@@ -1,0 +1,240 @@
+using GrainMarket.Application.Common;
+using GrainMarket.Application.Common.Exceptions;
+using GrainMarket.Application.Common.Interfaces;
+using GrainMarket.Application.Common.Services;
+using GrainMarket.Domain.Entities;
+using GrainMarket.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
+
+namespace GrainMarket.Application.Pakkis;
+
+public class PakkiService : IPakkiService
+{
+    private readonly IApplicationDbContext _db;
+    private readonly ILedgerPostingService _ledger;
+    private readonly IInvoiceNumberGenerator _numberGenerator;
+    private readonly IDateTimeProvider _clock;
+
+    public PakkiService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock)
+    {
+        _db = db;
+        _ledger = ledger;
+        _numberGenerator = numberGenerator;
+        _clock = clock;
+    }
+
+    public async Task<List<PakkiDto>> GetAllAsync(int? seasonId = null, CancellationToken ct = default)
+    {
+        var query = _db.Pakkis
+            .Include(p => p.Season).Include(p => p.Buyer).Include(p => p.Farmer).Include(p => p.Product)
+            .Include(p => p.Kachi).Include(p => p.DeductionLines)
+            .Where(p => !p.IsDeleted);
+        if (seasonId is not null) query = query.Where(p => p.SeasonId == seasonId);
+
+        var rows = await query.OrderByDescending(p => p.Date).ThenByDescending(p => p.Id).ToListAsync(ct);
+        return rows.Select(ToDto).ToList();
+    }
+
+    public async Task<PakkiDto> GetByIdAsync(int id, CancellationToken ct = default)
+    {
+        var pakki = await LoadAsync(id, ct);
+        return ToDto(pakki);
+    }
+
+    public async Task<PakkiDto> CreateFromKachiAsync(CreatePakkiFromKachiRequest request, CancellationToken ct = default)
+    {
+        var kachi = await _db.Kachis
+            .Include(k => k.Season)
+            .FirstOrDefaultAsync(k => k.Id == request.KachiId && !k.IsDeleted, ct)
+            ?? throw new NotFoundException(nameof(Kachi), request.KachiId);
+
+        if (kachi.Status != InvoiceStatus.Open)
+        {
+            throw new InvalidCalculationException("Only an open Kachi can be converted to a Pakki.");
+        }
+
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+        {
+            throw new NotFoundException(nameof(Party), request.BuyerId);
+        }
+
+        var grossAmount = Math.Round(request.RatePerUnit * kachi.NetWeightKg, 2);
+        var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
+        var calc = DeductionEngine.Calculate(grossAmount, kachi.NetWeightKg, DeductionAppliesTo.Pakki, kachi.ProductId, kachi.FarmerId, rules);
+
+        var pakki = new Pakki
+        {
+            InvoiceNo = await _numberGenerator.NextAsync("P", ct),
+            Date = request.Date,
+            SeasonId = kachi.SeasonId,
+            KachiId = kachi.Id,
+            BuyerId = request.BuyerId,
+            FarmerId = kachi.FarmerId,
+            ProductId = kachi.ProductId,
+            ManQty = kachi.ManQty,
+            KiloQty = kachi.KiloQty,
+            GramQty = kachi.GramQty,
+            BoriQty = kachi.BoriQty,
+            NetWeightKg = kachi.NetWeightKg,
+            RatePerUnit = request.RatePerUnit,
+            GrossAmount = grossAmount,
+            TotalDeductions = calc.TotalDeductions,
+            NetPayableToFarmer = calc.NetAmount,
+            VehicleNumber = request.VehicleNumber,
+            Status = InvoiceStatus.Open,
+            Notes = request.Notes
+        };
+
+        foreach (var line in calc.Lines)
+        {
+            pakki.DeductionLines.Add(new PakkiDeductionLine
+            {
+                DeductionRuleId = line.DeductionRuleId,
+                Name = line.Name,
+                NameUrdu = line.NameUrdu,
+                Amount = line.Amount,
+                VehicleNumber = line.RequiresVehicleNumber ? request.VehicleNumber : null
+            });
+        }
+
+        _db.Pakkis.Add(pakki);
+        await _db.SaveChangesAsync(ct);
+
+        kachi.Status = InvoiceStatus.ConvertedToPakki;
+        kachi.ConvertedToPakkiId = pakki.Id;
+        kachi.UpdatedAtUtc = _clock.UtcNow;
+
+        await PostLedgerAsync(pakki, calc, ct);
+        await _db.SaveChangesAsync(ct);
+
+        return await GetByIdAsync(pakki.Id, ct);
+    }
+
+    public async Task<PakkiDto> CreateStandaloneAsync(CreateStandalonePakkiRequest request, CancellationToken ct = default)
+    {
+        if (!await _db.Seasons.AnyAsync(s => s.Id == request.SeasonId && !s.IsDeleted, ct))
+            throw new NotFoundException(nameof(Season), request.SeasonId);
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+            throw new NotFoundException(nameof(Party), request.BuyerId);
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.FarmerId && !p.IsDeleted && p.PartyType == PartyType.Farmer, ct))
+            throw new NotFoundException(nameof(Party), request.FarmerId);
+        if (!await _db.Products.AnyAsync(p => p.Id == request.ProductId && !p.IsDeleted, ct))
+            throw new NotFoundException(nameof(Product), request.ProductId);
+
+        var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
+        var netWeightKg = UnitConversionCalculator.ToBaseKg(request.ManQty, request.KiloQty, request.GramQty, request.BoriQty, request.ProductId, conversions);
+        var grossAmount = Math.Round(request.RatePerUnit * netWeightKg, 2);
+
+        var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
+        var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Pakki, request.ProductId, request.FarmerId, rules);
+
+        var pakki = new Pakki
+        {
+            InvoiceNo = await _numberGenerator.NextAsync("P", ct),
+            Date = request.Date,
+            SeasonId = request.SeasonId,
+            KachiId = null,
+            BuyerId = request.BuyerId,
+            FarmerId = request.FarmerId,
+            ProductId = request.ProductId,
+            ManQty = request.ManQty,
+            KiloQty = request.KiloQty,
+            GramQty = request.GramQty,
+            BoriQty = request.BoriQty,
+            NetWeightKg = netWeightKg,
+            RatePerUnit = request.RatePerUnit,
+            GrossAmount = grossAmount,
+            TotalDeductions = calc.TotalDeductions,
+            NetPayableToFarmer = calc.NetAmount,
+            VehicleNumber = request.VehicleNumber,
+            Status = InvoiceStatus.Open,
+            Notes = request.Notes
+        };
+
+        foreach (var line in calc.Lines)
+        {
+            pakki.DeductionLines.Add(new PakkiDeductionLine
+            {
+                DeductionRuleId = line.DeductionRuleId,
+                Name = line.Name,
+                NameUrdu = line.NameUrdu,
+                Amount = line.Amount,
+                VehicleNumber = line.RequiresVehicleNumber ? request.VehicleNumber : null
+            });
+        }
+
+        _db.Pakkis.Add(pakki);
+        await _db.SaveChangesAsync(ct);
+
+        await PostLedgerAsync(pakki, calc, ct);
+        await _db.SaveChangesAsync(ct);
+
+        return await GetByIdAsync(pakki.Id, ct);
+    }
+
+    public async Task CancelAsync(int id, CancellationToken ct = default)
+    {
+        var pakki = await LoadAsync(id, ct);
+        pakki.Status = InvoiceStatus.Cancelled;
+        pakki.UpdatedAtUtc = _clock.UtcNow;
+
+        if (pakki.KachiId is not null)
+        {
+            var kachi = await _db.Kachis.FirstOrDefaultAsync(k => k.Id == pakki.KachiId, ct);
+            if (kachi is not null)
+            {
+                kachi.Status = InvoiceStatus.Open;
+                kachi.ConvertedToPakkiId = null;
+            }
+        }
+
+        // Reversing ledger entries: post the mirror image so the running balance is corrected
+        // without ever deleting or mutating a posted row.
+        await _ledger.PostPartyEntryAsync(pakki.BuyerId, _clock.UtcNow, 0, pakki.GrossAmount, LedgerSourceType.Pakki, pakki.Id, $"Reversal: {pakki.InvoiceNo} cancelled", ct);
+        await _ledger.PostPartyEntryAsync(pakki.FarmerId, _clock.UtcNow, pakki.NetPayableToFarmer, 0, LedgerSourceType.Pakki, pakki.Id, $"Reversal: {pakki.InvoiceNo} cancelled", ct);
+        foreach (var line in pakki.DeductionLines)
+        {
+            var accountId = await ResolveIncomeAccountIdAsync(await _db.DeductionRules.Where(r => r.Id == line.DeductionRuleId).Select(r => r.IncomeAccountId).FirstOrDefaultAsync(ct), ct);
+            await _ledger.PostAccountEntryAsync(accountId, _clock.UtcNow, line.Amount, 0, LedgerSourceType.Pakki, pakki.Id, $"Reversal: {pakki.InvoiceNo} cancelled ({line.Name})", ct);
+        }
+
+        await _db.SaveChangesAsync(ct);
+    }
+
+    private async Task PostLedgerAsync(Pakki pakki, DeductionCalculationResult calc, CancellationToken ct)
+    {
+        await _ledger.PostPartyEntryAsync(pakki.BuyerId, pakki.Date, pakki.GrossAmount, 0, LedgerSourceType.Pakki, pakki.Id, $"Pakki {pakki.InvoiceNo}", ct);
+        await _ledger.PostPartyEntryAsync(pakki.FarmerId, pakki.Date, 0, pakki.NetPayableToFarmer, LedgerSourceType.Pakki, pakki.Id, $"Pakki {pakki.InvoiceNo}", ct);
+
+        foreach (var line in calc.Lines)
+        {
+            var accountId = await ResolveIncomeAccountIdAsync(line.IncomeAccountId, ct);
+            await _ledger.PostAccountEntryAsync(accountId, pakki.Date, 0, line.Amount, LedgerSourceType.Pakki, pakki.Id, $"Pakki {pakki.InvoiceNo}: {line.Name}", ct);
+        }
+    }
+
+    private async Task<int> ResolveIncomeAccountIdAsync(int? explicitAccountId, CancellationToken ct)
+    {
+        if (explicitAccountId.HasValue) return explicitAccountId.Value;
+
+        var suspense = await _db.ChartOfAccounts.FirstOrDefaultAsync(a => a.Code == DomainConstants.UnallocatedDeductionsAccountCode, ct)
+            ?? throw new InvalidCalculationException($"The Unallocated Deductions account (code {DomainConstants.UnallocatedDeductionsAccountCode}) is missing. Re-run seed data or set an income account on every deduction rule.");
+        return suspense.Id;
+    }
+
+    private async Task<Pakki> LoadAsync(int id, CancellationToken ct)
+    {
+        return await _db.Pakkis
+            .Include(p => p.Season).Include(p => p.Buyer).Include(p => p.Farmer).Include(p => p.Product)
+            .Include(p => p.Kachi).Include(p => p.DeductionLines)
+            .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, ct)
+            ?? throw new NotFoundException(nameof(Pakki), id);
+    }
+
+    private static PakkiDto ToDto(Pakki p) => new(
+        p.Id, p.InvoiceNo, p.Date, p.SeasonId, p.Season.Name, p.KachiId, p.Kachi?.InvoiceNo,
+        p.BuyerId, p.Buyer.Name, p.FarmerId, p.Farmer.Name, p.ProductId, p.Product.Name,
+        p.ManQty, p.KiloQty, p.GramQty, p.BoriQty, p.NetWeightKg, p.RatePerUnit, p.GrossAmount,
+        p.TotalDeductions, p.NetPayableToFarmer, p.VehicleNumber, p.Status, p.Notes,
+        p.DeductionLines.Select(l => new PakkiDeductionLineDto(l.DeductionRuleId, l.Name, l.NameUrdu, l.Amount, l.VehicleNumber)).ToList());
+}

@@ -1,0 +1,102 @@
+@page "/recovery"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Recovery</h1>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    @if (_outstanding is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid" style="max-width:900px;">
+            <thead><tr><th>Party</th><th>Type</th><th>Phone</th><th>Outstanding</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var o in _outstanding)
+                {
+                    <tr>
+                        <td>@o.PartyName</td>
+                        <td>@o.PartyType</td>
+                        <td>@o.Phone</td>
+                        <td>@o.Balance.ToString("N2")</td>
+                        <td><button class="btn secondary" @onclick="() => SelectParty(o.PartyId)">Notes</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (_selectedPartyId is not null)
+    {
+        <h3 style="margin-top:20px;">Follow-up notes</h3>
+
+        <div class="form-grid" style="max-width:700px;">
+            <div><label>Contact Date</label><input type="date" @bind="_contactDate" /></div>
+            <div><label>Promised Date</label><input type="date" @bind="_promisedDate" /></div>
+            <div><label>Promised Amount</label><input type="number" step="0.01" @bind="_promisedAmount" /></div>
+            <div style="grid-column: span 2;"><label>Note</label><textarea @bind="_note" style="width:100%;" rows="2"></textarea></div>
+            <div style="grid-column: span 2;"><button class="btn" @onclick="AddNoteAsync">Add Note</button></div>
+        </div>
+
+        @if (_notes is not null)
+        {
+            <table class="data-grid" style="max-width:700px;margin-top:10px;">
+                <thead><tr><th>Date</th><th>Note</th><th>Promised</th></tr></thead>
+                <tbody>
+                    @foreach (var n in _notes)
+                    {
+                        <tr>
+                            <td>@n.ContactDate.ToString("yyyy-MM-dd")</td>
+                            <td>@n.Note</td>
+                            <td>@(n.PromisedDate?.ToString("yyyy-MM-dd")) @(n.PromisedAmount.HasValue ? $"(Rs {n.PromisedAmount:N0})" : "")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+</RequireAuth>
+
+@code {
+    private List<OutstandingPartyDto>? _outstanding;
+    private List<RecoveryNoteDto>? _notes;
+    private int? _selectedPartyId;
+    private string? _error;
+
+    private DateTime _contactDate = DateTime.Today;
+    private DateTime? _promisedDate;
+    private decimal? _promisedAmount;
+    private string _note = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _outstanding = await Api.GetOutstandingAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task SelectParty(int partyId)
+    {
+        _selectedPartyId = partyId;
+        try { _notes = await Api.GetRecoveryNotesAsync(partyId); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task AddNoteAsync()
+    {
+        if (_selectedPartyId is null || string.IsNullOrWhiteSpace(_note)) return;
+        _error = null;
+        try
+        {
+            await Api.AddRecoveryNoteAsync(new CreateRecoveryNoteRequest(_selectedPartyId.Value, _contactDate, _note, _promisedDate, _promisedAmount));
+            _note = ""; _promisedDate = null; _promisedAmount = null;
+            _notes = await Api.GetRecoveryNotesAsync(_selectedPartyId.Value);
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

@@ -1,0 +1,58 @@
+@inherits LayoutComponentBase
+@inject AuthState AuthState
+@inject NavigationManager Nav
+
+@if (!AuthState.IsAuthenticated)
+{
+    @Body
+}
+else
+{
+    <div class="app-shell">
+        <div class="sidebar">
+            <div class="brand">
+                Umer Farooq &amp; Brothers<br />
+                <small>@AuthState.FullName (@AuthState.RoleName)</small>
+            </div>
+            <nav>
+                <NavLink href="" Match="NavLinkMatch.All">Dashboard</NavLink>
+                @if (AuthState.CanView(ModuleName.Kachi)) { <NavLink href="kachi">Kachi</NavLink> }
+                @if (AuthState.CanView(ModuleName.Pakki)) { <NavLink href="pakki">Pakki</NavLink> }
+                @if (AuthState.CanView(ModuleName.DualInvoice)) { <NavLink href="dual-invoice">Dual Invoice</NavLink> }
+                @if (AuthState.CanView(ModuleName.Trading)) { <NavLink href="trading">Trading</NavLink> }
+                @if (AuthState.CanView(ModuleName.SaleInvoice)) { <NavLink href="sale-invoice">Sale Invoice</NavLink> }
+                @if (AuthState.CanView(ModuleName.Purchase)) { <NavLink href="purchase">Purchase</NavLink> }
+                @if (AuthState.CanView(ModuleName.Payment)) { <NavLink href="payment">Payment</NavLink> }
+                @if (AuthState.CanView(ModuleName.Receipt)) { <NavLink href="receipt">Receipt</NavLink> }
+                @if (AuthState.CanView(ModuleName.Journal)) { <NavLink href="journal">Journal</NavLink> }
+                @if (AuthState.CanView(ModuleName.Expense)) { <NavLink href="expense">Expense</NavLink> }
+                @if (AuthState.CanView(ModuleName.Ledger)) { <NavLink href="ledger">Ledger</NavLink> }
+                @if (AuthState.CanView(ModuleName.Recovery)) { <NavLink href="recovery">Recovery</NavLink> }
+
+                <div class="brand" style="margin-top:8px;">Setup</div>
+                @if (AuthState.CanView(ModuleName.SetupParty)) { <NavLink href="setup/parties">Party</NavLink> }
+                @if (AuthState.CanView(ModuleName.SetupProducts)) { <NavLink href="setup/products">Products</NavLink> }
+                @if (AuthState.CanView(ModuleName.SetupChartOfAccounts)) { <NavLink href="setup/chart-of-accounts">Chart of Accounts</NavLink> }
+                @if (AuthState.CanView(ModuleName.SetupDeductionRules)) { <NavLink href="setup/deduction-rules">Format (Deductions)</NavLink> }
+                @if (AuthState.CanView(ModuleName.SetupUnitConversions)) { <NavLink href="setup/unit-conversions">Unit Conversions</NavLink> }
+                @if (AuthState.CanView(ModuleName.SetupSeasons)) { <NavLink href="setup/seasons">Seasons</NavLink> }
+                @if (AuthState.CanView(ModuleName.SetupUsersRoles)) { <NavLink href="setup/users">User Account</NavLink> }
+                @if (AuthState.CanView(ModuleName.Backup)) { <NavLink href="backup">Backup</NavLink> }
+
+                <a href="#" @onclick="Logout" @onclick:preventDefault="true" style="display:block;padding:10px 16px;color:#e8f5e9;margin-top:16px;">Quit / Logout</a>
+            </nav>
+        </div>
+        <div class="main-content">
+            @Body
+        </div>
+    </div>
+}
+
+@code {
+    private void Logout()
+    {
+        AuthState.Clear();
+        AuthState.ClearPersistedToken();
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+}

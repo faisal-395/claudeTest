@@ -1,0 +1,44 @@
+@page "/"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Dashboard</h1>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+    else if (_summary is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1100px;">
+            <StatCard Title="Kachi Today" Value="@_summary.TodayKachiCount.ToString()" Sub="@($"{_summary.TodayKachiWeightKg:N0} kg")" />
+            <StatCard Title="Pakki Today" Value="@_summary.TodayPakkiCount.ToString()" Sub="@($"Rs {_summary.TodayPakkiGrossAmount:N0}")" />
+            <StatCard Title="Sale Invoices Today" Value="@_summary.TodaySaleInvoiceCount.ToString()" Sub="@($"Rs {_summary.TodaySaleNetBill:N0}")" />
+            <StatCard Title="Purchases Today" Value="@_summary.TodayPurchaseCount.ToString()" Sub="@($"Rs {_summary.TodayPurchaseNetBill:N0}")" />
+            <StatCard Title="Cash Balance" Value="@($"Rs {_summary.CashBalance:N0}")" />
+            <StatCard Title="Bank Balance" Value="@($"Rs {_summary.BankBalance:N0}")" />
+            <StatCard Title="Outstanding Recovery" Value="@($"Rs {_summary.TotalOutstandingRecovery:N0}")" />
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    private DashboardSummaryDto? _summary;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _summary = await Api.GetDashboardAsync();
+        }
+        catch (Models.ApiException ex)
+        {
+            _error = ex.Message;
+        }
+    }
+}

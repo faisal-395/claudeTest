@@ -1,0 +1,29 @@
+@page "/settings"
+@inject AppSettings AppSettings
+@inject NavigationManager Nav
+
+<div style="max-width:500px;margin:60px auto;background:white;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+    <h2 style="color:#1B4332;">Connection Settings</h2>
+    <p style="color:#777;">Point this till at the API. Today that's this same PC; once the API moves to the LAN server, change this to the server's address — see README "Architecture &amp; deployment".</p>
+
+    <label>API Base URL</label>
+    <input @bind="_url" style="width:100%;padding:8px;box-sizing:border-box;margin-bottom:12px;" placeholder="http://localhost:5080/" />
+
+    <button class="btn" @onclick="Save">Save</button>
+    <button class="btn secondary" @onclick="Back">Back to Login</button>
+</div>
+
+@code {
+    private string _url = string.Empty;
+
+    protected override void OnInitialized() => _url = AppSettings.ApiBaseUrl;
+
+    private void Save()
+    {
+        if (!_url.EndsWith('/')) _url += "/";
+        AppSettings.ApiBaseUrl = _url;
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+
+    private void Back() => Nav.NavigateTo("/login");
+}

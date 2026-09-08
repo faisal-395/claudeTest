@@ -1,0 +1,123 @@
+@page "/setup/deduction-rules"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Format (Deduction Rules)</h1>
+    <p style="color:#777;">Commission, market fee, association fund, octroi, withholding tax, labour, bagging/stitching and freight — all editable here instead of hardcoded.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="margin-bottom:20px;">
+        <div><label>Name (English)</label><input @bind="_name" /></div>
+        <div><label>Name (Urdu)</label><input class="rtl-urdu" @bind="_nameUrdu" /></div>
+        <div>
+            <label>Calculation Type</label>
+            <select @bind="_calcType">
+                <option value="@DeductionCalculationType.FixedAmount">Fixed Amount</option>
+                <option value="@DeductionCalculationType.PercentOfGross">Percent of Gross</option>
+                <option value="@DeductionCalculationType.PerUnitWeight">Per Unit Weight (kg)</option>
+            </select>
+        </div>
+        <div><label>Value</label><input type="number" step="0.01" @bind="_value" /></div>
+        <div>
+            <label>Applies To</label>
+            <select @bind="_appliesTo">
+                <option value="@DeductionAppliesTo.Kachi">Kachi</option>
+                <option value="@DeductionAppliesTo.Pakki">Pakki</option>
+                <option value="@DeductionAppliesTo.Both">Both</option>
+            </select>
+        </div>
+        <div><label>Sort Order</label><input type="number" @bind="_sortOrder" /></div>
+        <div><label><input type="checkbox" @bind="_requiresVehicle" /> Requires vehicle number (Freight)</label></div>
+        <div style="grid-column: span 2;">
+            <button class="btn" @onclick="SaveAsync">@(_editingId is null ? "Add Rule" : "Update Rule")</button>
+            @if (_editingId is not null) { <button class="btn secondary" @onclick="ResetForm">Cancel</button> }
+        </div>
+    </div>
+
+    @if (_rules is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>#</th><th>Name</th><th class="rtl-urdu">اردو</th><th>Type</th><th>Value</th><th>Applies To</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var r in _rules.OrderBy(r => r.SortOrder))
+                {
+                    <tr>
+                        <td>@r.SortOrder</td>
+                        <td>@r.Name</td>
+                        <td class="rtl-urdu">@r.NameUrdu</td>
+                        <td>@r.CalculationType</td>
+                        <td>@r.Value.ToString("N2")</td>
+                        <td>@r.AppliesTo</td>
+                        <td>
+                            <button class="btn secondary" @onclick="() => Edit(r)">Edit</button>
+                            <button class="btn danger" @onclick="() => DeleteAsync(r.Id)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<DeductionRuleDto>? _rules;
+    private int? _editingId;
+    private string? _error;
+
+    private string _name = "";
+    private string _nameUrdu = "";
+    private DeductionCalculationType _calcType = DeductionCalculationType.FixedAmount;
+    private decimal _value;
+    private DeductionAppliesTo _appliesTo = DeductionAppliesTo.Both;
+    private int _sortOrder;
+    private bool _requiresVehicle;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try { _rules = await Api.GetDeductionRulesAsync(includeInactive: true); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private void Edit(DeductionRuleDto r)
+    {
+        _editingId = r.Id;
+        _name = r.Name; _nameUrdu = r.NameUrdu; _calcType = r.CalculationType;
+        _value = r.Value; _appliesTo = r.AppliesTo; _sortOrder = r.SortOrder; _requiresVehicle = r.RequiresVehicleNumber;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null; _name = ""; _nameUrdu = ""; _calcType = DeductionCalculationType.FixedAmount;
+        _value = 0; _appliesTo = DeductionAppliesTo.Both; _sortOrder = 0; _requiresVehicle = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var request = new UpsertDeductionRuleRequest(_name, _nameUrdu, _calcType, _value, _appliesTo, _sortOrder, true, null, null, _requiresVehicle, null);
+        try
+        {
+            if (_editingId is null) await Api.CreateDeductionRuleAsync(request);
+            else await Api.UpdateDeductionRuleAsync(_editingId.Value, request);
+            ResetForm();
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        try { await Api.DeleteDeductionRuleAsync(id); await LoadAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

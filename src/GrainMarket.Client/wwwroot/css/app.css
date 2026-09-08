@@ -1,0 +1,203 @@
+/* Bundled Nastaliq-capable Urdu font (see Resources/Fonts) so Urdu labels and print templates
+   render correctly regardless of what's installed on the till PC. Drop the real .ttf file at
+   wwwroot/fonts/JameelNooriNastaleeq.ttf — see README "Bilingual / Urdu requirements". */
+@font-face {
+    font-family: 'JameelNooriNastaleeq';
+    src: url('../fonts/JameelNooriNastaleeq.ttf') format('truetype');
+    font-display: swap;
+}
+
+html, body {
+    font-family: 'Segoe UI', 'Open Sans', sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+.loading-splash {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-size: 1.2rem;
+    color: #1B4332;
+}
+
+/* RTL / Urdu content — apply to any block that shows Urdu labels or a Kachi/Pakki print
+   template. Nested Latin content (numbers, invoice codes) stays LTR via .ltr-inline. */
+.rtl-urdu {
+    direction: rtl;
+    text-align: right;
+    font-family: 'JameelNooriNastaleeq', 'Noto Nastaliq Urdu', serif;
+    font-size: 1.15rem;
+    line-height: 2.1;
+    unicode-bidi: embed;
+}
+
+.ltr-inline {
+    direction: ltr;
+    unicode-bidi: embed;
+    display: inline-block;
+}
+
+/* App shell */
+.app-shell {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 230px;
+    background: #1B4332;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.sidebar .brand {
+    padding: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+
+.sidebar nav a {
+    display: block;
+    padding: 10px 16px;
+    color: #e8f5e9;
+    text-decoration: none;
+    font-size: 0.92rem;
+}
+
+.sidebar nav a:hover, .sidebar nav a.active {
+    background: #2D6A4F;
+    color: white;
+}
+
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 28px;
+    background: #f7f9f7;
+}
+
+.page-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #1B4332;
+    margin-bottom: 16px;
+}
+
+table.data-grid {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+table.data-grid th, table.data-grid td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e5e5e5;
+    text-align: left;
+    font-size: 0.9rem;
+}
+
+table.data-grid th {
+    background: #eef4ee;
+    color: #1B4332;
+    font-weight: 600;
+}
+
+table.data-grid tbody tr:hover {
+    background: #f4faf4;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 12px 20px;
+    background: white;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    max-width: 900px;
+}
+
+.form-grid label {
+    display: block;
+    font-size: 0.85rem;
+    color: #444;
+    margin-bottom: 4px;
+}
+
+.form-grid input, .form-grid select, .form-grid textarea {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+.btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 3px;
+    background: #2D6A4F;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn:hover { background: #1B4332; }
+.btn.secondary { background: #999; }
+.btn.danger { background: #b3261e; }
+
+.error-banner {
+    background: #fdecea;
+    color: #b3261e;
+    border: 1px solid #f5c6cb;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    border-radius: 3px;
+}
+
+.total-figure {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1B4332;
+}
+
+.invalid-total {
+    color: #b3261e;
+    font-style: italic;
+}
+
+/* Thermal (80mm) vs A4 print — the same invoice component is styled by print target. */
+@media print {
+    .no-print { display: none !important; }
+}
+
+.print-thermal {
+    width: 78mm;
+    font-size: 12px;
+}
+
+.print-a4 {
+    width: 190mm;
+    font-size: 13px;
+}
+
+#blazor-error-ui {
+    display: none;
+    background: #b3261e;
+    color: white;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 16px;
+}
+
+#blazor-error-ui .dismiss {
+    float: right;
+    cursor: pointer;
+}

@@ -1,0 +1,36 @@
+@page "/backup"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Backup</h1>
+    <p style="color:#777;">Runs pg_dump against the database and saves a timestamped file next to the API. Requires PostgreSQL client tools on the server.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+    @if (_lastBackupPath is not null)
+    {
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:12px 16px;margin-bottom:16px;">
+            Backup created: @_lastBackupPath
+        </div>
+    }
+
+    <button class="btn" disabled="@_busy" @onclick="RunBackupAsync">@(_busy ? "Running…" : "Run Backup Now")</button>
+</RequireAuth>
+
+@code {
+    private string? _error;
+    private string? _lastBackupPath;
+    private bool _busy;
+
+    private async Task RunBackupAsync()
+    {
+        _error = null;
+        _lastBackupPath = null;
+        _busy = true;
+        try { _lastBackupPath = await Api.CreateBackupAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+        finally { _busy = false; }
+    }
+}

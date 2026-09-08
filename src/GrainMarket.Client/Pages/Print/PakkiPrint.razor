@@ -1,0 +1,60 @@
+@page "/print/pakki/{Id:int}"
+@inject ApiClient Api
+@inject IJSRuntime JS
+
+<RequireAuth>
+    <div class="no-print" style="margin-bottom:12px;">
+        <button class="btn" @onclick="PrintAsync">Print</button>
+    </div>
+
+    @if (_pakki is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div class="print-a4 rtl-urdu" style="background:white;padding:20px;border:1px solid #ccc;">
+            <div style="text-align:center;font-size:1.3rem;font-weight:700;">عمر فاروق اینڈ برادرز</div>
+            <div style="text-align:center;">پکی رسید</div>
+            <hr />
+            <table style="width:100%;">
+                <tr>
+                    <td>نمبر: <span class="ltr-inline">@_pakki.InvoiceNo</span></td>
+                    <td>تاریخ: <span class="ltr-inline">@_pakki.Date.ToString("yyyy-MM-dd")</span></td>
+                </tr>
+                <tr>
+                    <td>کسان: @_pakki.FarmerName</td>
+                    <td>خریدار: @_pakki.BuyerName</td>
+                </tr>
+                <tr>
+                    <td>جنس: @_pakki.ProductName</td>
+                    <td>گاڑی نمبر: <span class="ltr-inline">@(_pakki.VehicleNumber ?? "-")</span></td>
+                </tr>
+            </table>
+            <hr />
+            <table style="width:100%;">
+                <tr><td><b>کل وزن (کلو)</b></td><td class="ltr-inline"><b>@_pakki.NetWeightKg.ToString("N2")</b></td></tr>
+                <tr><td>ریٹ</td><td class="ltr-inline">@_pakki.RatePerUnit.ToString("N2")</td></tr>
+                <tr><td><b>مجموعی رقم</b></td><td class="ltr-inline"><b>@_pakki.GrossAmount.ToString("N2")</b></td></tr>
+            </table>
+            <hr />
+            <table style="width:100%;">
+                @foreach (var line in _pakki.DeductionLines)
+                {
+                    <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
+                }
+                <tr><td><b>مجموعی کٹوتی</b></td><td class="ltr-inline"><b>@_pakki.TotalDeductions.ToString("N2")</b></td></tr>
+                <tr><td><b>کسان کو ادائیگی</b></td><td class="ltr-inline"><b>@_pakki.NetPayableToFarmer.ToString("N2")</b></td></tr>
+            </table>
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private PakkiDto? _pakki;
+
+    protected override async Task OnInitializedAsync() => _pakki = await Api.GetPakkiAsync(Id);
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
+}

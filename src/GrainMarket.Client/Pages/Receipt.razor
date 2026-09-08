@@ -1,0 +1,6 @@
+@page "/receipt"
+@inject ApiClient Api
+
+<RequireAuth>
+    <VoucherForm VoucherKind="VoucherType.Receipt" Title="Receipt Voucher" />
+</RequireAuth>

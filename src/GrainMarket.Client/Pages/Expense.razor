@@ -1,0 +1,104 @@
+@page "/expense"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Expense</h1>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid">
+        <div><label>Date</label><input type="date" @bind="_date" /></div>
+        <div>
+            <label>Expense Account</label>
+            <select @bind="_expenseAccountId">
+                @if (_accounts is not null) { @foreach (var a in _accounts.Where(a => a.AccountType == AccountType.Expense)) { <option value="@a.Id">@a.Code - @a.Name</option> } }
+            </select>
+        </div>
+        <div><label>Amount</label><input type="number" step="0.01" @bind="_amount" /></div>
+        <div>
+            <label>Paid From</label>
+            <select @bind="_paidFrom">
+                <option value="@LedgerPartyRefType.Cash">Cash</option>
+                <option value="@LedgerPartyRefType.Bank">Bank</option>
+                <option value="@LedgerPartyRefType.Account">Other Account</option>
+            </select>
+        </div>
+        @if (_paidFrom == LedgerPartyRefType.Account)
+        {
+            <div>
+                <label>Account</label>
+                <select @bind="_paidFromAccountId">
+                    @if (_accounts is not null) { @foreach (var a in _accounts) { <option value="@a.Id">@a.Code - @a.Name</option> } }
+                </select>
+            </div>
+        }
+        <div style="grid-column: span 2;"><label>Description</label><input @bind="_description" style="width:100%;" /></div>
+        <div style="grid-column: span 2;">
+            <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">Save Expense</button>
+        </div>
+    </div>
+
+    @if (_expenses is not null)
+    {
+        <h3 style="margin-top:24px;">Recent Expenses</h3>
+        <table class="data-grid" style="max-width:1000px;">
+            <thead><tr><th>No</th><th>Date</th><th>Account</th><th>Amount</th><th>Paid From</th></tr></thead>
+            <tbody>
+                @foreach (var e in _expenses)
+                {
+                    <tr>
+                        <td>@e.ExpenseNo</td>
+                        <td>@e.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@e.ExpenseAccountName</td>
+                        <td>@e.Amount.ToString("N2")</td>
+                        <td>@(e.PaidFromAccountName ?? e.PaidFrom.ToString())</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<ChartOfAccountDto>? _accounts;
+    private List<ExpenseDto>? _expenses;
+    private string? _error;
+
+    private DateTime _date = DateTime.Today;
+    private int _expenseAccountId;
+    private decimal _amount;
+    private LedgerPartyRefType _paidFrom = LedgerPartyRefType.Cash;
+    private int? _paidFromAccountId;
+    private string? _description;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _accounts = await Api.GetChartOfAccountsAsync();
+        var firstExpense = _accounts.FirstOrDefault(a => a.AccountType == AccountType.Expense);
+        if (firstExpense is not null) _expenseAccountId = firstExpense.Id;
+        if (_accounts.Count > 0) _paidFromAccountId = _accounts[0].Id;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _expenses = await Api.GetExpensesAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var request = new CreateExpenseRequest(_date, _expenseAccountId, _amount, _description, _paidFrom, _paidFrom == LedgerPartyRefType.Account ? _paidFromAccountId : null);
+        try
+        {
+            await Api.CreateExpenseAsync(request);
+            _amount = 0; _description = null;
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

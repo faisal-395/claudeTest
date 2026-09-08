@@ -1,0 +1,168 @@
+@page "/setup/parties"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Party (Farmers / Buyers / Agents / Other)</h1>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="margin-bottom:20px;">
+        <div>
+            <label>Name (English)</label>
+            <input @bind="_name" />
+        </div>
+        <div>
+            <label>Name (Urdu)</label>
+            <input class="rtl-urdu" @bind="_nameUrdu" />
+        </div>
+        <div>
+            <label>Type</label>
+            <select @bind="_partyType">
+                @foreach (var t in Enum.GetValues<PartyType>())
+                {
+                    <option value="@t">@t</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label>Phone</label>
+            <input @bind="_phone" />
+        </div>
+        <div>
+            <label>CNIC</label>
+            <input @bind="_cnic" />
+        </div>
+        <div>
+            <label>Address</label>
+            <input @bind="_address" />
+        </div>
+        <div>
+            <label>Opening Balance</label>
+            <input type="number" step="0.01" @bind="_openingBalance" />
+        </div>
+        <div>
+            <label>Opening Balance Side</label>
+            <select @bind="_openingSide">
+                <option value="@BalanceSide.Debit">Debit (they owe us)</option>
+                <option value="@BalanceSide.Credit">Credit (we owe them)</option>
+            </select>
+        </div>
+        <div style="grid-column: span 2;">
+            <button class="btn" @onclick="SaveAsync">@(_editingId is null ? "Add Party" : "Update Party")</button>
+            @if (_editingId is not null)
+            {
+                <button class="btn secondary" @onclick="ResetForm">Cancel</button>
+            }
+        </div>
+    </div>
+
+    <div style="margin-bottom:10px;">
+        Filter:
+        <select @bind="_filterType" @bind:after="LoadAsync">
+            <option value="">All</option>
+            @foreach (var t in Enum.GetValues<PartyType>())
+            {
+                <option value="@t">@t</option>
+            }
+        </select>
+    </div>
+
+    @if (_parties is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead>
+                <tr><th>Name</th><th>Type</th><th>Phone</th><th>Balance</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var p in _parties)
+                {
+                    <tr>
+                        <td>@p.Name</td>
+                        <td>@p.PartyType</td>
+                        <td>@p.Phone</td>
+                        <td>@p.CurrentBalance.ToString("N2")</td>
+                        <td>
+                            <button class="btn secondary" @onclick="() => Edit(p)">Edit</button>
+                            <button class="btn danger" @onclick="() => DeleteAsync(p.Id)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<PartyDto>? _parties;
+    private int? _editingId;
+    private string? _error;
+    private string _filterType = "";
+
+    private string _name = "";
+    private string? _nameUrdu;
+    private PartyType _partyType = PartyType.Farmer;
+    private string? _phone;
+    private string? _cnic;
+    private string? _address;
+    private decimal _openingBalance;
+    private BalanceSide _openingSide = BalanceSide.Debit;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            PartyType? type = string.IsNullOrEmpty(_filterType) ? null : Enum.Parse<PartyType>(_filterType);
+            _parties = await Api.GetPartiesAsync(type, includeInactive: true);
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private void Edit(PartyDto p)
+    {
+        _editingId = p.Id;
+        _name = p.Name;
+        _nameUrdu = p.NameUrdu;
+        _partyType = p.PartyType;
+        _phone = p.Phone;
+        _cnic = p.Cnic;
+        _address = p.Address;
+        _openingBalance = p.OpeningBalance;
+        _openingSide = p.OpeningBalanceType;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _name = ""; _nameUrdu = null; _partyType = PartyType.Farmer;
+        _phone = null; _cnic = null; _address = null; _openingBalance = 0; _openingSide = BalanceSide.Debit;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var request = new UpsertPartyRequest(_name, _nameUrdu, _partyType, _phone, _cnic, _address, _openingBalance, _openingSide, true);
+        try
+        {
+            if (_editingId is null) await Api.CreatePartyAsync(request);
+            else await Api.UpdatePartyAsync(_editingId.Value, request);
+            ResetForm();
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        try { await Api.DeletePartyAsync(id); await LoadAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

@@ -1,0 +1,14 @@
+<div style="background:white;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+    <div style="font-size:0.8rem;color:#777;">@Title</div>
+    <div style="font-size:1.5rem;font-weight:700;color:#1B4332;">@Value</div>
+    @if (!string.IsNullOrEmpty(Sub))
+    {
+        <div style="font-size:0.8rem;color:#999;">@Sub</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public string? Sub { get; set; }
+}

@@ -1,0 +1,117 @@
+@page "/setup/products"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Products</h1>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="margin-bottom:20px;">
+        <div>
+            <label>Name (English)</label>
+            <input @bind="_name" />
+        </div>
+        <div>
+            <label>Name (Urdu)</label>
+            <input class="rtl-urdu" @bind="_nameUrdu" />
+        </div>
+        <div>
+            <label>Category</label>
+            <input @bind="_category" />
+        </div>
+        <div>
+            <label>Default Rate (per kg)</label>
+            <input type="number" step="0.01" @bind="_defaultRate" />
+        </div>
+        <div style="grid-column: span 2;">
+            <button class="btn" @onclick="SaveAsync">@(_editingId is null ? "Add Product" : "Update Product")</button>
+            @if (_editingId is not null)
+            {
+                <button class="btn secondary" @onclick="ResetForm">Cancel</button>
+            }
+        </div>
+    </div>
+
+    @if (_products is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead>
+                <tr><th>Name</th><th>Urdu</th><th>Category</th><th>Rate</th><th>Active</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var p in _products)
+                {
+                    <tr>
+                        <td>@p.Name</td>
+                        <td class="rtl-urdu">@p.NameUrdu</td>
+                        <td>@p.Category</td>
+                        <td>@p.DefaultRate.ToString("N2")</td>
+                        <td>@(p.IsActive ? "Yes" : "No")</td>
+                        <td>
+                            <button class="btn secondary" @onclick="() => Edit(p)">Edit</button>
+                            <button class="btn danger" @onclick="() => DeleteAsync(p.Id)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<ProductDto>? _products;
+    private int? _editingId;
+    private string? _error;
+
+    private string _name = "";
+    private string? _nameUrdu;
+    private string? _category;
+    private decimal _defaultRate;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try { _products = await Api.GetProductsAsync(includeInactive: true); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private void Edit(ProductDto p)
+    {
+        _editingId = p.Id;
+        _name = p.Name; _nameUrdu = p.NameUrdu; _category = p.Category; _defaultRate = p.DefaultRate;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _name = ""; _nameUrdu = null; _category = null; _defaultRate = 0;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var request = new UpsertProductRequest(_name, _nameUrdu, _category, _defaultRate, true);
+        try
+        {
+            if (_editingId is null) await Api.CreateProductAsync(request);
+            else await Api.UpdateProductAsync(_editingId.Value, request);
+            ResetForm();
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        try { await Api.DeleteProductAsync(id); await LoadAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

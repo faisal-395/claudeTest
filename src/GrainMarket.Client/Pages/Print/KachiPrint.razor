@@ -1,0 +1,59 @@
+@page "/print/kachi/{Id:int}"
+@inject ApiClient Api
+@inject IJSRuntime JS
+
+<RequireAuth>
+    <div class="no-print" style="margin-bottom:12px;">
+        <button class="btn" @onclick="PrintAsync">Print</button>
+    </div>
+
+    @if (_kachi is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div class="print-a4 rtl-urdu" style="background:white;padding:20px;border:1px solid #ccc;">
+            <div style="text-align:center;font-size:1.3rem;font-weight:700;">عمر فاروق اینڈ برادرز</div>
+            <div style="text-align:center;">کچی رسید</div>
+            <hr />
+            <table style="width:100%;">
+                <tr>
+                    <td>نمبر: <span class="ltr-inline">@_kachi.InvoiceNo</span></td>
+                    <td>تاریخ: <span class="ltr-inline">@_kachi.Date.ToString("yyyy-MM-dd")</span></td>
+                </tr>
+                <tr>
+                    <td>کسان: @_kachi.FarmerName</td>
+                    <td>جنس: @_kachi.ProductName</td>
+                </tr>
+            </table>
+            <hr />
+            <table style="width:100%;">
+                <tr><td>مَن</td><td class="ltr-inline">@(_kachi.ManQty?.ToString("N2") ?? "-")</td></tr>
+                <tr><td>کلو</td><td class="ltr-inline">@(_kachi.KiloQty?.ToString("N2") ?? "-")</td></tr>
+                <tr><td>گرام</td><td class="ltr-inline">@(_kachi.GramQty?.ToString("N2") ?? "-")</td></tr>
+                <tr><td>بوری</td><td class="ltr-inline">@(_kachi.BoriQty?.ToString("N2") ?? "-")</td></tr>
+                <tr><td><b>کل وزن (کلو)</b></td><td class="ltr-inline"><b>@_kachi.NetWeightKg.ToString("N2")</b></td></tr>
+                <tr><td>ریٹ</td><td class="ltr-inline">@(_kachi.RatePerUnit?.ToString("N2") ?? "طے نہیں")</td></tr>
+            </table>
+            <hr />
+            <table style="width:100%;">
+                @foreach (var line in _kachi.DeductionLines)
+                {
+                    <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
+                }
+                <tr><td><b>مجموعی کٹوتی</b></td><td class="ltr-inline"><b>@_kachi.TotalDeductions.ToString("N2")</b></td></tr>
+                <tr><td><b>کل رقم</b></td><td class="ltr-inline"><b>@_kachi.Total.ToString("N2")</b></td></tr>
+            </table>
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private KachiDto? _kachi;
+
+    protected override async Task OnInitializedAsync() => _kachi = await Api.GetKachiAsync(Id);
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
+}

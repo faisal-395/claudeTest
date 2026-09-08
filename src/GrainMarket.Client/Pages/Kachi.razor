@@ -1,0 +1,131 @@
+@page "/kachi"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Kachi (Provisional Receipt)</h1>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="margin-bottom:20px;">
+        <div><label>Date</label><input type="date" @bind="_date" /></div>
+        <div>
+            <label>Season</label>
+            <select @bind="_seasonId">
+                @if (_seasons is not null) { @foreach (var s in _seasons) { <option value="@s.Id">@s.Name</option> } }
+            </select>
+        </div>
+        <div>
+            <label>Farmer</label>
+            <select @bind="_farmerId">
+                @if (_farmers is not null) { @foreach (var f in _farmers) { <option value="@f.Id">@f.Name</option> } }
+            </select>
+        </div>
+        <div>
+            <label>Product</label>
+            <select @bind="_productId">
+                @if (_products is not null) { @foreach (var p in _products) { <option value="@p.Id">@p.Name</option> } }
+            </select>
+        </div>
+        <div><label>Man (maund)</label><input type="number" step="0.01" @bind="_man" /></div>
+        <div><label>Kilo</label><input type="number" step="0.01" @bind="_kilo" /></div>
+        <div><label>Gram</label><input type="number" step="1" @bind="_gram" /></div>
+        <div><label>Bori (bags)</label><input type="number" step="0.01" @bind="_bori" /></div>
+        <div><label>Rate per kg (optional at Kachi stage)</label><input type="number" step="0.01" @bind="_rate" /></div>
+        <div><label>Vehicle Number (for freight)</label><input @bind="_vehicleNumber" /></div>
+        <div style="grid-column: span 2;">
+            @if (!HasWeight)
+            {
+                <div class="invalid-total">Enter at least one weight (Man/Kilo/Gram/Bori) before saving.</div>
+            }
+            <button class="btn" disabled="@(!HasWeight)" @onclick="SaveAsync">Save Kachi</button>
+        </div>
+    </div>
+
+    @if (_kachis is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>Invoice</th><th>Date</th><th>Farmer</th><th>Product</th><th>Net Wt (kg)</th><th>Rate</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var k in _kachis)
+                {
+                    <tr>
+                        <td>@k.InvoiceNo</td>
+                        <td>@k.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@k.FarmerName</td>
+                        <td>@k.ProductName</td>
+                        <td>@k.NetWeightKg.ToString("N2")</td>
+                        <td>@(k.RatePerUnit?.ToString("N2") ?? "—")</td>
+                        <td>@k.Total.ToString("N2")</td>
+                        <td>@k.Status</td>
+                        <td>
+                            @if (k.Status == InvoiceStatus.Open)
+                            {
+                                <a href="pakki?fromKachi=@k.Id">Convert to Pakki</a>
+                                <text> | </text>
+                            }
+                            <a href="print/kachi/@k.Id">Print</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<KachiDto>? _kachis;
+    private List<SeasonDto>? _seasons;
+    private List<PartyDto>? _farmers;
+    private List<ProductDto>? _products;
+    private string? _error;
+
+    private DateTime _date = DateTime.Today;
+    private int _seasonId;
+    private int _farmerId;
+    private int _productId;
+    private decimal? _man;
+    private decimal? _kilo;
+    private decimal? _gram;
+    private decimal? _bori;
+    private decimal? _rate;
+    private string? _vehicleNumber;
+
+    private bool HasWeight => (_man ?? 0) + (_kilo ?? 0) + (_gram ?? 0) + (_bori ?? 0) > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _seasons = await Api.GetSeasonsAsync();
+        _farmers = await Api.GetPartiesAsync(PartyType.Farmer);
+        _products = await Api.GetProductsAsync();
+        if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
+        if (_farmers.Count > 0) _farmerId = _farmers[0].Id;
+        if (_products.Count > 0) _productId = _products[0].Id;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _kachis = await Api.GetKachisAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var request = new CreateKachiRequest(_date, _seasonId, _farmerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
+        try
+        {
+            await Api.CreateKachiAsync(request);
+            _man = null; _kilo = null; _gram = null; _bori = null; _rate = null; _vehicleNumber = null;
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

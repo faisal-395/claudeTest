@@ -1,0 +1,111 @@
+@page "/journal"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Journal Voucher</h1>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid">
+        <div><label>Date</label><input type="date" @bind="_date" /></div>
+        <div>
+            <label>Season</label>
+            <select @bind="_seasonId">
+                @if (_seasons is not null) { @foreach (var s in _seasons) { <option value="@s.Id">@s.Name</option> } }
+            </select>
+        </div>
+        <div><label>Amount</label><input type="number" step="0.01" @bind="_amount" /></div>
+        <div><label>Ref No</label><input @bind="_refNo" /></div>
+
+        <div>
+            <label>Debit Account</label>
+            <select @bind="_debitAccountId">
+                @if (_accounts is not null) { @foreach (var a in _accounts) { <option value="@a.Id">@a.Code - @a.Name</option> } }
+            </select>
+        </div>
+        <div><label>Debit Description</label><input @bind="_debitDescription" /></div>
+
+        <div>
+            <label>Credit Account</label>
+            <select @bind="_creditAccountId">
+                @if (_accounts is not null) { @foreach (var a in _accounts) { <option value="@a.Id">@a.Code - @a.Name</option> } }
+            </select>
+        </div>
+        <div><label>Credit Description</label><input @bind="_creditDescription" /></div>
+
+        <div style="grid-column: span 2;">
+            @if (_debitAccountId == _creditAccountId)
+            {
+                <div class="invalid-total">Debit and credit accounts must be different.</div>
+            }
+            <button class="btn" disabled="@(_amount <= 0 || _debitAccountId == _creditAccountId)" @onclick="SaveAsync">Save Journal</button>
+        </div>
+    </div>
+
+    @if (_vouchers is not null)
+    {
+        <h3 style="margin-top:24px;">Recent Journal Entries</h3>
+        <table class="data-grid" style="max-width:1000px;">
+            <thead><tr><th>No</th><th>Date</th><th>Debit</th><th>Credit</th><th>Amount</th></tr></thead>
+            <tbody>
+                @foreach (var v in _vouchers)
+                {
+                    <tr>
+                        <td>@v.VoucherNo</td>
+                        <td>@v.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@v.DebitAccountName</td>
+                        <td>@v.CreditAccountName</td>
+                        <td>@v.Amount.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<SeasonDto>? _seasons;
+    private List<ChartOfAccountDto>? _accounts;
+    private List<VoucherDto>? _vouchers;
+    private string? _error;
+
+    private DateTime _date = DateTime.Today;
+    private int _seasonId;
+    private decimal _amount;
+    private string? _refNo;
+    private int _debitAccountId;
+    private string? _debitDescription;
+    private int _creditAccountId;
+    private string? _creditDescription;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _seasons = await Api.GetSeasonsAsync();
+        _accounts = await Api.GetChartOfAccountsAsync();
+        if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
+        if (_accounts.Count > 0) { _debitAccountId = _accounts[0].Id; _creditAccountId = _accounts.Count > 1 ? _accounts[1].Id : _accounts[0].Id; }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _vouchers = await Api.GetVouchersAsync(VoucherType.Journal); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var request = new CreateJournalRequest(_date, _seasonId, _amount, _refNo, _debitAccountId, _debitDescription, _creditAccountId, _creditDescription);
+        try
+        {
+            await Api.CreateJournalAsync(request);
+            _amount = 0; _refNo = null; _debitDescription = null; _creditDescription = null;
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

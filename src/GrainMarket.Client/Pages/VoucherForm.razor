@@ -1,0 +1,159 @@
+@inject ApiClient Api
+
+<h1 class="page-title">@Title</h1>
+
+@if (_error is not null)
+{
+    <div class="error-banner">@_error</div>
+}
+
+<div class="form-grid">
+    <div><label>Date</label><input type="date" @bind="_date" /></div>
+    <div>
+        <label>Season</label>
+        <select @bind="_seasonId">
+            @if (_seasons is not null) { @foreach (var s in _seasons) { <option value="@s.Id">@s.Name</option> } }
+        </select>
+    </div>
+    <div><label>Amount</label><input type="number" step="0.01" @bind="_amount" /></div>
+    <div><label>Ref No</label><input @bind="_refNo" /></div>
+
+    <div>
+        <label>From</label>
+        <select @bind="_fromType">
+            <option value="@LedgerPartyRefType.Cash">Cash</option>
+            <option value="@LedgerPartyRefType.Bank">Bank</option>
+            <option value="@LedgerPartyRefType.Party">Party</option>
+            <option value="@LedgerPartyRefType.Account">Account</option>
+        </select>
+    </div>
+    @if (_fromType == LedgerPartyRefType.Party)
+    {
+        <div>
+            <label>From Party</label>
+            <select @bind="_fromPartyId">
+                @if (_parties is not null) { @foreach (var p in _parties) { <option value="@p.Id">@p.Name (@p.CurrentBalance.ToString("N0"))</option> } }
+            </select>
+        </div>
+    }
+    else if (_fromType == LedgerPartyRefType.Account)
+    {
+        <div>
+            <label>From Account</label>
+            <select @bind="_fromAccountId">
+                @if (_accounts is not null) { @foreach (var a in _accounts) { <option value="@a.Id">@a.Code - @a.Name (@a.CurrentBalance.ToString("N0"))</option> } }
+            </select>
+        </div>
+    }
+
+    <div>
+        <label>To</label>
+        <select @bind="_toType">
+            <option value="@LedgerPartyRefType.Cash">Cash</option>
+            <option value="@LedgerPartyRefType.Bank">Bank</option>
+            <option value="@LedgerPartyRefType.Party">Party</option>
+            <option value="@LedgerPartyRefType.Account">Account</option>
+        </select>
+    </div>
+    @if (_toType == LedgerPartyRefType.Party)
+    {
+        <div>
+            <label>To Party</label>
+            <select @bind="_toPartyId">
+                @if (_parties is not null) { @foreach (var p in _parties) { <option value="@p.Id">@p.Name (@p.CurrentBalance.ToString("N0"))</option> } }
+            </select>
+        </div>
+    }
+    else if (_toType == LedgerPartyRefType.Account)
+    {
+        <div>
+            <label>To Account</label>
+            <select @bind="_toAccountId">
+                @if (_accounts is not null) { @foreach (var a in _accounts) { <option value="@a.Id">@a.Code - @a.Name (@a.CurrentBalance.ToString("N0"))</option> } }
+            </select>
+        </div>
+    }
+
+    <div style="grid-column: span 2;"><label>Description</label><input @bind="_description" style="width:100%;" /></div>
+    <div style="grid-column: span 2;">
+        <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">Save @Title</button>
+    </div>
+</div>
+
+@if (_vouchers is not null)
+{
+    <h3 style="margin-top:24px;">Recent @(Title)s</h3>
+    <table class="data-grid" style="max-width:1000px;">
+        <thead><tr><th>No</th><th>Date</th><th>From</th><th>To</th><th>Amount</th></tr></thead>
+        <tbody>
+            @foreach (var v in _vouchers)
+            {
+                <tr>
+                    <td>@v.VoucherNo</td>
+                    <td>@v.Date.ToString("yyyy-MM-dd")</td>
+                    <td>@(v.FromPartyName ?? v.FromAccountName ?? v.FromType?.ToString())</td>
+                    <td>@(v.ToPartyName ?? v.ToAccountName ?? v.ToType?.ToString())</td>
+                    <td>@v.Amount.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter, EditorRequired] public VoucherType VoucherKind { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    private List<SeasonDto>? _seasons;
+    private List<PartyDto>? _parties;
+    private List<ChartOfAccountDto>? _accounts;
+    private List<VoucherDto>? _vouchers;
+    private string? _error;
+
+    private DateTime _date = DateTime.Today;
+    private int _seasonId;
+    private decimal _amount;
+    private string? _refNo;
+    private string? _description;
+
+    private LedgerPartyRefType _fromType = LedgerPartyRefType.Cash;
+    private int? _fromPartyId;
+    private int? _fromAccountId;
+    private LedgerPartyRefType _toType = LedgerPartyRefType.Party;
+    private int? _toPartyId;
+    private int? _toAccountId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _seasons = await Api.GetSeasonsAsync();
+        _parties = await Api.GetPartiesAsync();
+        _accounts = await Api.GetChartOfAccountsAsync();
+        if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
+        if (_parties.Count > 0) { _fromPartyId = _parties[0].Id; _toPartyId = _parties[0].Id; }
+        if (_accounts.Count > 0) { _fromAccountId = _accounts[0].Id; _toAccountId = _accounts[0].Id; }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _vouchers = await Api.GetVouchersAsync(VoucherKind); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var request = new CreatePaymentOrReceiptRequest(
+            VoucherKind, _date, _seasonId, _amount, _refNo, _description,
+            _fromType, _fromPartyId, _fromAccountId,
+            _toType, _toPartyId, _toAccountId);
+        try
+        {
+            if (VoucherKind == VoucherType.Payment) await Api.CreatePaymentAsync(request);
+            else await Api.CreateReceiptAsync(request);
+            _amount = 0; _refNo = null; _description = null;
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

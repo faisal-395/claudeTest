@@ -1,0 +1,109 @@
+@page "/ledger"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Ledger</h1>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="max-width:900px;">
+        <div>
+            <label>View</label>
+            <select @bind="_mode">
+                <option value="party">Party</option>
+                <option value="account">Chart of Accounts</option>
+            </select>
+        </div>
+        @if (_mode == "party")
+        {
+            <div>
+                <label>Party</label>
+                <select @bind="_partyId">
+                    @if (_parties is not null) { @foreach (var p in _parties) { <option value="@p.Id">@p.Name</option> } }
+                </select>
+            </div>
+        }
+        else
+        {
+            <div>
+                <label>Account</label>
+                <select @bind="_accountId">
+                    @if (_accounts is not null) { @foreach (var a in _accounts) { <option value="@a.Id">@a.Code - @a.Name</option> } }
+                </select>
+            </div>
+        }
+        <div><label>From</label><input type="date" @bind="_from" /></div>
+        <div><label>To</label><input type="date" @bind="_to" /></div>
+        <div style="grid-column: span 2;"><button class="btn" @onclick="LoadAsync">Show Ledger</button></div>
+    </div>
+
+    @{
+        var rows = _partyLedger?.Rows ?? _accountLedger?.Rows;
+    }
+
+    @if (_partyLedger is not null)
+    {
+        <h3 style="margin-top:20px;">@_partyLedger.PartyName — Opening: @_partyLedger.OpeningBalance.ToString("N2"), Closing: @_partyLedger.ClosingBalance.ToString("N2")</h3>
+    }
+    else if (_accountLedger is not null)
+    {
+        <h3 style="margin-top:20px;">@_accountLedger.AccountCode - @_accountLedger.AccountName — Closing: @_accountLedger.ClosingBalance.ToString("N2")</h3>
+    }
+
+    @if (rows is not null)
+    {
+        <table class="data-grid">
+            <thead><tr><th>Date</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+            <tbody>
+                @foreach (var r in rows)
+                {
+                    <tr>
+                        <td>@r.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@r.Description</td>
+                        <td>@(r.Debit > 0 ? r.Debit.ToString("N2") : "")</td>
+                        <td>@(r.Credit > 0 ? r.Credit.ToString("N2") : "")</td>
+                        <td>@r.RunningBalance.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<PartyDto>? _parties;
+    private List<ChartOfAccountDto>? _accounts;
+    private PartyLedgerDto? _partyLedger;
+    private AccountLedgerDto? _accountLedger;
+    private string? _error;
+
+    private string _mode = "party";
+    private int _partyId;
+    private int _accountId;
+    private DateTime? _from;
+    private DateTime? _to;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _parties = await Api.GetPartiesAsync();
+        _accounts = await Api.GetChartOfAccountsAsync();
+        if (_parties.Count > 0) _partyId = _parties[0].Id;
+        if (_accounts.Count > 0) _accountId = _accounts[0].Id;
+    }
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        _partyLedger = null;
+        _accountLedger = null;
+        try
+        {
+            if (_mode == "party") _partyLedger = await Api.GetPartyLedgerAsync(_partyId, _from, _to);
+            else _accountLedger = await Api.GetAccountLedgerAsync(_accountId, _from, _to);
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

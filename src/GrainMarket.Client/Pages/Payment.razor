@@ -1,0 +1,6 @@
+@page "/payment"
+@inject ApiClient Api
+
+<RequireAuth>
+    <VoucherForm VoucherKind="VoucherType.Payment" Title="Payment Voucher" />
+</RequireAuth>

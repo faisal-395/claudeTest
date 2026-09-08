@@ -1,0 +1,141 @@
+@page "/setup/chart-of-accounts"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Chart of Accounts</h1>
+    <p style="color:#777;">Accounts marked "Protected" are only visible to the roles you allow — enforced by the server, not just hidden here.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="margin-bottom:20px;">
+        <div><label>Code</label><input @bind="_code" /></div>
+        <div><label>Name</label><input @bind="_name" /></div>
+        <div><label>Name (Urdu)</label><input class="rtl-urdu" @bind="_nameUrdu" /></div>
+        <div>
+            <label>Account Type</label>
+            <select @bind="_accountType">
+                @foreach (var t in Enum.GetValues<AccountType>())
+                {
+                    <option value="@t">@t</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label><input type="checkbox" @bind="_isProtected" /> Protected (restrict by role)</label>
+        </div>
+        @if (_isProtected && _roles is not null)
+        {
+            <div>
+                <label>Allowed Roles</label>
+                @foreach (var r in _roles)
+                {
+                    <label style="display:inline-block;margin-right:10px;">
+                        <input type="checkbox" checked="@_allowedRoleIds.Contains(r.Id)" @onchange="e => ToggleRole(r.Id, (bool)e.Value!)" /> @r.Name
+                    </label>
+                }
+            </div>
+        }
+        <div style="grid-column: span 2;">
+            <button class="btn" @onclick="SaveAsync">@(_editingId is null ? "Add Account" : "Update Account")</button>
+            @if (_editingId is not null)
+            {
+                <button class="btn secondary" @onclick="ResetForm">Cancel</button>
+            }
+        </div>
+    </div>
+
+    @if (_accounts is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Protected</th><th>Balance</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var a in _accounts)
+                {
+                    <tr>
+                        <td>@a.Code</td>
+                        <td>@a.Name</td>
+                        <td>@a.AccountType</td>
+                        <td>@(a.IsProtected ? "Yes" : "")</td>
+                        <td>@a.CurrentBalance.ToString("N2")</td>
+                        <td>
+                            <button class="btn secondary" @onclick="() => Edit(a)">Edit</button>
+                            <button class="btn danger" @onclick="() => DeleteAsync(a.Id)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<ChartOfAccountDto>? _accounts;
+    private List<RoleDto>? _roles;
+    private int? _editingId;
+    private string? _error;
+
+    private string _code = "";
+    private string _name = "";
+    private string? _nameUrdu;
+    private AccountType _accountType = AccountType.Asset;
+    private bool _isProtected;
+    private List<int> _allowedRoleIds = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _roles = await Api.GetRolesAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _accounts = await Api.GetChartOfAccountsAsync(includeInactive: true); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private void ToggleRole(int roleId, bool isChecked)
+    {
+        if (isChecked) { if (!_allowedRoleIds.Contains(roleId)) _allowedRoleIds.Add(roleId); }
+        else _allowedRoleIds.Remove(roleId);
+    }
+
+    private void Edit(ChartOfAccountDto a)
+    {
+        _editingId = a.Id;
+        _code = a.Code; _name = a.Name; _nameUrdu = a.NameUrdu; _accountType = a.AccountType;
+        _isProtected = a.IsProtected; _allowedRoleIds = new List<int>(a.AllowedRoleIds);
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null; _code = ""; _name = ""; _nameUrdu = null;
+        _accountType = AccountType.Asset; _isProtected = false; _allowedRoleIds = new();
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var request = new UpsertChartOfAccountRequest(_code, _name, _nameUrdu, _accountType, null, _isProtected, true, _allowedRoleIds);
+        try
+        {
+            if (_editingId is null) await Api.CreateChartOfAccountAsync(request);
+            else await Api.UpdateChartOfAccountAsync(_editingId.Value, request);
+            ResetForm();
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        try { await Api.DeleteChartOfAccountAsync(id); await LoadAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

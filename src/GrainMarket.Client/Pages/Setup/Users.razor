@@ -1,0 +1,113 @@
+@page "/setup/users"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">User Account</h1>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="margin-bottom:20px;">
+        <div><label>Username</label><input @bind="_username" disabled="@(_editingId is not null)" /></div>
+        <div><label>Full Name</label><input @bind="_fullName" /></div>
+        <div>
+            <label>Role</label>
+            <select @bind="_roleId">
+                @if (_roles is not null)
+                {
+                    @foreach (var r in _roles)
+                    {
+                        <option value="@r.Id">@r.Name</option>
+                    }
+                }
+            </select>
+        </div>
+        <div><label>@(_editingId is null ? "Password" : "New Password (leave blank to keep current)")</label><input type="password" @bind="_password" /></div>
+        <div><label><input type="checkbox" @bind="_isActive" /> Active</label></div>
+        <div style="grid-column: span 2;">
+            <button class="btn" @onclick="SaveAsync">@(_editingId is null ? "Add User" : "Update User")</button>
+            @if (_editingId is not null) { <button class="btn secondary" @onclick="ResetForm">Cancel</button> }
+        </div>
+    </div>
+
+    @if (_users is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>Username</th><th>Full Name</th><th>Role</th><th>Active</th><th>Last Login</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var u in _users)
+                {
+                    <tr>
+                        <td>@u.Username</td>
+                        <td>@u.FullName</td>
+                        <td>@u.RoleName</td>
+                        <td>@(u.IsActive ? "Yes" : "No")</td>
+                        <td>@(u.LastLoginAtUtc?.ToLocalTime().ToString("g"))</td>
+                        <td><button class="btn secondary" @onclick="() => Edit(u)">Edit</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<UserDto>? _users;
+    private List<RoleDto>? _roles;
+    private int? _editingId;
+    private string? _error;
+
+    private string _username = "";
+    private string _fullName = "";
+    private int _roleId;
+    private string _password = "";
+    private bool _isActive = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _roles = await Api.GetRolesAsync();
+        if (_roles.Count > 0) _roleId = _roles[0].Id;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _users = await Api.GetUsersAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private void Edit(UserDto u)
+    {
+        _editingId = u.Id; _username = u.Username; _fullName = u.FullName; _roleId = u.RoleId; _isActive = u.IsActive; _password = "";
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null; _username = ""; _fullName = ""; _roleId = _roles?.FirstOrDefault()?.Id ?? 0; _password = ""; _isActive = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        try
+        {
+            if (_editingId is null)
+            {
+                await Api.CreateUserAsync(new CreateUserRequest(_username, _fullName, _password, _roleId, _isActive));
+            }
+            else
+            {
+                await Api.UpdateUserAsync(_editingId.Value, new UpdateUserRequest(_fullName, _roleId, _isActive, string.IsNullOrWhiteSpace(_password) ? null : _password));
+            }
+            ResetForm();
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

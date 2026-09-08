@@ -1,0 +1,47 @@
+@page "/trading"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Trading (Own-Account Stock Position)</h1>
+    <p style="color:#777;">Purchase vs. Sale for stock the business owns outright — separate from the commission-based Kachi/Pakki flow.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    @if (_positions is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid" style="max-width:900px;">
+            <thead><tr><th>Product</th><th>Purchased Qty</th><th>Sold Qty</th><th>Net Position</th><th>Purchase Value</th><th>Sale Value</th></tr></thead>
+            <tbody>
+                @foreach (var p in _positions)
+                {
+                    <tr>
+                        <td>@p.ProductName</td>
+                        <td>@p.PurchasedQty.ToString("N2")</td>
+                        <td>@p.SoldQty.ToString("N2")</td>
+                        <td>@p.NetPositionQty.ToString("N2")</td>
+                        <td>@p.PurchaseValue.ToString("N2")</td>
+                        <td>@p.SaleValue.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<TradingProductPositionDto>? _positions;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _positions = await Api.GetTradingStockPositionAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

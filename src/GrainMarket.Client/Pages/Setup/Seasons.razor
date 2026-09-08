@@ -1,0 +1,86 @@
+@page "/setup/seasons"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Seasons</h1>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="margin-bottom:20px;">
+        <div><label>Name (e.g. 2025-26)</label><input @bind="_name" /></div>
+        <div><label>Start Date</label><input type="date" @bind="_startDate" /></div>
+        <div><label>End Date (optional)</label><input type="date" @bind="_endDate" /></div>
+        <div style="grid-column: span 2;">
+            <button class="btn" @onclick="SaveAsync">@(_editingId is null ? "Add Season" : "Update Season")</button>
+            @if (_editingId is not null) { <button class="btn secondary" @onclick="ResetForm">Cancel</button> }
+        </div>
+    </div>
+
+    @if (_seasons is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>Name</th><th>Start</th><th>End</th><th>Active</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var s in _seasons)
+                {
+                    <tr>
+                        <td>@s.Name</td>
+                        <td>@s.StartDate.ToString("yyyy-MM-dd")</td>
+                        <td>@(s.EndDate?.ToString("yyyy-MM-dd"))</td>
+                        <td>@(s.IsActive ? "Yes" : "No")</td>
+                        <td><button class="btn secondary" @onclick="() => Edit(s)">Edit</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<SeasonDto>? _seasons;
+    private int? _editingId;
+    private string? _error;
+
+    private string _name = "";
+    private DateTime _startDate = DateTime.Today;
+    private DateTime? _endDate;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try { _seasons = await Api.GetSeasonsAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private void Edit(SeasonDto s)
+    {
+        _editingId = s.Id; _name = s.Name; _startDate = s.StartDate; _endDate = s.EndDate;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null; _name = ""; _startDate = DateTime.Today; _endDate = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var request = new UpsertSeasonRequest(_name, _startDate, _endDate, true);
+        try
+        {
+            if (_editingId is null) await Api.CreateSeasonAsync(request);
+            else await Api.UpdateSeasonAsync(_editingId.Value, request);
+            ResetForm();
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}
