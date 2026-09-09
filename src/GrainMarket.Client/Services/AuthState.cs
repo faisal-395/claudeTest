@@ -24,12 +24,20 @@ public class AuthState
 
     public event Action? Changed;
 
-    public void SetSession(LoginResponse login, List<RolePermissionDto> permissions)
+    /// <summary>Attaches the token immediately after login, before any follow-up authenticated call
+    /// (e.g. fetching role permissions) — TokenAuthHandler reads Token on every outgoing request,
+    /// so a follow-up call made before this runs goes out unauthenticated and gets a 401.</summary>
+    public void SetToken(LoginResponse login)
     {
         Token = login.Token;
         Username = login.Username;
         FullName = login.FullName;
         RoleName = login.RoleName;
+        Changed?.Invoke();
+    }
+
+    public void SetPermissions(List<RolePermissionDto> permissions)
+    {
         Permissions = permissions;
         Changed?.Invoke();
     }

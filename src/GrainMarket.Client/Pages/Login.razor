@@ -45,11 +45,14 @@
         {
             var login = await Api.LoginAsync(new LoginRequest(_model.Username, _model.Password));
 
+            // Token must be attached before any follow-up authenticated call — GetRolesAsync
+            // below needs it, or it 401s.
+            AuthState.SetToken(login);
+            await AuthState.PersistTokenAsync();
+
             var roles = await Api.GetRolesAsync();
             var role = roles.FirstOrDefault(r => r.Name == login.RoleName);
-
-            AuthState.SetSession(login, role?.Permissions ?? new());
-            await AuthState.PersistTokenAsync();
+            AuthState.SetPermissions(role?.Permissions ?? new());
 
             Nav.NavigateTo("/", forceLoad: true);
         }
