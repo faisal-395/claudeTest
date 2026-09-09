@@ -21,6 +21,8 @@ public class Purchase : BaseEntity
     public PrintFormat PrintFormat { get; set; } = PrintFormat.Thermal;
     public PrintLanguage PrintLanguage { get; set; } = PrintLanguage.English;
 
+    public bool IsCancelled { get; set; }
+
     public ICollection<PurchaseLine> Lines { get; set; } = new List<PurchaseLine>();
 }
 

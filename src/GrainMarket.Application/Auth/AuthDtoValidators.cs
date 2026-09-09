@@ -10,3 +10,11 @@ public class LoginRequestValidator : AbstractValidator<LoginRequest>
         RuleFor(x => x.Password).NotEmpty().MaximumLength(200);
     }
 }
+
+public class RefreshTokenRequestValidator : AbstractValidator<RefreshTokenRequest>
+{
+    public RefreshTokenRequestValidator()
+    {
+        RuleFor(x => x.RefreshToken).NotEmpty();
+    }
+}

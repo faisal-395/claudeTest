@@ -1,0 +1,136 @@
+@* Type-to-filter dropdown used in place of a native <select> for long lists (farmers, buyers,
+   products, accounts…). Native <select> popups render as an OS-level overlay inside the
+   Windows WebView2 host and can appear detached from the control (wrong position/size) after
+   the window is resized, moved, or the display's DPI scaling kicks in — this renders entirely
+   inside normal page flow instead, sidestepping that. *@
+@typeparam TItem
+
+<div class="search-select" tabindex="-1" @onfocusout="HandleFocusOut">
+    <input class="search-select-input" type="text" autocomplete="off"
+           value="@_displayText"
+           placeholder="@Placeholder"
+           @oninput="OnInput"
+           @onfocus="OnFocus"
+           @onkeydown="OnKeyDown" />
+    @if (_open && _filtered.Count > 0)
+    {
+        <div class="search-select-menu">
+            @for (var i = 0; i < _filtered.Count; i++)
+            {
+                var item = _filtered[i];
+                var index = i;
+                <div class="search-select-option @(index == _highlighted ? "highlighted" : "")"
+                     @onmousedown:preventDefault="true"
+                     @onmousedown="() => Select(item)">
+                    @TextSelector(item)
+                </div>
+            }
+        </div>
+    }
+    @if (_open && _filtered.Count == 0)
+    {
+        <div class="search-select-menu">
+            <div class="search-select-option search-select-empty">No matches</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<TItem>? Items { get; set; }
+    [Parameter, EditorRequired] public Func<TItem, int> IdSelector { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<TItem, string> TextSelector { get; set; } = default!;
+    [Parameter] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Type to search…";
+
+    private List<TItem> _filtered = new();
+    private string _query = string.Empty;
+    private string _displayText = string.Empty;
+    private bool _open;
+    private int _highlighted;
+    private int? _lastValue;
+
+    protected override void OnParametersSet()
+    {
+        var items = (Items ?? Enumerable.Empty<TItem>()).ToList();
+
+        if (!_open && Value != _lastValue)
+        {
+            var selected = items.FirstOrDefault(i => IdSelector(i) == Value);
+            _displayText = selected is not null ? TextSelector(selected) : string.Empty;
+        }
+        _lastValue = Value;
+
+        Filter(items);
+    }
+
+    private void Filter(List<TItem>? items = null)
+    {
+        var source = items ?? (Items ?? Enumerable.Empty<TItem>()).ToList();
+        _filtered = string.IsNullOrWhiteSpace(_query)
+            ? source
+            : source.Where(i => TextSelector(i).Contains(_query, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (_highlighted >= _filtered.Count)
+        {
+            _highlighted = 0;
+        }
+    }
+
+    private void OnFocus()
+    {
+        _open = true;
+        _query = string.Empty;
+        _displayText = string.Empty;
+        Filter();
+    }
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        _query = e.Value?.ToString() ?? string.Empty;
+        _displayText = _query;
+        _open = true;
+        _highlighted = 0;
+        Filter();
+    }
+
+    private void HandleFocusOut()
+    {
+        _open = false;
+        var items = (Items ?? Enumerable.Empty<TItem>()).ToList();
+        var selected = items.FirstOrDefault(i => IdSelector(i) == Value);
+        _displayText = selected is not null ? TextSelector(selected) : string.Empty;
+    }
+
+    private async Task Select(TItem item)
+    {
+        _open = false;
+        var newValue = IdSelector(item);
+        _displayText = TextSelector(item);
+        _lastValue = newValue;
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                if (_filtered.Count > 0) _highlighted = Math.Min(_highlighted + 1, _filtered.Count - 1);
+                _open = true;
+                break;
+            case "ArrowUp":
+                if (_filtered.Count > 0) _highlighted = Math.Max(_highlighted - 1, 0);
+                _open = true;
+                break;
+            case "Enter":
+                if (_open && _filtered.Count > 0)
+                {
+                    await Select(_filtered[_highlighted]);
+                }
+                break;
+            case "Escape":
+                _open = false;
+                break;
+        }
+    }
+}

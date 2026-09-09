@@ -200,6 +200,46 @@ one helper, covered by `UnitConversionCalculatorTests`.
   mirror-image approach `CancelAsync` uses) and posts fresh entries for the new terms, rather than
   mutating any `LedgerEntry` row in place.
 
+## Session persistence: refresh tokens
+
+Access tokens are short-lived (`Jwt:ExpiryHours`, default 8h). Login and
+`POST /api/auth/refresh` both return a `RefreshToken` alongside the JWT — a random 64-byte value
+whose SHA-256 hash is stored in the `RefreshTokens` table (`Jwt:RefreshTokenExpiryDays`, default
+30 days); the plaintext is only ever handed to the client. `TokenAuthHandler`
+(`Client/Services/TokenAuthHandler.cs`) attaches the JWT to every request and:
+
+- **Proactively refreshes** shortly before the access token expires, so a request made after the
+  app has sat idle for hours doesn't even try the stale token.
+- **Reactively refreshes and retries once** if a request still comes back 401 (clock skew, or the
+  refresh didn't happen for some reason) — the original request is cloned and resent with the new
+  token.
+- **Rotates** the refresh token on every use (`AuthService.RefreshAsync` revokes the old one and
+  issues a new pair) — reusing a spent refresh token is rejected.
+- If the refresh token itself is gone, expired, or revoked, `AuthState.ClearDueToExpiry()` clears
+  the session and raises `SessionExpired`, which `RequireAuth` (wrapping every protected page)
+  turns into a redirect to `/login?expired=1` with a plain-language message — instead of the app
+  ever falling through to Blazor's fatal "An unhandled error has occurred" overlay.
+
+## Searchable dropdowns
+
+Native `<select>` popups are rendered by WebView2 as an OS-level overlay outside Blazor's own
+layout — after the host window is resized, moved, or hits a display's DPI scaling, that popup can
+render detached from the control it belongs to. `Components/SearchSelect.razor` replaces it for
+every farmer/buyer/product/party/account picker: a type-to-filter text input plus a menu that
+renders in normal page flow, so it can never separate from its control. Static, short enum lists
+(season, role, print format, account type, …) are left as native `<select>` — no benefit there,
+and it keeps those forms simpler.
+
+## Cancelling Sale Invoices and Purchases
+
+Kachi, Pakki and every Voucher type could already be reversed (`Cancel`); Sale Invoice and
+Purchase could not — there was no way for anyone, including Owner/Admin, to undo a mistaken entry
+short of a database edit. Both now carry an `IsCancelled` flag and a
+`POST /api/{sale-invoices|purchases}/{id}/cancel` endpoint (gated by the module's `Delete`
+permission, same as every other cancel action) that posts mirror-image ledger entries — customer/
+supplier, income/expense account, and any cash applied — rather than deleting the row, preserving
+the audit trail the same way Kachi/Pakki/Voucher already do.
+
 ## Open items — resolved
 
 The spec flagged four open items to confirm before/while building. Given the instruction to

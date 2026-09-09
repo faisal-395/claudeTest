@@ -12,12 +12,14 @@ public class PurchaseService : IPurchaseService
     private readonly IApplicationDbContext _db;
     private readonly ILedgerPostingService _ledger;
     private readonly IInvoiceNumberGenerator _numberGenerator;
+    private readonly IDateTimeProvider _clock;
 
-    public PurchaseService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator)
+    public PurchaseService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock)
     {
         _db = db;
         _ledger = ledger;
         _numberGenerator = numberGenerator;
+        _clock = clock;
     }
 
     public async Task<List<PurchaseDto>> GetAllAsync(CancellationToken ct = default)
@@ -100,6 +102,31 @@ public class PurchaseService : IPurchaseService
         return await GetByIdAsync(purchase.Id, ct);
     }
 
+    public async Task CancelAsync(int id, CancellationToken ct = default)
+    {
+        var purchase = await LoadAsync(id, ct);
+        if (purchase.IsCancelled) return;
+
+        purchase.IsCancelled = true;
+        purchase.UpdatedAtUtc = _clock.UtcNow;
+
+        var purchaseExpenseAccountId = await GetAccountIdAsync(DomainConstants.PurchaseExpenseAccountCode, ct);
+        var cashAccountId = await GetAccountIdAsync(DomainConstants.CashAccountCode, ct);
+        var reason = $"Reversal: {purchase.InvoiceNo} cancelled";
+
+        await _ledger.PostAccountEntryAsync(purchaseExpenseAccountId, _clock.UtcNow, 0, purchase.NetBill, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+        await _ledger.PostPartyEntryAsync(purchase.SupplierId, _clock.UtcNow, purchase.NetBill, 0, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+
+        var cashApplied = Math.Min(purchase.PaidCash, purchase.NetBill);
+        if (cashApplied > 0)
+        {
+            await _ledger.PostPartyEntryAsync(purchase.SupplierId, _clock.UtcNow, 0, cashApplied, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+            await _ledger.PostAccountEntryAsync(cashAccountId, _clock.UtcNow, cashApplied, 0, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+        }
+
+        await _db.SaveChangesAsync(ct);
+    }
+
     private async Task<int> GetAccountIdAsync(string code, CancellationToken ct)
     {
         var account = await _db.ChartOfAccounts.FirstOrDefaultAsync(a => a.Code == code, ct)
@@ -116,6 +143,6 @@ public class PurchaseService : IPurchaseService
 
     private static PurchaseDto ToDto(Purchase p) => new(
         p.Id, p.InvoiceNo, p.BillNo, p.Date, p.SupplierId, p.Supplier.Name,
-        p.TotalBill, p.TotalDiscount, p.NetBill, p.PaidCash, p.PrintFormat, p.PrintLanguage,
+        p.TotalBill, p.TotalDiscount, p.NetBill, p.PaidCash, p.PrintFormat, p.PrintLanguage, p.IsCancelled,
         p.Lines.Select(l => new PurchaseLineDto(l.ProductId, l.Product.Name, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice)).ToList());
 }

@@ -8,7 +8,7 @@ public record SaleInvoiceLineRequest(int ProductId, decimal Quantity, decimal Pr
 public record SaleInvoiceDto(
     int Id, string InvoiceNo, string? BillNo, DateTime Date, int CustomerId, string CustomerName,
     decimal TotalBill, decimal TotalDiscount, decimal NetBill, decimal ReceivedCash, decimal PayCash,
-    PrintFormat PrintFormat, PrintLanguage PrintLanguage, List<SaleInvoiceLineDto> Lines);
+    PrintFormat PrintFormat, PrintLanguage PrintLanguage, bool IsCancelled, List<SaleInvoiceLineDto> Lines);
 
 public record CreateSaleInvoiceRequest(
     DateTime Date, string? BillNo, int CustomerId, List<SaleInvoiceLineRequest> Lines,

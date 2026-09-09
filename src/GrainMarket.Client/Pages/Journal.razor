@@ -22,17 +22,13 @@
 
         <div>
             <label>Debit Account</label>
-            <select @bind="_debitAccountId">
-                @if (_accounts is not null) { @foreach (var a in _accounts) { <option value="@a.Id">@a.Code - @a.Name</option> } }
-            </select>
+            <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" @bind-Value="_debitAccountId" Placeholder="Search account…" />
         </div>
         <div><label>Debit Description</label><input @bind="_debitDescription" /></div>
 
         <div>
             <label>Credit Account</label>
-            <select @bind="_creditAccountId">
-                @if (_accounts is not null) { @foreach (var a in _accounts) { <option value="@a.Id">@a.Code - @a.Name</option> } }
-            </select>
+            <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" @bind-Value="_creditAccountId" Placeholder="Search account…" />
         </div>
         <div><label>Credit Description</label><input @bind="_creditDescription" /></div>
 

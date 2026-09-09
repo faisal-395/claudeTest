@@ -106,10 +106,12 @@ public class ApiClient
     public Task<List<SaleInvoiceDto>> GetSaleInvoicesAsync() => GetAsync<List<SaleInvoiceDto>>("api/sale-invoices");
     public Task<SaleInvoiceDto> GetSaleInvoiceAsync(int id) => GetAsync<SaleInvoiceDto>($"api/sale-invoices/{id}");
     public Task<SaleInvoiceDto> CreateSaleInvoiceAsync(CreateSaleInvoiceRequest request) => PostAsync<CreateSaleInvoiceRequest, SaleInvoiceDto>("api/sale-invoices", request);
+    public Task CancelSaleInvoiceAsync(int id) => PostAsync($"api/sale-invoices/{id}/cancel");
 
     public Task<List<PurchaseDto>> GetPurchasesAsync() => GetAsync<List<PurchaseDto>>("api/purchases");
     public Task<PurchaseDto> GetPurchaseAsync(int id) => GetAsync<PurchaseDto>($"api/purchases/{id}");
     public Task<PurchaseDto> CreatePurchaseAsync(CreatePurchaseRequest request) => PostAsync<CreatePurchaseRequest, PurchaseDto>("api/purchases", request);
+    public Task CancelPurchaseAsync(int id) => PostAsync($"api/purchases/{id}/cancel");
 
     // --- Vouchers: Payment / Receipt / Journal -----------------------------------------------------
     public Task<List<VoucherDto>> GetVouchersAsync(VoucherType? type = null, int? seasonId = null) =>

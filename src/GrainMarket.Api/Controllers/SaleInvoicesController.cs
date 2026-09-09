@@ -32,4 +32,12 @@ public class SaleInvoicesController : ControllerBase
         var result = await _service.CreateAsync(request, ct);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
+
+    [ModulePermission(ModuleName.SaleInvoice, PermissionAction.Delete)]
+    [HttpPost("{id:int}/cancel")]
+    public async Task<IActionResult> Cancel(int id, CancellationToken ct)
+    {
+        await _service.CancelAsync(id, ct);
+        return NoContent();
+    }
 }

@@ -1,5 +1,6 @@
 @inject AuthState AuthState
 @inject NavigationManager Nav
+@implements IDisposable
 
 @if (AuthState.IsAuthenticated)
 {
@@ -11,9 +12,21 @@
 
     protected override void OnInitialized()
     {
+        AuthState.SessionExpired += OnSessionExpired;
+
         if (!AuthState.IsAuthenticated)
         {
             Nav.NavigateTo("/login");
         }
     }
+
+    /// <summary>The session couldn't be kept alive (refresh token missing/expired/revoked) —
+    /// send the user to login with a clear reason instead of letting the page that triggered it
+    /// show a raw 401 or crash.</summary>
+    private void OnSessionExpired()
+    {
+        InvokeAsync(() => Nav.NavigateTo("/login?expired=1", forceLoad: true));
+    }
+
+    public void Dispose() => AuthState.SessionExpired -= OnSessionExpired;
 }

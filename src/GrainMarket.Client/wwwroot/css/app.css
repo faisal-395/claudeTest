@@ -137,6 +137,52 @@ table.data-grid tbody tr:hover {
     box-sizing: border-box;
 }
 
+/* SearchSelect — replaces native <select> for long pickers (farmer/buyer/product/account) so the
+   options render in normal page flow instead of the WebView2 native popup, which can appear
+   detached from the control after a resize or DPI change. */
+.search-select {
+    position: relative;
+}
+
+.search-select-input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+    background: white;
+}
+
+.search-select-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    max-height: 220px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+
+.search-select-option {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.search-select-option:hover, .search-select-option.highlighted {
+    background: #eef4ee;
+}
+
+.search-select-empty {
+    color: #999;
+    font-style: italic;
+    cursor: default;
+}
+
 .btn {
     padding: 8px 18px;
     border: none;

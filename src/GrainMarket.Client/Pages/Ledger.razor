@@ -21,18 +21,14 @@
         {
             <div>
                 <label>Party</label>
-                <select @bind="_partyId">
-                    @if (_parties is not null) { @foreach (var p in _parties) { <option value="@p.Id">@p.Name</option> } }
-                </select>
+                <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" @bind-Value="_partyId" Placeholder="Search party…" />
             </div>
         }
         else
         {
             <div>
                 <label>Account</label>
-                <select @bind="_accountId">
-                    @if (_accounts is not null) { @foreach (var a in _accounts) { <option value="@a.Id">@a.Code - @a.Name</option> } }
-                </select>
+                <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" @bind-Value="_accountId" Placeholder="Search account…" />
             </div>
         }
         <div><label>From</label><input type="date" @bind="_from" /></div>

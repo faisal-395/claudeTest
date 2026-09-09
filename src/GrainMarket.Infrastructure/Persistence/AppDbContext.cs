@@ -20,6 +20,7 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<DeductionRule> DeductionRules => Set<DeductionRule>();
     public DbSet<Season> Seasons => Set<Season>();
     public DbSet<Kachi> Kachis => Set<Kachi>();

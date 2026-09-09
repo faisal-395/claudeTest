@@ -37,6 +37,15 @@ public static class MauiProgram
             client.BaseAddress = new Uri(settings.ApiBaseUrl);
         }).AddHttpMessageHandler<TokenAuthHandler>();
 
+        // Deliberately has no TokenAuthHandler — used only by TokenAuthHandler itself to call
+        // api/auth/refresh, which must go out unauthenticated (it carries its own refresh token).
+        // Attaching the same handler here would recurse into itself.
+        builder.Services.AddHttpClient("AuthRefresh", (sp, client) =>
+        {
+            var settings = sp.GetRequiredService<AppSettings>();
+            client.BaseAddress = new Uri(settings.ApiBaseUrl);
+        });
+
         return builder.Build();
     }
 }

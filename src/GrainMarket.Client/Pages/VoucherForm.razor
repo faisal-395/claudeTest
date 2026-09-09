@@ -31,18 +31,14 @@
     {
         <div>
             <label>From Party</label>
-            <select @bind="_fromPartyId">
-                @if (_parties is not null) { @foreach (var p in _parties) { <option value="@p.Id">@p.Name (@p.CurrentBalance.ToString("N0"))</option> } }
-            </select>
+            <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
         </div>
     }
     else if (_fromType == LedgerPartyRefType.Account)
     {
         <div>
             <label>From Account</label>
-            <select @bind="_fromAccountId">
-                @if (_accounts is not null) { @foreach (var a in _accounts) { <option value="@a.Id">@a.Code - @a.Name (@a.CurrentBalance.ToString("N0"))</option> } }
-            </select>
+            <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@(a => $"{DisplayText.Account(a)} ({a.CurrentBalance:N0})")" Value="@(_fromAccountId ?? 0)" ValueChanged="@(v => _fromAccountId = v)" Placeholder="Search account…" />
         </div>
     }
 
@@ -59,18 +55,14 @@
     {
         <div>
             <label>To Party</label>
-            <select @bind="_toPartyId">
-                @if (_parties is not null) { @foreach (var p in _parties) { <option value="@p.Id">@p.Name (@p.CurrentBalance.ToString("N0"))</option> } }
-            </select>
+            <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
         </div>
     }
     else if (_toType == LedgerPartyRefType.Account)
     {
         <div>
             <label>To Account</label>
-            <select @bind="_toAccountId">
-                @if (_accounts is not null) { @foreach (var a in _accounts) { <option value="@a.Id">@a.Code - @a.Name (@a.CurrentBalance.ToString("N0"))</option> } }
-            </select>
+            <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@(a => $"{DisplayText.Account(a)} ({a.CurrentBalance:N0})")" Value="@(_toAccountId ?? 0)" ValueChanged="@(v => _toAccountId = v)" Placeholder="Search account…" />
         </div>
     }
 

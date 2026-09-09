@@ -19,15 +19,11 @@
         </div>
         <div>
             <label>Farmer / کسان</label>
-            <select @bind="_farmerId">
-                @if (_farmers is not null) { @foreach (var f in _farmers) { <option value="@f.Id">@f.Name @(string.IsNullOrEmpty(f.NameUrdu) ? "" : $"— {f.NameUrdu}")</option> } }
-            </select>
+            <SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" @bind-Value="_farmerId" Placeholder="Search farmer…" />
         </div>
         <div>
             <label>Product / جنس</label>
-            <select @bind="_productId">
-                @if (_products is not null) { @foreach (var p in _products) { <option value="@p.Id">@p.Name @(string.IsNullOrEmpty(p.NameUrdu) ? "" : $"— {p.NameUrdu}")</option> } }
-            </select>
+            <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Search product…" />
         </div>
         <div><label>Man (maund) / مَن</label><input type="number" step="0.01" @bind="_man" /></div>
         <div><label>Kilo / کلو</label><input type="number" step="0.01" @bind="_kilo" /></div>
@@ -69,6 +65,8 @@
                         <td>@k.Total.ToString("N2")</td>
                         <td>@k.Status</td>
                         <td>
+                            <a href="#" @onclick="() => ToggleDetails(k.Id)" @onclick:preventDefault="true">@(_expandedId == k.Id ? "Hide" : "Details")</a>
+                            <text> | </text>
                             @if (k.Status == InvoiceStatus.Open)
                             {
                                 <a href="#" @onclick="() => Edit(k)" @onclick:preventDefault="true">Edit</a>
@@ -79,6 +77,33 @@
                             <a href="print/kachi/@k.Id">Print</a>
                         </td>
                     </tr>
+                    @if (_expandedId == k.Id)
+                    {
+                        <tr>
+                            <td colspan="9" style="background:#f7f9f7;">
+                                @if (k.DeductionLines.Count == 0)
+                                {
+                                    <span style="color:#777;">No deductions on this Kachi.</span>
+                                }
+                                else
+                                {
+                                    <table style="width:auto;min-width:280px;">
+                                        <thead><tr><th style="text-align:left;padding:2px 12px 2px 0;">Deduction</th><th style="text-align:left;padding:2px 12px;">اردو</th><th style="text-align:right;padding:2px 0;">Amount</th></tr></thead>
+                                        <tbody>
+                                            @foreach (var line in k.DeductionLines)
+                                            {
+                                                <tr>
+                                                    <td style="padding:2px 12px 2px 0;">@line.Name</td>
+                                                    <td class="rtl-urdu" style="padding:2px 12px;font-size:1rem;">@line.NameUrdu</td>
+                                                    <td style="text-align:right;padding:2px 0;">@line.Amount.ToString("N2")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                }
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>
@@ -92,6 +117,7 @@
     private List<ProductDto>? _products;
     private string? _error;
     private int? _editingId;
+    private int? _expandedId;
 
     private DateTime _date = DateTime.Today;
     private int _seasonId;
@@ -126,6 +152,8 @@
         try { _kachis = await Api.GetKachisAsync(); }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
+
+    private void ToggleDetails(int id) => _expandedId = _expandedId == id ? null : id;
 
     private void Edit(KachiDto k)
     {

@@ -17,6 +17,9 @@ public class JwtTokenService : IJwtTokenService
         _settings = settings.Value;
     }
 
+    public TimeSpan AccessTokenLifetime => TimeSpan.FromHours(_settings.ExpiryHours);
+    public TimeSpan RefreshTokenLifetime => TimeSpan.FromDays(_settings.RefreshTokenExpiryDays);
+
     public string GenerateToken(User user)
     {
         var claims = new List<Claim>

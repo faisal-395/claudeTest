@@ -17,6 +17,7 @@ public interface IApplicationDbContext
     DbSet<Role> Roles { get; }
     DbSet<RolePermission> RolePermissions { get; }
     DbSet<User> Users { get; }
+    DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<DeductionRule> DeductionRules { get; }
     DbSet<Season> Seasons { get; }
     DbSet<Kachi> Kachis { get; }

@@ -12,12 +12,14 @@ public class SaleInvoiceService : ISaleInvoiceService
     private readonly IApplicationDbContext _db;
     private readonly ILedgerPostingService _ledger;
     private readonly IInvoiceNumberGenerator _numberGenerator;
+    private readonly IDateTimeProvider _clock;
 
-    public SaleInvoiceService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator)
+    public SaleInvoiceService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock)
     {
         _db = db;
         _ledger = ledger;
         _numberGenerator = numberGenerator;
+        _clock = clock;
     }
 
     public async Task<List<SaleInvoiceDto>> GetAllAsync(CancellationToken ct = default)
@@ -101,6 +103,31 @@ public class SaleInvoiceService : ISaleInvoiceService
         return await GetByIdAsync(sale.Id, ct);
     }
 
+    public async Task CancelAsync(int id, CancellationToken ct = default)
+    {
+        var sale = await LoadAsync(id, ct);
+        if (sale.IsCancelled) return;
+
+        sale.IsCancelled = true;
+        sale.UpdatedAtUtc = _clock.UtcNow;
+
+        var salesIncomeAccountId = await GetAccountIdAsync(DomainConstants.SalesIncomeAccountCode, ct);
+        var cashAccountId = await GetAccountIdAsync(DomainConstants.CashAccountCode, ct);
+        var reason = $"Reversal: {sale.InvoiceNo} cancelled";
+
+        await _ledger.PostPartyEntryAsync(sale.CustomerId, _clock.UtcNow, 0, sale.NetBill, LedgerSourceType.Sale, sale.Id, reason, ct);
+        await _ledger.PostAccountEntryAsync(salesIncomeAccountId, _clock.UtcNow, sale.NetBill, 0, LedgerSourceType.Sale, sale.Id, reason, ct);
+
+        var cashApplied = Math.Min(sale.ReceivedCash, sale.NetBill);
+        if (cashApplied > 0)
+        {
+            await _ledger.PostAccountEntryAsync(cashAccountId, _clock.UtcNow, 0, cashApplied, LedgerSourceType.Sale, sale.Id, reason, ct);
+            await _ledger.PostPartyEntryAsync(sale.CustomerId, _clock.UtcNow, cashApplied, 0, LedgerSourceType.Sale, sale.Id, reason, ct);
+        }
+
+        await _db.SaveChangesAsync(ct);
+    }
+
     private async Task<int> GetAccountIdAsync(string code, CancellationToken ct)
     {
         var account = await _db.ChartOfAccounts.FirstOrDefaultAsync(a => a.Code == code, ct)
@@ -117,6 +144,6 @@ public class SaleInvoiceService : ISaleInvoiceService
 
     private static SaleInvoiceDto ToDto(SaleInvoice s) => new(
         s.Id, s.InvoiceNo, s.BillNo, s.Date, s.CustomerId, s.Customer.Name,
-        s.TotalBill, s.TotalDiscount, s.NetBill, s.ReceivedCash, s.PayCash, s.PrintFormat, s.PrintLanguage,
+        s.TotalBill, s.TotalDiscount, s.NetBill, s.ReceivedCash, s.PayCash, s.PrintFormat, s.PrintLanguage, s.IsCancelled,
         s.Lines.Select(l => new SaleInvoiceLineDto(l.ProductId, l.Product.Name, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice)).ToList());
 }

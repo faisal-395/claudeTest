@@ -22,4 +22,23 @@ public class AuthController : ControllerBase
         var response = await _authService.LoginAsync(request, ct);
         return Ok(response);
     }
+
+    /// <summary>Exchanges a still-valid refresh token for a new access/refresh token pair —
+    /// lets the client silently recover from an expired JWT (e.g. after the app sat idle)
+    /// instead of forcing the user back to the login screen.</summary>
+    [AllowAnonymous]
+    [HttpPost("refresh")]
+    public async Task<ActionResult<LoginResponse>> Refresh(RefreshTokenRequest request, CancellationToken ct)
+    {
+        var response = await _authService.RefreshAsync(request, ct);
+        return Ok(response);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(RefreshTokenRequest request, CancellationToken ct)
+    {
+        await _authService.LogoutAsync(request, ct);
+        return NoContent();
+    }
 }

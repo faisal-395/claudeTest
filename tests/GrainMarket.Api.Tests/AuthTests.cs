@@ -51,4 +51,62 @@ public class AuthTests : IClassFixture<CustomWebApplicationFactory>
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Login_ReturnsARefreshTokenAlongsideTheAccessToken()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(SeedData.DefaultAdminUsername, SeedData.DefaultAdminPassword));
+
+        var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        Assert.False(string.IsNullOrWhiteSpace(body!.RefreshToken));
+    }
+
+    [Fact]
+    public async Task Refresh_WithValidRefreshToken_IssuesANewTokenPairAndRevokesTheOld()
+    {
+        var client = _factory.CreateClient();
+        var login = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(SeedData.DefaultAdminUsername, SeedData.DefaultAdminPassword));
+        var loginBody = await login.Content.ReadFromJsonAsync<LoginResponse>();
+
+        var refreshResponse = await client.PostAsJsonAsync("/api/auth/refresh", new RefreshTokenRequest(loginBody!.RefreshToken));
+
+        Assert.Equal(HttpStatusCode.OK, refreshResponse.StatusCode);
+        var refreshed = await refreshResponse.Content.ReadFromJsonAsync<LoginResponse>();
+        Assert.NotNull(refreshed);
+        Assert.NotEqual(loginBody.Token, refreshed!.Token);
+        Assert.NotEqual(loginBody.RefreshToken, refreshed.RefreshToken);
+
+        // The old refresh token was rotated out — reusing it must fail.
+        var reuseResponse = await client.PostAsJsonAsync("/api/auth/refresh", new RefreshTokenRequest(loginBody.RefreshToken));
+        Assert.Equal(HttpStatusCode.Unauthorized, reuseResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_WithUnknownToken_ReturnsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/refresh", new RefreshTokenRequest("not-a-real-token"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Logout_RevokesTheRefreshTokenSoItCanNoLongerBeUsed()
+    {
+        var client = _factory.CreateClient();
+        var login = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest(SeedData.DefaultAdminUsername, SeedData.DefaultAdminPassword));
+        var loginBody = await login.Content.ReadFromJsonAsync<LoginResponse>();
+
+        var logoutResponse = await client.PostAsJsonAsync("/api/auth/logout", new RefreshTokenRequest(loginBody!.RefreshToken));
+        Assert.Equal(HttpStatusCode.NoContent, logoutResponse.StatusCode);
+
+        var refreshResponse = await client.PostAsJsonAsync("/api/auth/refresh", new RefreshTokenRequest(loginBody.RefreshToken));
+        Assert.Equal(HttpStatusCode.Unauthorized, refreshResponse.StatusCode);
+    }
 }

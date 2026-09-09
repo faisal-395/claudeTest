@@ -9,6 +9,10 @@
         <h2 style="color:#1B4332;margin-top:0;">Umer Farooq &amp; Brothers</h2>
         <p style="color:#666;margin-top:-8px;">Grain Market Management System</p>
 
+        @if (Expired == 1 && string.IsNullOrEmpty(_error))
+        {
+            <div class="error-banner">Your session expired after a period of inactivity — please sign in again.</div>
+        }
         @if (!string.IsNullOrEmpty(_error))
         {
             <div class="error-banner">@_error</div>
@@ -33,6 +37,8 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery] public int? Expired { get; set; }
+
     private readonly LoginFormModel _model = new();
     private string? _error;
     private bool _busy;

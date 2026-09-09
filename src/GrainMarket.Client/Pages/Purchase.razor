@@ -14,9 +14,7 @@
         <div><label>Date</label><input type="date" @bind="_date" /></div>
         <div>
             <label>Supplier</label>
-            <select @bind="_supplierId">
-                @if (_suppliers is not null) { @foreach (var s in _suppliers) { <option value="@s.Id">@s.Name</option> } }
-            </select>
+            <SearchSelect TItem="PartyDto" Items="_suppliers" IdSelector="@(s => s.Id)" TextSelector="@DisplayText.Party" @bind-Value="_supplierId" Placeholder="Search supplier…" />
         </div>
     </div>
 
@@ -29,9 +27,7 @@
                 var line = _lines[index];
                 <tr>
                     <td>
-                        <select value="@line.ProductId" @onchange="e => line.ProductId = int.Parse((string)e.Value!)">
-                            @if (_products is not null) { @foreach (var p in _products) { <option value="@p.Id">@p.Name</option> } }
-                        </select>
+                        <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@line.ProductId" ValueChanged="@(v => line.ProductId = v)" Placeholder="Search product…" />
                     </td>
                     <td><input type="number" step="0.01" value="@line.Quantity" @onchange="e => line.Quantity = ParseDecimal(e.Value)" /></td>
                     <td><input type="number" step="0.01" value="@line.Price" @onchange="e => line.Price = ParseDecimal(e.Value)" /></td>
@@ -60,7 +56,7 @@
     {
         <h3 style="margin-top:24px;">Recent Purchases</h3>
         <table class="data-grid" style="max-width:1100px;">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Supplier</th><th>Net Bill</th><th>Paid</th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Date</th><th>Supplier</th><th>Net Bill</th><th>Paid</th><th>Status</th><th></th></tr></thead>
             <tbody>
                 @foreach (var p in _purchases)
                 {
@@ -70,6 +66,13 @@
                         <td>@p.SupplierName</td>
                         <td>@p.NetBill.ToString("N2")</td>
                         <td>@p.PaidCash.ToString("N2")</td>
+                        <td>@(p.IsCancelled ? "Cancelled" : "Open")</td>
+                        <td>
+                            @if (!p.IsCancelled)
+                            {
+                                <a href="#" @onclick="() => CancelAsync(p.Id)" @onclick:preventDefault="true">Cancel</a>
+                            }
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -118,6 +121,13 @@
     }
 
     private static decimal ParseDecimal(object? value) => decimal.TryParse(value?.ToString(), out var d) ? d : 0;
+
+    private async Task CancelAsync(int id)
+    {
+        _error = null;
+        try { await Api.CancelPurchaseAsync(id); await LoadAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
 
     private async Task SaveAsync()
     {

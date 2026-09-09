@@ -26,21 +26,15 @@
         </div>
         <div>
             <label>Farmer / کسان</label>
-            <select @bind="_farmerId">
-                @if (_farmers is not null) { @foreach (var f in _farmers) { <option value="@f.Id">@f.Name @(string.IsNullOrEmpty(f.NameUrdu) ? "" : $"— {f.NameUrdu}")</option> } }
-            </select>
+            <SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" @bind-Value="_farmerId" Placeholder="Search farmer…" />
         </div>
         <div>
             <label>Buyer / خریدار</label>
-            <select @bind="_buyerId">
-                @if (_buyers is not null) { @foreach (var b in _buyers) { <option value="@b.Id">@b.Name @(string.IsNullOrEmpty(b.NameUrdu) ? "" : $"— {b.NameUrdu}")</option> } }
-            </select>
+            <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
         </div>
         <div>
             <label>Product / جنس</label>
-            <select @bind="_productId">
-                @if (_products is not null) { @foreach (var p in _products) { <option value="@p.Id">@p.Name @(string.IsNullOrEmpty(p.NameUrdu) ? "" : $"— {p.NameUrdu}")</option> } }
-            </select>
+            <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Search product…" />
         </div>
         <div><label>Man / مَن</label><input type="number" step="0.01" @bind="_man" /></div>
         <div><label>Kilo / کلو</label><input type="number" step="0.01" @bind="_kilo" /></div>
