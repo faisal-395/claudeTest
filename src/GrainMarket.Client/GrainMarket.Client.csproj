@@ -47,6 +47,9 @@
     <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.101" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.101" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
+    <!-- Backs builder.Logging.AddDebug() in MauiProgram.cs (Debug builds only, matching the
+         standard MAUI template — Debug.WriteLine-based logging has no reason to ship in Release). -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.12" Condition="'$(Configuration)' == 'Debug'" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.12" />
   </ItemGroup>
 
