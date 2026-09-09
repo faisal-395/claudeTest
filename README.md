@@ -52,11 +52,14 @@ GrainMarket.sln
 dotnet test GrainMarket.sln
 ```
 
+(On Linux/macOS without the MAUI workload, run the three test projects individually instead —
+`GrainMarket.Client` is part of the solution and will fail to restore/build there.)
+
 ## Running it
 
 ### Prerequisites
 
-- .NET 8 SDK
+- .NET 10 SDK
 - PostgreSQL 14+ (a connection string, in `src/GrainMarket.Api/appsettings.json` under
   `ConnectionStrings:Default` — defaults to `Host=localhost;Port=5432;Database=grainmarket;
   Username=postgres;Password=postgres`)
@@ -88,7 +91,7 @@ environment variables / user-secrets) — the checked-in value is a development 
 
 ```bash
 cd src/GrainMarket.Client
-dotnet build -f net8.0-windows10.0.19041.0    # or open in Visual Studio and F5
+dotnet build -f net10.0-windows10.0.19041.0    # or open in Visual Studio and F5
 ```
 
 On first launch it points at `http://localhost:5080/`. Use **Connection Settings** on the
@@ -105,26 +108,58 @@ something this environment can produce) — drop real files at:
 
 This was built in a Linux sandbox with no access to the MAUI workload (offline — the workload
 feed isn't reachable) or a Windows host, so `GrainMarket.Client` could not be `dotnet build`'d
-end-to-end here. That said, it wasn't shipped untested:
+end-to-end here. That said, it wasn't shipped untested, and it was re-verified after the
+.NET 8 → .NET 10 migration described below:
 
 - **Domain, Application, Infrastructure, Api, and all three test projects**: built and tested
-  directly in this environment. `dotnet test GrainMarket.sln` → 40/40 passing, zero warnings.
+  directly in this environment on .NET 10. `dotnet test` (per test project — the solution
+  includes the Windows-only Client, so `dotnet test GrainMarket.sln` won't run on Linux/macOS) →
+  40/40 passing, zero warnings.
 - **Client**: every `.razor` file (all pages, layout, `_Imports.razor`, `Main.razor`) was
   compiled with the real Razor compiler in an isolated scratch project against the actual
-  `GrainMarket.Application` DTOs, to catch binding/markup errors — this is exactly the same
-  compilation step the MAUI build would run, just without the MAUI-specific host. It caught and
-  fixed one real bug (`Products.razor` was two-way-binding directly to a `record`'s `init`-only
-  properties, which doesn't compile — reworked to local mutable fields, matching every other
-  Setup page's pattern). The MAUI-specific files (`MauiProgram.cs`, `App.xaml(.cs)`,
-  `MainPage.xaml(.cs)`, `Platforms/Windows/*`) were checked by hand against the standard .NET 8
-  MAUI Blazor Hybrid template and got as far as this sandbox's toolchain allows: NuGet restore,
-  referenced-project compilation, and Resizetizer icon/splash generation all succeeded (which
-  also caught and fixed an unescaped `&` in `Package.appxmanifest`); it fails past that point
-  only because WinUI3's `XamlCompiler.exe` is a native Windows binary that cannot run on Linux —
-  an environment limitation, not a code defect.
+  `GrainMarket.Application` DTOs and `Microsoft.AspNetCore.Components.Web` 10.0.12, to catch
+  binding/markup errors — this is exactly the same compilation step the MAUI build would run,
+  just without the MAUI-specific host. It caught and fixed one real bug during the initial build
+  (`Products.razor` was two-way-binding directly to a `record`'s `init`-only properties, which
+  doesn't compile — reworked to local mutable fields, matching every other Setup page's pattern).
+  The MAUI-specific files (`MauiProgram.cs`, `App.xaml(.cs)`, `MainPage.xaml(.cs)`,
+  `Platforms/Windows/*`) were checked by hand against the standard MAUI Blazor Hybrid template
+  and got as far as this sandbox's toolchain allows: NuGet restore and Resizetizer icon/splash
+  generation succeeded (which also caught and fixed an unescaped `&` in `Package.appxmanifest`
+  during the initial build); it now fails one step earlier than before, at workload resolution
+  (`NETSDK1147: ... maui-tizen`), because the .NET 10 SDK here has no MAUI workload installed at
+  all — on a Windows machine with `dotnet workload install maui` run, this resolves and the build
+  proceeds to WinUI3's `XamlCompiler.exe`, a native Windows binary that cannot run on Linux
+  regardless. Both are environment limitations, not code defects.
 
 **If you hit a build error in `GrainMarket.Client` on Windows**, it's most likely in the
 untested 5% (the MAUI host files) rather than the Razor pages — start there.
+
+### The .NET 8 → .NET 10 migration
+
+The solution now targets `net10.0` (`net10.0-windows10.0.19041.0` for the Client) throughout,
+with every EF Core/ASP.NET Core-tied package bumped to its 10.0.x release (Npgsql.
+EntityFrameworkCore.PostgreSQL 10.0.3, Microsoft.Maui.Controls 10.0.101, etc.) — see the
+`.csproj` files for exact versions. Two real issues surfaced and were fixed while migrating,
+both worth knowing about if you touch this code:
+
+1. **Swashbuckle.AspNetCore 10.x** moved to OpenAPI.NET 2.x, which renamed the whole
+   `Microsoft.OpenApi.Models` namespace to `Microsoft.OpenApi` and changed
+   `AddSecurityRequirement`'s signature to a `Func<OpenApiDocument, OpenApiSecurityRequirement>`
+   factory (so it can reference a scheme already registered in the document via
+   `OpenApiSecuritySchemeReference`, rather than a duplicated inline definition). Updated in
+   `Program.cs`.
+2. **EF Core's `AddDbContext` now supports multiple `IDbContextOptionsConfiguration<T>`
+   registrations** rather than one config action per context type. `CustomWebApplicationFactory`
+   in `GrainMarket.Api.Tests` was only removing the `DbContextOptions<AppDbContext>` descriptor
+   before re-adding `AddDbContext` with the InMemory provider — under EF Core 10 that left
+   Npgsql's `IDbContextOptionsConfiguration<AppDbContext>` registration in place too, so both
+   providers got applied to the same options and every integration test failed at startup with
+   "Only a single database provider can be registered". Fixed by also removing that descriptor
+   (and `DbContextOptions`/`AppDbContext` itself, for good measure) before re-adding.
+
+If you ever need to go back to .NET 8 for some reason, reverse both TFM changes and the package
+version bumps above; nothing else in the codebase is .NET-10-specific.
 
 ## Bilingual / Urdu support
 

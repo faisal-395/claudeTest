@@ -10,7 +10,7 @@ using GrainMarket.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Serilog;
 
 Log.Logger = SerilogSetup.Configure(new LoggerConfiguration()).CreateBootstrapLogger();
@@ -49,12 +49,9 @@ try
             Type = SecuritySchemeType.ApiKey,
             Scheme = "Bearer"
         });
-        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
         {
-            {
-                new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
-                Array.Empty<string>()
-            }
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()
         });
     });
 
