@@ -2,6 +2,7 @@ using GrainMarket.Application.Common.Interfaces;
 using GrainMarket.Domain.Common;
 using GrainMarket.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace GrainMarket.Infrastructure.Persistence;
 
@@ -34,6 +35,38 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<RecoveryNote> RecoveryNotes => Set<RecoveryNote>();
     public DbSet<NumberSequence> NumberSequences => Set<NumberSequence>();
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // Npgsql maps DateTime to "timestamp with time zone" and, since Npgsql 6, refuses to write
+        // any value whose Kind isn't Utc — but request DTOs (JSON dates with no offset, Blazor
+        // <input type="date"> bindings) and plain `new DateTime(...)` calls (e.g. seed data)
+        // routinely produce Kind=Unspecified. Every Date field here is a business date, not an
+        // exact instant, so relabel (never shift) Unspecified/Local values as Utc on the way in —
+        // applied globally so no individual call site has to remember to do it.
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<NullableUtcDateTimeConverter>();
+
+        base.ConfigureConventions(configurationBuilder);
+    }
+
+    private class UtcDateTimeConverter : ValueConverter<DateTime, DateTime>
+    {
+        public UtcDateTimeConverter() : base(
+            v => v.Kind == DateTimeKind.Utc ? v : DateTime.SpecifyKind(v, DateTimeKind.Utc),
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc))
+        {
+        }
+    }
+
+    private class NullableUtcDateTimeConverter : ValueConverter<DateTime?, DateTime?>
+    {
+        public NullableUtcDateTimeConverter() : base(
+            v => v.HasValue ? (v.Value.Kind == DateTimeKind.Utc ? v.Value : DateTime.SpecifyKind(v.Value, DateTimeKind.Utc)) : v,
+            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v)
+        {
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
