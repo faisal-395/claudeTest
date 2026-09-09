@@ -7,7 +7,11 @@
         <button class="btn" @onclick="PrintAsync">Print</button>
     </div>
 
-    @if (_kachi is null)
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+    else if (_kachi is null)
     {
         <p>Loading…</p>
     }
@@ -52,8 +56,13 @@
 @code {
     [Parameter] public int Id { get; set; }
     private KachiDto? _kachi;
+    private string? _error;
 
-    protected override async Task OnInitializedAsync() => _kachi = await Api.GetKachiAsync(Id);
+    protected override async Task OnInitializedAsync()
+    {
+        try { _kachi = await Api.GetKachiAsync(Id); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
 
     private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
 }

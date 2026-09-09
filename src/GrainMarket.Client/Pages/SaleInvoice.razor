@@ -109,9 +109,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _customers = await Api.GetPartiesAsync();
-        _products = await Api.GetProductsAsync();
-        if (_customers.Count > 0) _customerId = _customers[0].Id;
+        try
+        {
+            _customers = await Api.GetPartiesAsync();
+            _products = await Api.GetProductsAsync();
+            if (_customers.Count > 0) _customerId = _customers[0].Id;
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; return; }
         await LoadAsync();
     }
 

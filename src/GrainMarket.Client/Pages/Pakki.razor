@@ -128,14 +128,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _seasons = await Api.GetSeasonsAsync();
-        _farmers = await Api.GetPartiesAsync(PartyType.Farmer);
-        _buyers = await Api.GetPartiesAsync(PartyType.Buyer);
-        _products = await Api.GetProductsAsync();
-        if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
-        if (_farmers.Count > 0) _farmerId = _farmers[0].Id;
-        if (_buyers.Count > 0) _buyerId = _buyers[0].Id;
-        if (_products.Count > 0) _productId = _products[0].Id;
+        try
+        {
+            _seasons = await Api.GetSeasonsAsync();
+            _farmers = await Api.GetPartiesAsync(PartyType.Farmer);
+            _buyers = await Api.GetPartiesAsync(PartyType.Buyer);
+            _products = await Api.GetProductsAsync();
+            if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
+            if (_farmers.Count > 0) _farmerId = _farmers[0].Id;
+            if (_buyers.Count > 0) _buyerId = _buyers[0].Id;
+            if (_products.Count > 0) _productId = _products[0].Id;
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; return; }
 
         if (FromKachi.HasValue)
         {

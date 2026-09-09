@@ -78,7 +78,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _products = await Api.GetProductsAsync();
+        try { _products = await Api.GetProductsAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; return; }
         await LoadAsync();
     }
 

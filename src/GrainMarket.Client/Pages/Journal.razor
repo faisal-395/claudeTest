@@ -83,10 +83,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _seasons = await Api.GetSeasonsAsync();
-        _accounts = await Api.GetChartOfAccountsAsync();
-        if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
-        if (_accounts.Count > 0) { _debitAccountId = _accounts[0].Id; _creditAccountId = _accounts.Count > 1 ? _accounts[1].Id : _accounts[0].Id; }
+        try
+        {
+            _seasons = await Api.GetSeasonsAsync();
+            _accounts = await Api.GetChartOfAccountsAsync();
+            if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
+            if (_accounts.Count > 0) { _debitAccountId = _accounts[0].Id; _creditAccountId = _accounts.Count > 1 ? _accounts[1].Id : _accounts[0].Id; }
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; return; }
         await LoadAsync();
     }
 

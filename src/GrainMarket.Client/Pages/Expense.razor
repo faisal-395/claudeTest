@@ -76,10 +76,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _accounts = await Api.GetChartOfAccountsAsync();
-        var firstExpense = _accounts.FirstOrDefault(a => a.AccountType == AccountType.Expense);
-        if (firstExpense is not null) _expenseAccountId = firstExpense.Id;
-        if (_accounts.Count > 0) _paidFromAccountId = _accounts[0].Id;
+        try
+        {
+            _accounts = await Api.GetChartOfAccountsAsync();
+            var firstExpense = _accounts.FirstOrDefault(a => a.AccountType == AccountType.Expense);
+            if (firstExpense is not null) _expenseAccountId = firstExpense.Id;
+            if (_accounts.Count > 0) _paidFromAccountId = _accounts[0].Id;
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; return; }
         await LoadAsync();
     }
 

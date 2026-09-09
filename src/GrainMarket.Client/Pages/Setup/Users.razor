@@ -71,8 +71,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _roles = await Api.GetRolesAsync();
-        if (_roles.Count > 0) _roleId = _roles[0].Id;
+        try
+        {
+            _roles = await Api.GetRolesAsync();
+            if (_roles.Count > 0) _roleId = _roles[0].Id;
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; return; }
         await LoadAsync();
     }
 

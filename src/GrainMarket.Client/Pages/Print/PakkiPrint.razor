@@ -7,7 +7,11 @@
         <button class="btn" @onclick="PrintAsync">Print</button>
     </div>
 
-    @if (_pakki is null)
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+    else if (_pakki is null)
     {
         <p>Loading…</p>
     }
@@ -53,8 +57,13 @@
 @code {
     [Parameter] public int Id { get; set; }
     private PakkiDto? _pakki;
+    private string? _error;
 
-    protected override async Task OnInitializedAsync() => _pakki = await Api.GetPakkiAsync(Id);
+    protected override async Task OnInitializedAsync()
+    {
+        try { _pakki = await Api.GetPakkiAsync(Id); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
 
     private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
 }
