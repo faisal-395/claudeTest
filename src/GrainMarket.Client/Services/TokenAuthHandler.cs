@@ -9,9 +9,11 @@ namespace GrainMarket.Client.Services;
 /// Attaches the current JWT to every outgoing request and keeps the session alive across long idle
 /// periods: it proactively swaps the access token for a fresh one shortly before it expires, and —
 /// if a request still comes back 401 (clock skew, or the app was asleep well past expiry) — refreshes
-/// once and retries. If the refresh token itself is gone or has expired, the session is cleared and
-/// AuthState.SessionExpired fires so the UI can send the user back to login instead of ever showing
-/// the raw failure as an unhandled error.
+/// once and retries. The session is only ever cleared when the server explicitly rejects the refresh
+/// token (it's genuinely expired or revoked) — a network hiccup, a timeout, or the server being
+/// briefly unreachable (e.g. right after the machine wakes from sleep) leaves the session alone, so
+/// the app never logs someone out just because a request didn't make it through once. Only on that
+/// explicit rejection does AuthState.SessionExpired fire, sending the UI back to login.
 /// </summary>
 public class TokenAuthHandler : DelegatingHandler
 {
@@ -64,7 +66,7 @@ public class TokenAuthHandler : DelegatingHandler
     {
         if (_authState.RefreshToken is null)
         {
-            _authState.ClearDueToExpiry();
+            // Nothing to fall back on (never logged in, or the session was already cleared).
             return false;
         }
 
@@ -83,18 +85,37 @@ public class TokenAuthHandler : DelegatingHandler
                 return false;
             }
 
-            var client = _httpClientFactory.CreateClient("AuthRefresh");
-            var response = await client.PostAsJsonAsync("api/auth/refresh", new RefreshTokenRequest(refreshToken), cancellationToken);
+            HttpResponseMessage response;
+            try
+            {
+                var client = _httpClientFactory.CreateClient("AuthRefresh");
+                response = await client.PostAsJsonAsync("api/auth/refresh", new RefreshTokenRequest(refreshToken), cancellationToken);
+            }
+            catch
+            {
+                // Couldn't even reach the server (offline, DNS hiccup right after waking from
+                // sleep, request timed out) — transient, not a rejection. Leave the session alone;
+                // the caller falls back to whatever token it already has and tries again next time.
+                return false;
+            }
+
+            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            {
+                // The server has explicitly rejected this refresh token — it's genuinely expired,
+                // revoked, or the account was deactivated. Only this case ends the session.
+                _authState.ClearDueToExpiry();
+                return false;
+            }
+
             if (!response.IsSuccessStatusCode)
             {
-                _authState.ClearDueToExpiry();
+                // Some other failure (e.g. the API is mid-restart) — transient, don't end the session.
                 return false;
             }
 
             var login = await response.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken: cancellationToken);
             if (login is null)
             {
-                _authState.ClearDueToExpiry();
                 return false;
             }
 
@@ -104,7 +125,8 @@ public class TokenAuthHandler : DelegatingHandler
         }
         catch
         {
-            _authState.ClearDueToExpiry();
+            // Unexpected failure reading/persisting the refreshed token — transient, don't end the
+            // session over it.
             return false;
         }
         finally

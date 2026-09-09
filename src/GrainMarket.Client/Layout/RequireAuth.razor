@@ -20,12 +20,17 @@
         }
     }
 
-    /// <summary>The session couldn't be kept alive (refresh token missing/expired/revoked) —
-    /// send the user to login with a clear reason instead of letting the page that triggered it
-    /// show a raw 401 or crash.</summary>
+    /// <summary>The session couldn't be kept alive (the server explicitly rejected the refresh
+    /// token — it's genuinely expired or revoked, not just a network blip) — send the user to
+    /// login with a clear reason instead of letting the page that triggered it show a raw 401 or
+    /// crash. Deliberately no forceLoad: a full reload here can race with whatever request was
+    /// still in flight when the session was cleared, and that race — the in-flight call resuming
+    /// against a renderer the reload already tore down — is what used to surface as Blazor's
+    /// fatal "An unhandled error has occurred" overlay. A normal in-app navigation swaps this
+    /// page out for Login cleanly without disturbing anything still running.</summary>
     private void OnSessionExpired()
     {
-        InvokeAsync(() => Nav.NavigateTo("/login?expired=1", forceLoad: true));
+        InvokeAsync(() => Nav.NavigateTo("/login?expired=1"));
     }
 
     public void Dispose() => AuthState.SessionExpired -= OnSessionExpired;

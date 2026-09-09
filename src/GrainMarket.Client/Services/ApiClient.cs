@@ -156,35 +156,63 @@ public class ApiClient
         return parts.Count > 0 ? "?" + string.Join("&", parts) : string.Empty;
     }
 
-    private async Task<T> GetAsync<T>(string url)
+    private Task<T> GetAsync<T>(string url) => GuardAsync(async () =>
     {
         var response = await _http.GetAsync(url);
         return await ReadOrThrowAsync<T>(response);
-    }
+    });
 
-    private async Task<TResponse> PostAsync<TRequest, TResponse>(string url, TRequest body)
+    private Task<TResponse> PostAsync<TRequest, TResponse>(string url, TRequest body) => GuardAsync(async () =>
     {
         var response = await _http.PostAsJsonAsync(url, body, JsonOptions);
         return await ReadOrThrowAsync<TResponse>(response);
-    }
+    });
 
-    private async Task PostAsync(string url)
+    private Task PostAsync(string url) => GuardAsync(async () =>
     {
         var response = await _http.PostAsync(url, content: null);
         await EnsureSuccessAsync(response);
-    }
+    });
 
-    private async Task<TResponse> PutAsync<TRequest, TResponse>(string url, TRequest body)
+    private Task<TResponse> PutAsync<TRequest, TResponse>(string url, TRequest body) => GuardAsync(async () =>
     {
         var response = await _http.PutAsJsonAsync(url, body, JsonOptions);
         return await ReadOrThrowAsync<TResponse>(response);
-    }
+    });
 
-    private async Task DeleteAsync(string url)
+    private Task DeleteAsync(string url) => GuardAsync(async () =>
     {
         var response = await _http.DeleteAsync(url);
         await EnsureSuccessAsync(response);
+    });
+
+    /// <summary>Every page catches Models.ApiException and shows one error banner instead of
+    /// crashing — but that only works if every failure mode actually becomes an ApiException.
+    /// A dropped connection, a request that times out, or a malformed response otherwise throws
+    /// HttpRequestException/TaskCanceledException/JsonException, which no page catches, and which
+    /// used to reach Blazor's fatal "An unhandled error has occurred" overlay instead of a page's
+    /// error banner — most visibly right after the app had sat idle and the network needed a
+    /// moment to reconnect. Translate anything that isn't already an ApiException here, once.</summary>
+    private static async Task<T> GuardAsync<T>(Func<Task<T>> action)
+    {
+        try { return await action(); }
+        catch (ApiException) { throw; }
+        catch (Exception ex) { throw new ApiException(0, FriendlyMessage(ex)); }
     }
+
+    private static async Task GuardAsync(Func<Task> action)
+    {
+        try { await action(); }
+        catch (ApiException) { throw; }
+        catch (Exception ex) { throw new ApiException(0, FriendlyMessage(ex)); }
+    }
+
+    private static string FriendlyMessage(Exception ex) => ex switch
+    {
+        TaskCanceledException or OperationCanceledException => "The request timed out. Check your connection and try again.",
+        HttpRequestException => "Could not reach the server. Check your connection and try again.",
+        _ => "Something went wrong talking to the server. Please try again."
+    };
 
     private static async Task<T> ReadOrThrowAsync<T>(HttpResponseMessage response)
     {
