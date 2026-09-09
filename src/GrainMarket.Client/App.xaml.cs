@@ -1,6 +1,9 @@
 namespace GrainMarket.Client;
 
-public partial class App : Application
+// Fully qualified: unqualified "Application" would otherwise resolve to the sibling
+// GrainMarket.Application project's namespace (a nested namespace under the shared GrainMarket
+// root wins over Microsoft.Maui.Controls.Application in C#'s lookup), not the MAUI base class.
+public partial class App : Microsoft.Maui.Controls.Application
 {
     public App()
     {
