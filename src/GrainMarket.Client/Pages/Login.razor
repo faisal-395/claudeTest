@@ -2,6 +2,7 @@
 @inject ApiClient Api
 @inject AuthState AuthState
 @inject NavigationManager Nav
+@inject AppSettings AppSettings
 
 <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f0f4f0;">
     <div style="background:white;padding:32px 36px;box-shadow:0 2px 8px rgba(0,0,0,0.15);width:340px;">
@@ -56,9 +57,14 @@
         {
             _error = ex.Message;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            _error = "Could not reach the server. Check the API base URL in Settings.";
+            // Surface the real cause (connection refused vs. TLS trust failure vs. timeout, etc.)
+            // instead of one generic message — those need different fixes and otherwise look
+            // identical to whoever's troubleshooting.
+            var root = ex;
+            while (root.InnerException is not null) root = root.InnerException;
+            _error = $"Could not reach the server at {AppSettings.ApiBaseUrl} — [{root.GetType().Name}] {root.Message}";
         }
         finally
         {
