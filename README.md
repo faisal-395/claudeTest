@@ -163,8 +163,11 @@ version bumps above; nothing else in the codebase is .NET-10-specific.
 
 ## Bilingual / Urdu support
 
-- Kachi, Pakki and their print templates (`Pages/Print/KachiPrint.razor`,
-  `Pages/Print/PakkiPrint.razor`) are full Urdu/RTL, matching the legacy screens' layout.
+- Kachi, Pakki, Dual Invoice and their print templates (`Pages/Print/KachiPrint.razor`,
+  `Pages/Print/PakkiPrint.razor`) carry bilingual English/Urdu labels throughout — not just the
+  print templates: field labels, dropdown options and table headers on the entry screens
+  themselves show the Urdu alongside the English (e.g. "Farmer / کسان", and farmer/buyer/product
+  dropdown options show `NameUrdu` next to `Name`), matching the legacy screens' bilingual layout.
 - General Sale/Purchase stay English-first with a Thermal/A4 × English/Urdu print toggle, as in
   the legacy "New Sale General" screen.
 - `wwwroot/css/app.css` defines `.rtl-urdu` (RTL, Nastaliq font, right-aligned) and `.ltr-inline`
@@ -172,6 +175,30 @@ version bumps above; nothing else in the codebase is .NET-10-specific.
   Urdu font via `@font-face` so it never depends on what's installed on the till PC.
 - `Party`, `Product` and `ChartOfAccount` all carry `Name` + `NameUrdu` side by side, so
   English-UI screens and Urdu print templates read from the same record.
+
+## Kachi/Pakki rate: per Man (maund), not per kg
+
+`Kachi.RatePerUnit`/`Pakki.RatePerUnit` are quoted **per Man (maund)**, matching arhti market
+convention — even though weight is always stored internally in kg (the spec's canonical base
+unit). `UnitConversionCalculator.GrossAmountFromRatePerMan` converts the stored kg weight back to
+Man using the same configurable Man→kg factor as weight entry (Setup ▸ Unit Conversions, with
+optional per-product overrides), so a rate of "5000" against 400 kg (= 10 Man at the default
+40 kg/Man) computes a gross of Rs 50,000 — not Rs 2,000,000, which is what treating the same
+number as a per-kg rate would produce. Both Kachi and Pakki creation/update paths go through this
+one helper, covered by `UnitConversionCalculatorTests`.
+
+## Editing Kachi and Pakki
+
+- **Kachi**: fully editable while `Status = Open` (`PUT /api/kachis/{id}`, `Edit` link on the
+  Kachi screen) — every field can change, deductions and totals recompute.
+- **Pakki**: editable while `Status = Open` (`PUT /api/pakkis/{id}`, `Edit` link on the Pakki
+  screen), but only its *commercial terms* — buyer, rate, vehicle number, notes. Weight, product,
+  farmer and season stay fixed once posted (they carry the originating Kachi's identity forward,
+  or fix a standalone sale's own identity). A Pakki is a posted financial document — its ledger
+  entries (buyer owes gross, farmer is owed net, each deduction credited to its income account)
+  already exist — so `PakkiService.UpdateAsync` reverses exactly what was posted (the same
+  mirror-image approach `CancelAsync` uses) and posts fresh entries for the new terms, rather than
+  mutating any `LedgerEntry` row in place.
 
 ## Open items — resolved
 

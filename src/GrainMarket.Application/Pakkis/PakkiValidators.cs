@@ -27,3 +27,12 @@ public class CreateStandalonePakkiRequestValidator : AbstractValidator<CreateSta
             .WithName("Weight");
     }
 }
+
+public class UpdatePakkiRequestValidator : AbstractValidator<UpdatePakkiRequest>
+{
+    public UpdatePakkiRequestValidator()
+    {
+        RuleFor(x => x.BuyerId).GreaterThan(0);
+        RuleFor(x => x.RatePerUnit).GreaterThan(0).WithMessage("Rate must be greater than zero.");
+    }
+}

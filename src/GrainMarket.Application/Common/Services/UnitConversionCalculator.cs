@@ -39,6 +39,19 @@ public static class UnitConversionCalculator
         return total;
     }
 
+    /// <summary>
+    /// Kachi/Pakki rates are quoted per Man (maund), matching arhti market convention — not per
+    /// kg, even though weight is stored internally in kg. Converts a rate entered per Man into a
+    /// gross amount using the same configurable Man→kg factor as everywhere else, so a change to
+    /// that factor in Setup keeps rate entry and weight entry consistent.
+    /// </summary>
+    public static decimal GrossAmountFromRatePerMan(decimal ratePerMan, decimal netWeightKg, int? productId, IReadOnlyCollection<UnitConversion> conversions)
+    {
+        var manFactor = FactorFor(WeightUnit.Man, productId, conversions);
+        var netWeightMan = netWeightKg / manFactor;
+        return Math.Round(ratePerMan * netWeightMan, 2, MidpointRounding.AwayFromZero);
+    }
+
     public static decimal FactorFor(WeightUnit unit, int? productId, IReadOnlyCollection<UnitConversion> conversions)
     {
         var productSpecific = productId.HasValue

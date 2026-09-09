@@ -20,3 +20,9 @@ public record CreateStandalonePakkiRequest(
     DateTime Date, int SeasonId, int BuyerId, int FarmerId, int ProductId,
     decimal? ManQty, decimal? KiloQty, decimal? GramQty, decimal? BoriQty,
     decimal RatePerUnit, string? VehicleNumber, string? Notes);
+
+/// <summary>Edits an open Pakki's buyer/rate/vehicle/notes. Weight, product, farmer and season stay
+/// fixed (they carry the Kachi's identity forward, or fix the standalone sale's own identity) —
+/// only the commercial terms are editable. Reverses and re-posts the ledger under the hood since
+/// this is a posted financial document, not a plain field edit.</summary>
+public record UpdatePakkiRequest(int BuyerId, decimal RatePerUnit, string? VehicleNumber, string? Notes);

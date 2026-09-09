@@ -43,6 +43,11 @@ public class PakkisController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
+    [ModulePermission(ModuleName.Pakki, PermissionAction.Edit)]
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<PakkiDto>> Update(int id, UpdatePakkiRequest request, CancellationToken ct)
+        => Ok(await _service.UpdateAsync(id, request, ct));
+
     [ModulePermission(ModuleName.Pakki, PermissionAction.Delete)]
     [HttpPost("{id:int}/cancel")]
     public async Task<IActionResult> Cancel(int id, CancellationToken ct)

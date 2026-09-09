@@ -2,7 +2,7 @@
 @inject ApiClient Api
 
 <RequireAuth>
-    <h1 class="page-title">Kachi (Provisional Receipt)</h1>
+    <h1 class="page-title">Kachi (Provisional Receipt) <span class="rtl-urdu" style="font-size:1rem;">کچی رسید</span></h1>
 
     @if (_error is not null)
     {
@@ -10,37 +10,41 @@
     }
 
     <div class="form-grid" style="margin-bottom:20px;">
-        <div><label>Date</label><input type="date" @bind="_date" /></div>
+        <div><label>Date / تاریخ</label><input type="date" @bind="_date" /></div>
         <div>
-            <label>Season</label>
+            <label>Season / سیزن</label>
             <select @bind="_seasonId">
                 @if (_seasons is not null) { @foreach (var s in _seasons) { <option value="@s.Id">@s.Name</option> } }
             </select>
         </div>
         <div>
-            <label>Farmer</label>
+            <label>Farmer / کسان</label>
             <select @bind="_farmerId">
-                @if (_farmers is not null) { @foreach (var f in _farmers) { <option value="@f.Id">@f.Name</option> } }
+                @if (_farmers is not null) { @foreach (var f in _farmers) { <option value="@f.Id">@f.Name @(string.IsNullOrEmpty(f.NameUrdu) ? "" : $"— {f.NameUrdu}")</option> } }
             </select>
         </div>
         <div>
-            <label>Product</label>
+            <label>Product / جنس</label>
             <select @bind="_productId">
-                @if (_products is not null) { @foreach (var p in _products) { <option value="@p.Id">@p.Name</option> } }
+                @if (_products is not null) { @foreach (var p in _products) { <option value="@p.Id">@p.Name @(string.IsNullOrEmpty(p.NameUrdu) ? "" : $"— {p.NameUrdu}")</option> } }
             </select>
         </div>
-        <div><label>Man (maund)</label><input type="number" step="0.01" @bind="_man" /></div>
-        <div><label>Kilo</label><input type="number" step="0.01" @bind="_kilo" /></div>
-        <div><label>Gram</label><input type="number" step="1" @bind="_gram" /></div>
-        <div><label>Bori (bags)</label><input type="number" step="0.01" @bind="_bori" /></div>
-        <div><label>Rate per kg (optional at Kachi stage)</label><input type="number" step="0.01" @bind="_rate" /></div>
-        <div><label>Vehicle Number (for freight)</label><input @bind="_vehicleNumber" /></div>
+        <div><label>Man (maund) / مَن</label><input type="number" step="0.01" @bind="_man" /></div>
+        <div><label>Kilo / کلو</label><input type="number" step="0.01" @bind="_kilo" /></div>
+        <div><label>Gram / گرام</label><input type="number" step="1" @bind="_gram" /></div>
+        <div><label>Bori (bags) / بوری</label><input type="number" step="0.01" @bind="_bori" /></div>
+        <div><label>Rate per Man / ریٹ فی مَن (optional at Kachi stage)</label><input type="number" step="0.01" @bind="_rate" /></div>
+        <div><label>Vehicle Number / گاڑی نمبر (for freight)</label><input @bind="_vehicleNumber" /></div>
         <div style="grid-column: span 2;">
             @if (!HasWeight)
             {
                 <div class="invalid-total">Enter at least one weight (Man/Kilo/Gram/Bori) before saving.</div>
             }
-            <button class="btn" disabled="@(!HasWeight)" @onclick="SaveAsync">Save Kachi</button>
+            <button class="btn" disabled="@(!HasWeight)" @onclick="SaveAsync">@(_editingId is null ? "Save Kachi" : "Update Kachi")</button>
+            @if (_editingId is not null)
+            {
+                <button class="btn secondary" @onclick="ResetForm">Cancel Edit</button>
+            }
         </div>
     </div>
 
@@ -51,7 +55,7 @@
     else
     {
         <table class="data-grid">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Farmer</th><th>Product</th><th>Net Wt (kg)</th><th>Rate</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Date</th><th>Farmer / کسان</th><th>Product / جنس</th><th>Net Wt (kg)</th><th>Rate/Man</th><th>Total</th><th>Status</th><th></th></tr></thead>
             <tbody>
                 @foreach (var k in _kachis)
                 {
@@ -67,6 +71,8 @@
                         <td>
                             @if (k.Status == InvoiceStatus.Open)
                             {
+                                <a href="#" @onclick="() => Edit(k)" @onclick:preventDefault="true">Edit</a>
+                                <text> | </text>
                                 <a href="pakki?fromKachi=@k.Id">Convert to Pakki</a>
                                 <text> | </text>
                             }
@@ -85,6 +91,7 @@
     private List<PartyDto>? _farmers;
     private List<ProductDto>? _products;
     private string? _error;
+    private int? _editingId;
 
     private DateTime _date = DateTime.Today;
     private int _seasonId;
@@ -120,14 +127,44 @@
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
+    private void Edit(KachiDto k)
+    {
+        _editingId = k.Id;
+        _date = k.Date;
+        _seasonId = k.SeasonId;
+        _farmerId = k.FarmerId;
+        _productId = k.ProductId;
+        _man = k.ManQty;
+        _kilo = k.KiloQty;
+        _gram = k.GramQty;
+        _bori = k.BoriQty;
+        _rate = k.RatePerUnit;
+        _vehicleNumber = k.DeductionLines.FirstOrDefault(l => l.VehicleNumber is not null)?.VehicleNumber;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _date = DateTime.Today;
+        _man = null; _kilo = null; _gram = null; _bori = null; _rate = null; _vehicleNumber = null;
+    }
+
     private async Task SaveAsync()
     {
         _error = null;
-        var request = new CreateKachiRequest(_date, _seasonId, _farmerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
         try
         {
-            await Api.CreateKachiAsync(request);
-            _man = null; _kilo = null; _gram = null; _bori = null; _rate = null; _vehicleNumber = null;
+            if (_editingId is null)
+            {
+                var request = new CreateKachiRequest(_date, _seasonId, _farmerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
+                await Api.CreateKachiAsync(request);
+            }
+            else
+            {
+                var request = new UpdateKachiRequest(_date, _seasonId, _farmerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
+                await Api.UpdateKachiAsync(_editingId.Value, request);
+            }
+            ResetForm();
             await LoadAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }

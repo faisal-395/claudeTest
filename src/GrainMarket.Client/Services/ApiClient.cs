@@ -97,6 +97,7 @@ public class ApiClient
     public Task<PakkiDto> GetPakkiAsync(int id) => GetAsync<PakkiDto>($"api/pakkis/{id}");
     public Task<PakkiDto> CreatePakkiFromKachiAsync(CreatePakkiFromKachiRequest request) => PostAsync<CreatePakkiFromKachiRequest, PakkiDto>("api/pakkis/from-kachi", request);
     public Task<PakkiDto> CreateStandalonePakkiAsync(CreateStandalonePakkiRequest request) => PostAsync<CreateStandalonePakkiRequest, PakkiDto>("api/pakkis/standalone", request);
+    public Task<PakkiDto> UpdatePakkiAsync(int id, UpdatePakkiRequest request) => PutAsync<UpdatePakkiRequest, PakkiDto>($"api/pakkis/{id}", request);
     public Task CancelPakkiAsync(int id) => PostAsync($"api/pakkis/{id}/cancel");
 
     public Task<DualInvoiceResultDto> CreateDualInvoiceAsync(CreateDualInvoiceRequest request) => PostAsync<CreateDualInvoiceRequest, DualInvoiceResultDto>("api/dual-invoice", request);

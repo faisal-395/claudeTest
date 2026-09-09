@@ -71,4 +71,36 @@ public class UnitConversionCalculatorTests
         Assert.Throws<InvalidCalculationException>(() =>
             UnitConversionCalculator.ToBaseKg(manQty: 1m, null, null, null, null, conversions));
     }
+
+    [Fact]
+    public void GrossAmountFromRatePerMan_ComputesPerMaundNotPerKg()
+    {
+        // 10 Man (= 400 kg at the default 40kg/Man factor) at Rs 5000/Man should be Rs 50,000 —
+        // not Rs 5000 * 400kg = Rs 2,000,000, which is what a naive rate-times-kg calculation
+        // would produce if the rate were (wrongly) treated as per kg.
+        var result = UnitConversionCalculator.GrossAmountFromRatePerMan(ratePerMan: 5000m, netWeightKg: 400m, productId: null, DefaultConversions());
+
+        Assert.Equal(50000m, result);
+    }
+
+    [Fact]
+    public void GrossAmountFromRatePerMan_UsesProductSpecificManFactorWhenSet()
+    {
+        var conversions = DefaultConversions();
+        conversions.Add(new UnitConversion { Id = 5, Unit = WeightUnit.Man, FactorToKg = 37.5m, ProductId = 3, IsActive = true });
+
+        // 75 kg at a 37.5kg/Man product-specific factor = 2 Man, at Rs 1000/Man = Rs 2000.
+        var result = UnitConversionCalculator.GrossAmountFromRatePerMan(ratePerMan: 1000m, netWeightKg: 75m, productId: 3, conversions);
+
+        Assert.Equal(2000m, result);
+    }
+
+    [Fact]
+    public void GrossAmountFromRatePerMan_MissingManFactor_ThrowsInvalidCalculation()
+    {
+        var conversions = new List<UnitConversion>(); // no Man factor configured
+
+        Assert.Throws<InvalidCalculationException>(() =>
+            UnitConversionCalculator.GrossAmountFromRatePerMan(1000m, 400m, null, conversions));
+    }
 }

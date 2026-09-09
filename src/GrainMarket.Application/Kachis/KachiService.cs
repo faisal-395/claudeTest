@@ -44,7 +44,9 @@ public class KachiService : IKachiService
         var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
         var netWeightKg = UnitConversionCalculator.ToBaseKg(request.ManQty, request.KiloQty, request.GramQty, request.BoriQty, request.ProductId, conversions);
 
-        var grossAmount = request.RatePerUnit.HasValue ? Math.Round(request.RatePerUnit.Value * netWeightKg, 2) : 0m;
+        var grossAmount = request.RatePerUnit.HasValue
+            ? UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit.Value, netWeightKg, request.ProductId, conversions)
+            : 0m;
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);
@@ -98,7 +100,9 @@ public class KachiService : IKachiService
 
         var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
         var netWeightKg = UnitConversionCalculator.ToBaseKg(request.ManQty, request.KiloQty, request.GramQty, request.BoriQty, request.ProductId, conversions);
-        var grossAmount = request.RatePerUnit.HasValue ? Math.Round(request.RatePerUnit.Value * netWeightKg, 2) : 0m;
+        var grossAmount = request.RatePerUnit.HasValue
+            ? UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit.Value, netWeightKg, request.ProductId, conversions)
+            : 0m;
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);

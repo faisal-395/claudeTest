@@ -2,7 +2,7 @@
 @inject ApiClient Api
 
 <RequireAuth>
-    <h1 class="page-title">Dual Invoice (Kachi + Pakki in one step)</h1>
+    <h1 class="page-title">Dual Invoice (Kachi + Pakki in one step) <span class="rtl-urdu" style="font-size:1rem;">کچی و پکی</span></h1>
     <p style="color:#777;">For when the farmer, buyer and rate are all known up front — raises a Kachi and immediately finalizes it as a Pakki. Use the separate Kachi screen when the rate isn't settled yet.</p>
 
     @if (_error is not null)
@@ -25,29 +25,29 @@
             </select>
         </div>
         <div>
-            <label>Farmer</label>
+            <label>Farmer / کسان</label>
             <select @bind="_farmerId">
-                @if (_farmers is not null) { @foreach (var f in _farmers) { <option value="@f.Id">@f.Name</option> } }
+                @if (_farmers is not null) { @foreach (var f in _farmers) { <option value="@f.Id">@f.Name @(string.IsNullOrEmpty(f.NameUrdu) ? "" : $"— {f.NameUrdu}")</option> } }
             </select>
         </div>
         <div>
-            <label>Buyer</label>
+            <label>Buyer / خریدار</label>
             <select @bind="_buyerId">
-                @if (_buyers is not null) { @foreach (var b in _buyers) { <option value="@b.Id">@b.Name</option> } }
+                @if (_buyers is not null) { @foreach (var b in _buyers) { <option value="@b.Id">@b.Name @(string.IsNullOrEmpty(b.NameUrdu) ? "" : $"— {b.NameUrdu}")</option> } }
             </select>
         </div>
         <div>
-            <label>Product</label>
+            <label>Product / جنس</label>
             <select @bind="_productId">
-                @if (_products is not null) { @foreach (var p in _products) { <option value="@p.Id">@p.Name</option> } }
+                @if (_products is not null) { @foreach (var p in _products) { <option value="@p.Id">@p.Name @(string.IsNullOrEmpty(p.NameUrdu) ? "" : $"— {p.NameUrdu}")</option> } }
             </select>
         </div>
-        <div><label>Man</label><input type="number" step="0.01" @bind="_man" /></div>
-        <div><label>Kilo</label><input type="number" step="0.01" @bind="_kilo" /></div>
-        <div><label>Gram</label><input type="number" step="1" @bind="_gram" /></div>
-        <div><label>Bori</label><input type="number" step="0.01" @bind="_bori" /></div>
-        <div><label>Rate per kg</label><input type="number" step="0.01" @bind="_rate" /></div>
-        <div><label>Vehicle Number</label><input @bind="_vehicleNumber" /></div>
+        <div><label>Man / مَن</label><input type="number" step="0.01" @bind="_man" /></div>
+        <div><label>Kilo / کلو</label><input type="number" step="0.01" @bind="_kilo" /></div>
+        <div><label>Gram / گرام</label><input type="number" step="1" @bind="_gram" /></div>
+        <div><label>Bori / بوری</label><input type="number" step="0.01" @bind="_bori" /></div>
+        <div><label>Rate per Man / ریٹ فی مَن</label><input type="number" step="0.01" @bind="_rate" /></div>
+        <div><label>Vehicle Number / گاڑی نمبر</label><input @bind="_vehicleNumber" /></div>
         <div style="grid-column: span 2;">
             @if (!CanSave)
             {

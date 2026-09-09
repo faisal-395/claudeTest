@@ -58,7 +58,8 @@ public class PakkiService : IPakkiService
             throw new NotFoundException(nameof(Party), request.BuyerId);
         }
 
-        var grossAmount = Math.Round(request.RatePerUnit * kachi.NetWeightKg, 2);
+        var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
+        var grossAmount = UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit, kachi.NetWeightKg, kachi.ProductId, conversions);
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, kachi.NetWeightKg, DeductionAppliesTo.Pakki, kachi.ProductId, kachi.FarmerId, rules);
 
@@ -123,7 +124,7 @@ public class PakkiService : IPakkiService
 
         var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
         var netWeightKg = UnitConversionCalculator.ToBaseKg(request.ManQty, request.KiloQty, request.GramQty, request.BoriQty, request.ProductId, conversions);
-        var grossAmount = Math.Round(request.RatePerUnit * netWeightKg, 2);
+        var grossAmount = UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit, netWeightKg, request.ProductId, conversions);
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Pakki, request.ProductId, request.FarmerId, rules);
@@ -172,6 +173,62 @@ public class PakkiService : IPakkiService
         return await GetByIdAsync(pakki.Id, ct);
     }
 
+    public async Task<PakkiDto> UpdateAsync(int id, UpdatePakkiRequest request, CancellationToken ct = default)
+    {
+        var pakki = await LoadAsync(id, ct);
+        if (pakki.Status != InvoiceStatus.Open)
+        {
+            throw new InvalidCalculationException("Only an open Pakki (not yet cancelled) can be edited.");
+        }
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+        {
+            throw new NotFoundException(nameof(Party), request.BuyerId);
+        }
+
+        // A Pakki is a posted financial document — editing it means reversing exactly what was
+        // posted (mirroring CancelAsync's approach), then posting fresh entries for the new terms.
+        // Weight/product/farmer/season never change here; only buyer, rate, vehicle and notes do.
+        await ReverseLedgerAsync(pakki, $"Reversal: {pakki.InvoiceNo} edited", ct);
+
+        var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
+        var grossAmount = UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit, pakki.NetWeightKg, pakki.ProductId, conversions);
+
+        var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
+        var calc = DeductionEngine.Calculate(grossAmount, pakki.NetWeightKg, DeductionAppliesTo.Pakki, pakki.ProductId, pakki.FarmerId, rules);
+
+        pakki.BuyerId = request.BuyerId;
+        pakki.RatePerUnit = request.RatePerUnit;
+        pakki.GrossAmount = grossAmount;
+        pakki.TotalDeductions = calc.TotalDeductions;
+        pakki.NetPayableToFarmer = calc.NetAmount;
+        pakki.VehicleNumber = request.VehicleNumber;
+        pakki.Notes = request.Notes;
+        pakki.UpdatedAtUtc = _clock.UtcNow;
+
+        foreach (var existing in pakki.DeductionLines.ToList())
+        {
+            _db.PakkiDeductionLines.Remove(existing);
+        }
+        pakki.DeductionLines.Clear();
+        foreach (var line in calc.Lines)
+        {
+            pakki.DeductionLines.Add(new PakkiDeductionLine
+            {
+                DeductionRuleId = line.DeductionRuleId,
+                Name = line.Name,
+                NameUrdu = line.NameUrdu,
+                Amount = line.Amount,
+                VehicleNumber = line.RequiresVehicleNumber ? request.VehicleNumber : null
+            });
+        }
+
+        await _db.SaveChangesAsync(ct);
+        await PostLedgerAsync(pakki, calc, ct);
+        await _db.SaveChangesAsync(ct);
+
+        return await GetByIdAsync(id, ct);
+    }
+
     public async Task CancelAsync(int id, CancellationToken ct = default)
     {
         var pakki = await LoadAsync(id, ct);
@@ -188,17 +245,22 @@ public class PakkiService : IPakkiService
             }
         }
 
-        // Reversing ledger entries: post the mirror image so the running balance is corrected
-        // without ever deleting or mutating a posted row.
-        await _ledger.PostPartyEntryAsync(pakki.BuyerId, _clock.UtcNow, 0, pakki.GrossAmount, LedgerSourceType.Pakki, pakki.Id, $"Reversal: {pakki.InvoiceNo} cancelled", ct);
-        await _ledger.PostPartyEntryAsync(pakki.FarmerId, _clock.UtcNow, pakki.NetPayableToFarmer, 0, LedgerSourceType.Pakki, pakki.Id, $"Reversal: {pakki.InvoiceNo} cancelled", ct);
+        await ReverseLedgerAsync(pakki, $"Reversal: {pakki.InvoiceNo} cancelled", ct);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Posts the mirror image of a Pakki's ledger postings, so the running balance is
+    /// corrected without ever deleting or mutating a previously posted row. Used by both
+    /// CancelAsync and UpdateAsync (which reverses, then posts fresh entries for the new terms).</summary>
+    private async Task ReverseLedgerAsync(Pakki pakki, string reason, CancellationToken ct)
+    {
+        await _ledger.PostPartyEntryAsync(pakki.BuyerId, _clock.UtcNow, 0, pakki.GrossAmount, LedgerSourceType.Pakki, pakki.Id, reason, ct);
+        await _ledger.PostPartyEntryAsync(pakki.FarmerId, _clock.UtcNow, pakki.NetPayableToFarmer, 0, LedgerSourceType.Pakki, pakki.Id, reason, ct);
         foreach (var line in pakki.DeductionLines)
         {
             var accountId = await ResolveIncomeAccountIdAsync(await _db.DeductionRules.Where(r => r.Id == line.DeductionRuleId).Select(r => r.IncomeAccountId).FirstOrDefaultAsync(ct), ct);
-            await _ledger.PostAccountEntryAsync(accountId, _clock.UtcNow, line.Amount, 0, LedgerSourceType.Pakki, pakki.Id, $"Reversal: {pakki.InvoiceNo} cancelled ({line.Name})", ct);
+            await _ledger.PostAccountEntryAsync(accountId, _clock.UtcNow, line.Amount, 0, LedgerSourceType.Pakki, pakki.Id, $"{reason} ({line.Name})", ct);
         }
-
-        await _db.SaveChangesAsync(ct);
     }
 
     private async Task PostLedgerAsync(Pakki pakki, DeductionCalculationResult calc, CancellationToken ct)

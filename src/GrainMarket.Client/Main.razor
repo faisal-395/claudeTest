@@ -1,10 +1,24 @@
 @using Microsoft.AspNetCore.Components.Routing
 @using GrainMarket.Client.Layout
+@inject NavigationManager Nav
 
 <Router AppAssembly="@typeof(Main).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="@typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        <ErrorBoundary @ref="_errorBoundary">
+            <ChildContent>
+                <RouteView RouteData="routeData" DefaultLayout="@typeof(MainLayout)" />
+                <FocusOnNavigate RouteData="routeData" Selector="h1" />
+            </ChildContent>
+            <ErrorContent Context="ex">
+                <div style="max-width:600px;margin:60px auto;background:white;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                    <h2 style="color:#b3261e;margin-top:0;">Something went wrong on this screen</h2>
+                    <p style="color:#666;">The rest of the app is unaffected — this page hit an error instead of showing your data. If this keeps happening on the same screen, note exactly what it says below.</p>
+                    <div class="error-banner" style="white-space:pre-wrap;">@ex.GetType().Name: @ex.Message</div>
+                    <button class="btn" @onclick="Recover">Try Again</button>
+                    <button class="btn secondary" @onclick="GoToDashboard">Go to Dashboard</button>
+                </div>
+            </ErrorContent>
+        </ErrorBoundary>
     </Found>
     <NotFound>
         <LayoutView Layout="@typeof(MainLayout)">
@@ -12,3 +26,19 @@
         </LayoutView>
     </NotFound>
 </Router>
+
+@code {
+    // ErrorBoundary logs the caught exception via ILogger<ErrorBoundary> by default (visible in
+    // the Debug/Output window) — this only needs to render a recoverable fallback instead of
+    // Blazor's fatal "An unhandled error has occurred. Reload" overlay, which tears down the
+    // whole app rather than just the page that failed.
+    private ErrorBoundary? _errorBoundary;
+
+    private void Recover() => _errorBoundary?.Recover();
+
+    private void GoToDashboard()
+    {
+        _errorBoundary?.Recover();
+        Nav.NavigateTo("/");
+    }
+}

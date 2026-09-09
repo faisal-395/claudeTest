@@ -6,5 +6,6 @@ public interface IPakkiService
     Task<PakkiDto> GetByIdAsync(int id, CancellationToken ct = default);
     Task<PakkiDto> CreateFromKachiAsync(CreatePakkiFromKachiRequest request, CancellationToken ct = default);
     Task<PakkiDto> CreateStandaloneAsync(CreateStandalonePakkiRequest request, CancellationToken ct = default);
+    Task<PakkiDto> UpdateAsync(int id, UpdatePakkiRequest request, CancellationToken ct = default);
     Task CancelAsync(int id, CancellationToken ct = default);
 }
