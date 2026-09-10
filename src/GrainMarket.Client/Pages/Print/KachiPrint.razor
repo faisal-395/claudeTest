@@ -44,7 +44,9 @@
             <table style="width:100%;">
                 <tr><td>بھرتی (کلو فی بوری)</td><td class="ltr-inline">@(_kachi.BhartiKgPerBag?.ToString("N2") ?? "-")</td></tr>
                 <tr><td>کل وزن (کلو)</td><td class="ltr-inline">@(_kachi.TotalWeightKg?.ToString("N2") ?? "-")</td></tr>
-                <tr><td>من / دھرن / کلو</td><td class="ltr-inline">@ManDhrnKgBreakdownText</td></tr>
+                <tr><td>من</td><td class="ltr-inline">@(ManDhrnKgBreakdown?.ManCount.ToString() ?? "-")</td></tr>
+                <tr><td>دھرن</td><td class="ltr-inline">@(ManDhrnKgBreakdown?.DhrnCount.ToString() ?? "-")</td></tr>
+                <tr><td>کلو (باقی)</td><td class="ltr-inline">@(ManDhrnKgBreakdown?.KgRemainder.ToString("N2") ?? "-")</td></tr>
                 <tr><td>بوری</td><td class="ltr-inline">@(_kachi.BoriQty?.ToString("N2") ?? "-")</td></tr>
                 <tr><td><b>صافی وزن (کلو)</b></td><td class="ltr-inline"><b>@_kachi.NetWeightKg.ToString("N2")</b></td></tr>
                 <tr><td>ریٹ فی مَن</td><td class="ltr-inline">@(_kachi.RatePerUnit?.ToString("N2") ?? "طے نہیں")</td></tr>
@@ -94,17 +96,16 @@
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private string ManDhrnKgBreakdownText
+    private (int ManCount, int DhrnCount, decimal KgRemainder)? ManDhrnKgBreakdown
     {
         get
         {
-            if (_kachi is null || _unitConversionEntities is null) return "-";
+            if (_kachi is null || _unitConversionEntities is null) return null;
             try
             {
-                var (manCount, dhrnCount, kgRemainder) = UnitConversionCalculator.BreakdownIntoManDhrnKg(_kachi.NetWeightKg, _kachi.ProductId, _unitConversionEntities);
-                return $"{manCount} / {dhrnCount} / {kgRemainder:N2}";
+                return UnitConversionCalculator.BreakdownIntoManDhrnKg(_kachi.NetWeightKg, _kachi.ProductId, _unitConversionEntities);
             }
-            catch (Application.Common.Exceptions.InvalidCalculationException) { return "-"; }
+            catch (Application.Common.Exceptions.InvalidCalculationException) { return null; }
         }
     }
 

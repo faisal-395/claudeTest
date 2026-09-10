@@ -72,11 +72,12 @@
                     <td colspan="6" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
                         @if (calc is not null)
                         {
-                            <div>
-                                <span class="rtl-urdu">من / دھرن / کلو</span>:
+                            <div class="rtl-urdu">
                                 @if (calc.Breakdown is not null)
                                 {
-                                    <b>@calc.Breakdown.Value.ManCount / @calc.Breakdown.Value.DhrnCount / @calc.Breakdown.Value.KgRemainder.ToString("N2")</b>
+                                    <span>من: <b>@calc.Breakdown.Value.ManCount</b></span>
+                                    <span>&nbsp;&nbsp;دھرن: <b>@calc.Breakdown.Value.DhrnCount</b></span>
+                                    <span>&nbsp;&nbsp;کلو: <b>@calc.Breakdown.Value.KgRemainder.ToString("N2")</b></span>
                                 }
                                 else
                                 {

@@ -34,7 +34,21 @@
             </div>
             <div><label>Bharti (kg/bag) / بھرتی</label><input type="number" step="0.01" @bind="_bhartiKgPerBag" /></div>
             <div><label>Total Weight (kg) / کل وزن</label><input type="number" step="0.01" @bind="_totalWeightKg" /></div>
-            <div><label>Man / Dhrn / Kg &nbsp;<span class="rtl-urdu">من / دھرن / کلو</span></label><div style="padding:6px 0;">@EditBreakdownText</div></div>
+            <div>
+                <label>Man / Dhrn / Kg &nbsp;<span class="rtl-urdu">من / دھرن / کلو</span></label>
+                <div class="rtl-urdu" style="padding:6px 0;">
+                    @if (EditBreakdown is not null)
+                    {
+                        <span>من: <b>@EditBreakdown.Value.ManCount</b></span>
+                        <span>&nbsp;&nbsp;دھرن: <b>@EditBreakdown.Value.DhrnCount</b></span>
+                        <span>&nbsp;&nbsp;کلو: <b>@EditBreakdown.Value.KgRemainder.ToString("N2")</b></span>
+                    }
+                    else
+                    {
+                        <span>—</span>
+                    }
+                </div>
+            </div>
             <div><label>Rate per Man (Darr) / ریٹ فی مَن (دَر)</label><input type="number" step="0.01" @bind="_rate" /></div>
             <div><label>Vehicle Number / گاڑی نمبر (for freight)</label><input @bind="_vehicleNumber" /></div>
             <div style="grid-column: span 2;">
@@ -107,17 +121,16 @@
     private bool CanSave =>
         _buyerId > 0 && (_bhartiKgPerBag ?? 0) > 0 && (_rate ?? 0) > 0 && (_totalWeightKg ?? 0) > 0;
 
-    private string EditBreakdownText
+    private (int ManCount, int DhrnCount, decimal KgRemainder)? EditBreakdown
     {
         get
         {
-            if (_unitConversionEntities is null || _totalWeightKg is not > 0) return "—";
+            if (_unitConversionEntities is null || _totalWeightKg is not > 0) return null;
             try
             {
-                var (manCount, dhrnCount, kgRemainder) = UnitConversionCalculator.BreakdownIntoManDhrnKg(_totalWeightKg.Value, _productId, _unitConversionEntities);
-                return $"{manCount} / {dhrnCount} / {kgRemainder:N2}";
+                return UnitConversionCalculator.BreakdownIntoManDhrnKg(_totalWeightKg.Value, _productId, _unitConversionEntities);
             }
-            catch (Application.Common.Exceptions.InvalidCalculationException) { return "—"; }
+            catch (Application.Common.Exceptions.InvalidCalculationException) { return null; }
         }
     }
 
