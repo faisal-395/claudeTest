@@ -123,6 +123,11 @@ table.data-grid tbody tr:hover {
     font-size: 0.85rem;
 }
 
+table.data-grid tbody tr.selected-row,
+table.data-grid tbody tr.selected-row:hover {
+    background: #eaf7ee;
+}
+
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(220px, 1fr));

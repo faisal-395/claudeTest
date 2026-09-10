@@ -1,9 +1,11 @@
 @page "/kachi-records"
+@using GrainMarket.Application.Common.Exceptions
+@using GrainMarket.Application.Common.Services
 @inject ApiClient Api
 
 <RequireAuth>
     <h1 class="page-title">Kachi Records <span class="rtl-urdu" style="font-size:1rem;">کچی ریکارڈ</span></h1>
-    <p style="color:#777;">Every Kachi raised from the Kachi entry screen — edit, cancel, print, or convert one to a Pakki here.</p>
+    <p style="color:#777;">Every Kachi raised from the Kachi entry screen — edit, cancel or print here.</p>
 
     @if (_error is not null)
     {
@@ -56,7 +58,7 @@
     else
     {
         <table class="data-grid">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Net Wt (kg)</th><th>Rate/Man</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Weight (Man)</th><th>Weight (kg)</th><th>Rate/Man</th><th>Total</th><th>Status</th><th></th></tr></thead>
             <tbody>
                 @foreach (var k in _kachis)
                 {
@@ -66,6 +68,7 @@
                         <td>@k.FarmerName</td>
                         <td>@(k.BuyerName ?? "—")</td>
                         <td>@k.ProductName</td>
+                        <td>@(ManEquivalent(k)?.ToString("N2") ?? "—")</td>
                         <td>@k.NetWeightKg.ToString("N2")</td>
                         <td>@(k.RatePerUnit?.ToString("N2") ?? "—")</td>
                         <td>@k.Total.ToString("N2")</td>
@@ -77,8 +80,6 @@
                             {
                                 <a href="#" @onclick="() => Edit(k)" @onclick:preventDefault="true">Edit</a>
                                 <text> | </text>
-                                <a href="pakki?fromKachi=@k.Id">Convert to Pakki</a>
-                                <text> | </text>
                             }
                             <a href="print/kachi/@k.Id">Print</a>
                         </td>
@@ -86,7 +87,7 @@
                     @if (_expandedId == k.Id)
                     {
                         <tr>
-                            <td colspan="10" style="background:#f7f9f7;">
+                            <td colspan="11" style="background:#f7f9f7;">
                                 @if (k.DeductionLines.Count == 0)
                                 {
                                     <span style="color:#777;">No deductions on this Kachi.</span>
@@ -122,6 +123,7 @@
     private List<PartyDto>? _farmers;
     private List<PartyDto>? _buyers;
     private List<ProductDto>? _products;
+    private List<UnitConversion>? _unitConversionEntities;
     private string? _error;
     private int? _editingId;
     private int? _expandedId;
@@ -148,9 +150,33 @@
             _farmers = await Api.GetPartiesAsync(PartyType.Farmer);
             _buyers = await Api.GetPartiesAsync(PartyType.Buyer);
             _products = await Api.GetProductsAsync();
+
+            var conversions = await Api.GetUnitConversionsAsync();
+            _unitConversionEntities = conversions.Select(c => new UnitConversion
+            {
+                Id = c.Id, Unit = c.Unit, FactorToKg = c.FactorToKg, ProductId = c.ProductId, IsActive = c.IsActive
+            }).ToList();
         }
         catch (Models.ApiException ex) { _error = ex.Message; return; }
         await LoadAsync();
+    }
+
+    /// <summary>Converts the stored kg total back to Man (maund) for display, using the same
+    /// configurable factor as entry — so it reads correctly even for a row originally keyed in as
+    /// Kilo/Gram/Bori only. Null (shown as "—") if no Man conversion factor is configured for the
+    /// product yet.</summary>
+    private decimal? ManEquivalent(KachiDto k)
+    {
+        if (_unitConversionEntities is null) return null;
+        try
+        {
+            var manFactor = UnitConversionCalculator.FactorFor(WeightUnit.Man, k.ProductId, _unitConversionEntities);
+            return k.NetWeightKg / manFactor;
+        }
+        catch (InvalidCalculationException)
+        {
+            return null;
+        }
     }
 
     private async Task LoadAsync()
