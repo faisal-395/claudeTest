@@ -344,9 +344,14 @@ table.data-grid tbody tr.selected-row:hover {
     font-style: italic;
 }
 
-/* Thermal (80mm) vs A4 print — the same invoice component is styled by print target. */
+/* Thermal (80mm) vs A4 print — the same invoice component is styled by print target. Print pages
+   still render inside the normal app-shell (sidebar + main-content), so without this the browser
+   prints the whole layout — sidebar nav included — not just the receipt. */
 @media print {
     .no-print { display: none !important; }
+    .sidebar { display: none !important; }
+    .app-shell { display: block !important; height: auto !important; }
+    .main-content { padding: 0 !important; overflow: visible !important; }
 }
 
 .print-thermal {

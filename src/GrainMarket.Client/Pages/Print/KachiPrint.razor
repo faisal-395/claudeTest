@@ -1,9 +1,11 @@
 @page "/print/kachi/{Id:int}"
 @inject ApiClient Api
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <RequireAuth>
     <div class="no-print" style="margin-bottom:12px;">
+        <button class="btn secondary" @onclick='() => Nav.NavigateTo("/kachi-records")'>← Back to Kachi Records</button>
         <button class="btn" @onclick="PrintAsync">Print</button>
     </div>
 
