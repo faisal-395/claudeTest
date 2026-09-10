@@ -112,6 +112,25 @@ public class DeductionEngineTests
     }
 
     [Fact]
+    public void Calculate_ChargedTo_IsPassedThroughPerLine_ButDoesNotAffectTotals()
+    {
+        // TotalDeductions/NetAmount stay unfiltered by ChargedTo — callers (KachiService) split by
+        // line.ChargedTo themselves; Pakki, which never filters, must see identical totals either way.
+        var rules = new List<DeductionRule>
+        {
+            new() { Id = 1, Name = "Aarat", NameUrdu = "آڑت", CalculationType = DeductionCalculationType.PercentOfGross, Value = 1.6m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Farmer, IsActive = true },
+            new() { Id = 2, Name = "Commission", NameUrdu = "کمیشن", CalculationType = DeductionCalculationType.PercentOfGross, Value = 1m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Buyer, IsActive = true }
+        };
+
+        var result = DeductionEngine.Calculate(10000m, 400m, DeductionAppliesTo.Kachi, null, null, rules);
+
+        Assert.Equal(2, result.Lines.Count);
+        Assert.Equal(DeductionChargedTo.Farmer, result.Lines.Single(l => l.DeductionRuleId == 1).ChargedTo);
+        Assert.Equal(DeductionChargedTo.Buyer, result.Lines.Single(l => l.DeductionRuleId == 2).ChargedTo);
+        Assert.Equal(260m, result.TotalDeductions); // 160 (aarat) + 100 (commission) — unfiltered
+    }
+
+    [Fact]
     public void Calculate_InactiveRule_IsExcluded()
     {
         var rules = new List<DeductionRule>

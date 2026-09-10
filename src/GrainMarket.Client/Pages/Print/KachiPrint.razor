@@ -48,13 +48,25 @@
             </table>
             <hr />
             <table style="width:100%;">
-                @foreach (var line in _kachi.DeductionLines)
+                @foreach (var line in _kachi.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer))
                 {
                     <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
                 }
                 <tr><td><b>مجموعی کٹوتی</b></td><td class="ltr-inline"><b>@_kachi.TotalDeductions.ToString("N2")</b></td></tr>
-                <tr><td><b>کل رقم</b></td><td class="ltr-inline"><b>@_kachi.Total.ToString("N2")</b></td></tr>
+                <tr><td><b>کل رقم (کسان)</b></td><td class="ltr-inline"><b>@_kachi.Total.ToString("N2")</b></td></tr>
             </table>
+            @if (_kachi.DeductionLines.Any(l => l.ChargedTo == DeductionChargedTo.Buyer))
+            {
+                <hr />
+                <table style="width:100%;">
+                    <tr><td colspan="2"><b>خریدار کے ذمہ</b></td></tr>
+                    @foreach (var line in _kachi.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer))
+                    {
+                        <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
+                    }
+                    <tr><td><b>کل (خریدار)</b></td><td class="ltr-inline"><b>@_kachi.BuyerChargesTotal.ToString("N2")</b></td></tr>
+                </table>
+            }
         </div>
     }
 </RequireAuth>

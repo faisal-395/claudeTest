@@ -40,7 +40,7 @@
             <span style="font-weight:600;">Kachi Tax / Deductions:</span>
             @foreach (var r in KachiRules)
             {
-                <span>@r.Name: <b>@FormatRuleValue(r)</b></span>
+                <span>@r.Name (@r.ChargedTo): <b>@FormatRuleValue(r)</b></span>
             }
         </div>
     }
@@ -77,11 +77,15 @@
                         {
                             <span>Net Wt: <b>@calc.NetWeightKg.ToString("N2")</b> kg</span>
                             <span>&nbsp;·&nbsp;Gross: <b>@calc.GrossAmount.ToString("N2")</b></span>
-                            @if (calc.Deductions.Lines.Count > 0)
+                            @if (calc.FarmerLines.Count > 0)
                             {
-                                <span>&nbsp;·&nbsp;Deductions (@calc.Deductions.TotalDeductions.ToString("N2")): @string.Join(", ", calc.Deductions.Lines.Select(l => $"{l.Name} {l.Amount:N2}"))</span>
+                                <span>&nbsp;·&nbsp;Deductions (@calc.FarmerDeductionsTotal.ToString("N2")): @string.Join(", ", calc.FarmerLines.Select(l => $"{l.Name} {l.Amount:N2}"))</span>
                             }
-                            <span>&nbsp;·&nbsp;Total: <b>@calc.Total.ToString("N2")</b></span>
+                            <span>&nbsp;·&nbsp;Farmer Total: <b>@calc.Total.ToString("N2")</b></span>
+                            @if (calc.BuyerLines.Count > 0)
+                            {
+                                <span>&nbsp;·&nbsp;Buyer Charges (@calc.BuyerChargesTotal.ToString("N2")): @string.Join(", ", calc.BuyerLines.Select(l => $"{l.Name} {l.Amount:N2}"))</span>
+                            }
                         }
                         else
                         {
@@ -96,7 +100,11 @@
     <div class="total-figure" style="margin-top:12px;display:flex;gap:28px;flex-wrap:wrap;">
         <span>Grand Gross: Rs @GrandGross.ToString("N2")</span>
         <span>Grand Deductions: Rs @GrandDeductions.ToString("N2")</span>
-        <span>Grand Total: Rs @GrandTotal.ToString("N2")</span>
+        <span>Grand Total (Farmer): Rs @GrandTotal.ToString("N2")</span>
+        @if (GrandBuyerCharges > 0)
+        {
+            <span>Grand Buyer Charges: Rs @GrandBuyerCharges.ToString("N2")</span>
+        }
     </div>
     <div style="margin-top:8px;">
         <button class="btn secondary" @onclick="AddRow">Add</button>
@@ -124,7 +132,8 @@
     private readonly List<RowModel> _rows = new();
 
     private decimal GrandGross => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.GrossAmount);
-    private decimal GrandDeductions => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.Deductions.TotalDeductions);
+    private decimal GrandDeductions => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.FarmerDeductionsTotal);
+    private decimal GrandBuyerCharges => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.BuyerChargesTotal);
     private decimal GrandTotal => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.Total);
 
     /// <summary>Active deduction rules that apply at the Kachi stage — drives the summary box shown
@@ -162,7 +171,7 @@
             _deductionRuleEntities = rules.Select(r => new DeductionRule
             {
                 Id = r.Id, Name = r.Name, NameUrdu = r.NameUrdu, CalculationType = r.CalculationType, Value = r.Value,
-                AppliesTo = r.AppliesTo, SortOrder = r.SortOrder, IsActive = r.IsActive,
+                AppliesTo = r.AppliesTo, ChargedTo = r.ChargedTo, SortOrder = r.SortOrder, IsActive = r.IsActive,
                 ProductId = r.ProductId, PartyId = r.PartyId, RequiresVehicleNumber = r.RequiresVehicleNumber,
                 IncomeAccountId = r.IncomeAccountId
             }).ToList();
@@ -206,7 +215,11 @@
             var netWeightKg = UnitConversionCalculator.ToBaseKg(row.ManQty, row.KiloQty, row.GramQty, row.BoriQty, row.ProductId, _unitConversionEntities);
             var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, row.ProductId, _unitConversionEntities);
             var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Kachi, row.ProductId, row.FarmerId, _deductionRuleEntities);
-            return new RowCalculation(netWeightKg, gross, deductions, deductions.NetAmount);
+            var farmerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).ToList();
+            var buyerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).ToList();
+            var farmerTotal = farmerLines.Sum(l => l.Amount);
+            var buyerTotal = buyerLines.Sum(l => l.Amount);
+            return new RowCalculation(netWeightKg, gross, farmerLines, buyerLines, farmerTotal, buyerTotal, gross - farmerTotal);
         }
         catch (InvalidCalculationException)
         {
@@ -255,5 +268,8 @@
         public string? Notes { get; set; }
     }
 
-    private record RowCalculation(decimal NetWeightKg, decimal GrossAmount, DeductionCalculationResult Deductions, decimal Total);
+    private record RowCalculation(
+        decimal NetWeightKg, decimal GrossAmount,
+        List<DeductionLineResult> FarmerLines, List<DeductionLineResult> BuyerLines,
+        decimal FarmerDeductionsTotal, decimal BuyerChargesTotal, decimal Total);
 }

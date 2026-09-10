@@ -47,7 +47,7 @@ public class CreateKachiRequestValidatorTests
     [Fact]
     public void Validate_ManQtyAndRateEntered_Passes()
     {
-        var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, 5000m, null, null);
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 1, 5m, null, null, null, 5000m, null, null);
         Assert.True(_validator.Validate(request).IsValid);
     }
 
@@ -67,11 +67,11 @@ public class CreateKachiRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_NoBuyerYet_Passes()
+    public void Validate_NoBuyer_Fails()
     {
-        // Buyer is still optional at Kachi stage even though rate is now required.
+        // Buyer is required at Kachi stage.
         var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, 5000m, null, null);
-        Assert.True(_validator.Validate(request).IsValid);
+        Assert.False(_validator.Validate(request).IsValid);
     }
 
     [Fact]
@@ -79,6 +79,25 @@ public class CreateKachiRequestValidatorTests
     {
         var request = new CreateKachiRequest(DateTime.Today, 1, 1, 0, 1, 5m, null, null, null, 5000m, null, null);
         Assert.False(_validator.Validate(request).IsValid);
+    }
+}
+
+public class UpdateKachiRequestValidatorTests
+{
+    private readonly UpdateKachiRequestValidator _validator = new();
+
+    [Fact]
+    public void Validate_NoBuyer_Fails()
+    {
+        var request = new UpdateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, 5000m, null, null);
+        Assert.False(_validator.Validate(request).IsValid);
+    }
+
+    [Fact]
+    public void Validate_ValidRequest_Passes()
+    {
+        var request = new UpdateKachiRequest(DateTime.Today, 1, 1, 1, 1, 5m, null, null, null, 5000m, null, null);
+        Assert.True(_validator.Validate(request).IsValid);
     }
 }
 
@@ -134,14 +153,14 @@ public class DeductionRuleValidatorTests
     [Fact]
     public void Validate_PercentOver100_Fails()
     {
-        var request = new UpsertDeductionRuleRequest("Commission", "کمیشن", DeductionCalculationType.PercentOfGross, 150m, DeductionAppliesTo.Pakki, 1, true, null, null, false, null);
+        var request = new UpsertDeductionRuleRequest("Commission", "کمیشن", DeductionCalculationType.PercentOfGross, 150m, DeductionAppliesTo.Pakki, DeductionChargedTo.Farmer, 1, true, null, null, false, null);
         Assert.False(_validator.Validate(request).IsValid);
     }
 
     [Fact]
     public void Validate_PercentWithin100_Passes()
     {
-        var request = new UpsertDeductionRuleRequest("Commission", "کمیشن", DeductionCalculationType.PercentOfGross, 2m, DeductionAppliesTo.Pakki, 1, true, null, null, false, null);
+        var request = new UpsertDeductionRuleRequest("Commission", "کمیشن", DeductionCalculationType.PercentOfGross, 2m, DeductionAppliesTo.Pakki, DeductionChargedTo.Farmer, 1, true, null, null, false, null);
         Assert.True(_validator.Validate(request).IsValid);
     }
 }

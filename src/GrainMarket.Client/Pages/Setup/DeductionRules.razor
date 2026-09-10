@@ -30,6 +30,13 @@
                 <option value="@DeductionAppliesTo.Both">Both</option>
             </select>
         </div>
+        <div>
+            <label>Charged To</label>
+            <select @bind="_chargedTo">
+                <option value="@DeductionChargedTo.Farmer">Farmer (reduces what the farmer receives)</option>
+                <option value="@DeductionChargedTo.Buyer">Buyer (what the buyer owes on top)</option>
+            </select>
+        </div>
         <div><label>Sort Order</label><input type="number" @bind="_sortOrder" /></div>
         <div><label><input type="checkbox" @bind="_requiresVehicle" /> Requires vehicle number (Freight)</label></div>
         <div style="grid-column: span 2;">
@@ -45,7 +52,7 @@
     else
     {
         <table class="data-grid">
-            <thead><tr><th>#</th><th>Name</th><th class="rtl-urdu">اردو</th><th>Type</th><th>Value</th><th>Applies To</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Name</th><th class="rtl-urdu">اردو</th><th>Type</th><th>Value</th><th>Applies To</th><th>Charged To</th><th></th></tr></thead>
             <tbody>
                 @foreach (var r in _rules.OrderBy(r => r.SortOrder))
                 {
@@ -56,6 +63,7 @@
                         <td>@r.CalculationType</td>
                         <td>@r.Value.ToString("N2")</td>
                         <td>@r.AppliesTo</td>
+                        <td>@r.ChargedTo</td>
                         <td>
                             <button class="btn secondary" @onclick="() => Edit(r)">Edit</button>
                             <button class="btn danger" @onclick="() => DeleteAsync(r.Id)">Delete</button>
@@ -77,6 +85,7 @@
     private DeductionCalculationType _calcType = DeductionCalculationType.FixedAmount;
     private decimal _value;
     private DeductionAppliesTo _appliesTo = DeductionAppliesTo.Both;
+    private DeductionChargedTo _chargedTo = DeductionChargedTo.Farmer;
     private int _sortOrder;
     private bool _requiresVehicle;
 
@@ -92,19 +101,19 @@
     {
         _editingId = r.Id;
         _name = r.Name; _nameUrdu = r.NameUrdu; _calcType = r.CalculationType;
-        _value = r.Value; _appliesTo = r.AppliesTo; _sortOrder = r.SortOrder; _requiresVehicle = r.RequiresVehicleNumber;
+        _value = r.Value; _appliesTo = r.AppliesTo; _chargedTo = r.ChargedTo; _sortOrder = r.SortOrder; _requiresVehicle = r.RequiresVehicleNumber;
     }
 
     private void ResetForm()
     {
         _editingId = null; _name = ""; _nameUrdu = ""; _calcType = DeductionCalculationType.FixedAmount;
-        _value = 0; _appliesTo = DeductionAppliesTo.Both; _sortOrder = 0; _requiresVehicle = false;
+        _value = 0; _appliesTo = DeductionAppliesTo.Both; _chargedTo = DeductionChargedTo.Farmer; _sortOrder = 0; _requiresVehicle = false;
     }
 
     private async Task SaveAsync()
     {
         _error = null;
-        var request = new UpsertDeductionRuleRequest(_name, _nameUrdu, _calcType, _value, _appliesTo, _sortOrder, true, null, null, _requiresVehicle, null);
+        var request = new UpsertDeductionRuleRequest(_name, _nameUrdu, _calcType, _value, _appliesTo, _chargedTo, _sortOrder, true, null, null, _requiresVehicle, null);
         try
         {
             if (_editingId is null) await Api.CreateDeductionRuleAsync(request);

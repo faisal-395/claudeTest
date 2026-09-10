@@ -33,6 +33,7 @@ public class DeductionRuleService : IDeductionRuleService
             CalculationType = request.CalculationType,
             Value = request.Value,
             AppliesTo = request.AppliesTo,
+            ChargedTo = request.ChargedTo,
             SortOrder = request.SortOrder,
             IsActive = request.IsActive,
             ProductId = request.ProductId,
@@ -55,6 +56,7 @@ public class DeductionRuleService : IDeductionRuleService
         rule.CalculationType = request.CalculationType;
         rule.Value = request.Value;
         rule.AppliesTo = request.AppliesTo;
+        rule.ChargedTo = request.ChargedTo;
         rule.SortOrder = request.SortOrder;
         rule.IsActive = request.IsActive;
         rule.ProductId = request.ProductId;
@@ -77,6 +79,6 @@ public class DeductionRuleService : IDeductionRuleService
     }
 
     private static DeductionRuleDto ToDto(DeductionRule r) => new(
-        r.Id, r.Name, r.NameUrdu, r.CalculationType, r.Value, r.AppliesTo, r.SortOrder, r.IsActive,
+        r.Id, r.Name, r.NameUrdu, r.CalculationType, r.Value, r.AppliesTo, r.ChargedTo, r.SortOrder, r.IsActive,
         r.ProductId, r.PartyId, r.RequiresVehicleNumber, r.IncomeAccountId);
 }

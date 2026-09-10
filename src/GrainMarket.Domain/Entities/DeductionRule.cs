@@ -18,6 +18,11 @@ public class DeductionRule : BaseEntity
     public decimal Value { get; set; }
 
     public DeductionAppliesTo AppliesTo { get; set; }
+
+    /// <summary>Farmer (default, existing behavior — reduces what the farmer receives) or Buyer
+    /// (calculated and shown, but never reduces the farmer's payable). See DeductionChargedTo.</summary>
+    public DeductionChargedTo ChargedTo { get; set; } = DeductionChargedTo.Farmer;
+
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
 

@@ -53,19 +53,32 @@
                     </tr>
                 </table>
                 <table style="width:100%;margin-bottom:6px;">
-                    @foreach (var line in k.DeductionLines)
+                    @foreach (var line in k.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer))
                     {
                         <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
                     }
                     <tr><td><b>مجموعی کٹوتی</b></td><td class="ltr-inline"><b>@k.TotalDeductions.ToString("N2")</b></td></tr>
-                    <tr><td><b>کل رقم</b></td><td class="ltr-inline"><b>@k.Total.ToString("N2")</b></td></tr>
+                    <tr><td><b>کل رقم (کسان)</b></td><td class="ltr-inline"><b>@k.Total.ToString("N2")</b></td></tr>
+                    @if (k.DeductionLines.Any(l => l.ChargedTo == DeductionChargedTo.Buyer))
+                    {
+                        <tr><td colspan="2"><b>خریدار کے ذمہ</b></td></tr>
+                        @foreach (var line in k.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer))
+                        {
+                            <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
+                        }
+                        <tr><td><b>کل (خریدار)</b></td><td class="ltr-inline"><b>@k.BuyerChargesTotal.ToString("N2")</b></td></tr>
+                    }
                 </table>
                 <hr />
             }
             <table style="width:100%;">
                 <tr><td><b>مجموعی رقم (کل)</b></td><td class="ltr-inline"><b>@_kachis.Sum(k => k.GrossAmount).ToString("N2")</b></td></tr>
                 <tr><td><b>مجموعی کٹوتی (کل)</b></td><td class="ltr-inline"><b>@_kachis.Sum(k => k.TotalDeductions).ToString("N2")</b></td></tr>
-                <tr><td><b>مجموعی کل رقم</b></td><td class="ltr-inline"><b>@_kachis.Sum(k => k.Total).ToString("N2")</b></td></tr>
+                <tr><td><b>مجموعی کل رقم (کسان)</b></td><td class="ltr-inline"><b>@_kachis.Sum(k => k.Total).ToString("N2")</b></td></tr>
+                @if (_kachis.Sum(k => k.BuyerChargesTotal) > 0)
+                {
+                    <tr><td><b>مجموعی خریدار چارجز</b></td><td class="ltr-inline"><b>@_kachis.Sum(k => k.BuyerChargesTotal).ToString("N2")</b></td></tr>
+                }
             </table>
         </div>
     }

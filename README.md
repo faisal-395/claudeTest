@@ -252,10 +252,19 @@ want to charge something at that stage. Labour (Palledari), Bagging/Stitching an
 `AppliesTo = Both`, since those are physical handling costs that make sense as soon as weight is
 known, independent of whether a sale price exists yet.
 
-`Kachi` now carries an optional `BuyerId` — set when the buyer is already known at Kachi stage
-(e.g. raised via Multi-Farmer Purchase below), left null for a purely provisional weighing where
-the buyer isn't decided. It plays no part in the deduction calculation, which only ever looks at
-product/farmer/weight/gross.
+`Kachi` carries a **required** `BuyerId` (`CreateKachiRequestValidator`/`UpdateKachiRequestValidator`:
+`NotNull().GreaterThan(0)`) — the buyer must be known at Kachi entry, not decided later.
+
+Each `DeductionRule` also has a **`ChargedTo`** (`Farmer` or `Buyer`, default `Farmer`), independent
+of `AppliesTo`. Farmer-charged rules behave exactly as before, reducing `Kachi.Total` (what the
+farmer receives). Buyer-charged rules are calculated and stored the same way (in
+`KachiDeductionLine`, tagged with the `ChargedTo` it had at posting time) but are summed into
+`Kachi.BuyerChargesTotal` instead — what the buyer owes on top, shown separately in Kachi Records,
+the entry grid, and both print templates, but never netted into the farmer's `Total` and not posted
+to any ledger (Kachi doesn't post to the ledger at all — only Pakki does, unchanged).
+`DeductionEngine.Calculate`'s `TotalDeductions`/`NetAmount` stay unfiltered by `ChargedTo`, so
+Pakki (which only ever reads those two fields) is completely unaffected; only `KachiService` and
+the Kachi entry screen split `calc.Lines` by `ChargedTo` themselves.
 
 ## Kachi: multi-farmer entry + a separate records page
 

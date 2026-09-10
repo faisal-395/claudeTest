@@ -37,6 +37,16 @@ public enum DeductionAppliesTo
     Both = 3
 }
 
+/// <summary>Which side of the transaction a deduction rule is charged to. Farmer-charged rules
+/// reduce what the farmer receives (the existing, default behavior). Buyer-charged rules are
+/// calculated and shown but never reduce the farmer's payable — they're what the buyer owes on
+/// top, informational only for now (no ledger posting).</summary>
+public enum DeductionChargedTo
+{
+    Farmer = 1,
+    Buyer = 2
+}
+
 public enum WeightUnit
 {
     Kilo = 1,

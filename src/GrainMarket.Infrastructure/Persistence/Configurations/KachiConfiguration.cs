@@ -20,6 +20,7 @@ public class KachiConfiguration : IEntityTypeConfiguration<Kachi>
         builder.Property(k => k.RatePerUnit).HasPrecision(18, 4);
         builder.Property(k => k.GrossAmount).HasPrecision(18, 2);
         builder.Property(k => k.TotalDeductions).HasPrecision(18, 2);
+        builder.Property(k => k.BuyerChargesTotal).HasPrecision(18, 2);
         builder.Property(k => k.Total).HasPrecision(18, 2);
 
         builder.HasOne(k => k.Season).WithMany().HasForeignKey(k => k.SeasonId).OnDelete(DeleteBehavior.Restrict);

@@ -8,7 +8,7 @@ public class CreateKachiRequestValidator : AbstractValidator<CreateKachiRequest>
     {
         RuleFor(x => x.SeasonId).GreaterThan(0);
         RuleFor(x => x.FarmerId).GreaterThan(0);
-        RuleFor(x => x.BuyerId).GreaterThan(0).When(x => x.BuyerId.HasValue);
+        RuleFor(x => x.BuyerId).NotNull().GreaterThan(0).WithMessage("Buyer is required.");
         RuleFor(x => x.ProductId).GreaterThan(0);
         RuleFor(x => x.RatePerUnit).NotNull().GreaterThan(0).WithMessage("Rate per Man is required.");
         RuleFor(x => x)
@@ -24,7 +24,7 @@ public class UpdateKachiRequestValidator : AbstractValidator<UpdateKachiRequest>
     {
         RuleFor(x => x.SeasonId).GreaterThan(0);
         RuleFor(x => x.FarmerId).GreaterThan(0);
-        RuleFor(x => x.BuyerId).GreaterThan(0).When(x => x.BuyerId.HasValue);
+        RuleFor(x => x.BuyerId).NotNull().GreaterThan(0).WithMessage("Buyer is required.");
         RuleFor(x => x.ProductId).GreaterThan(0);
         RuleFor(x => x.RatePerUnit).NotNull().GreaterThan(0).WithMessage("Rate per Man is required.");
         RuleFor(x => x)

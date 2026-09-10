@@ -4,7 +4,7 @@ using GrainMarket.Domain.Enums;
 
 namespace GrainMarket.Application.Common.Services;
 
-public record DeductionLineResult(int DeductionRuleId, string Name, string NameUrdu, decimal Amount, bool RequiresVehicleNumber, int? IncomeAccountId);
+public record DeductionLineResult(int DeductionRuleId, string Name, string NameUrdu, decimal Amount, bool RequiresVehicleNumber, int? IncomeAccountId, DeductionChargedTo ChargedTo);
 
 public record DeductionCalculationResult(IReadOnlyList<DeductionLineResult> Lines, decimal TotalDeductions, decimal NetAmount);
 
@@ -60,7 +60,7 @@ public static class DeductionEngine
                 throw new InvalidCalculationException($"Deduction '{rule.Name}' produced an invalid amount.");
             }
 
-            lines.Add(new DeductionLineResult(rule.Id, rule.Name, rule.NameUrdu, amount, rule.RequiresVehicleNumber, rule.IncomeAccountId));
+            lines.Add(new DeductionLineResult(rule.Id, rule.Name, rule.NameUrdu, amount, rule.RequiresVehicleNumber, rule.IncomeAccountId, rule.ChargedTo));
             total += amount;
         }
 

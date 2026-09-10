@@ -26,10 +26,8 @@ public class Kachi : BaseEntity
     public int ProductId { get; set; }
     public Product Product { get; set; } = null!;
 
-    /// <summary>Set when the buyer is already known at Kachi stage (e.g. raised via Multi-Farmer
-    /// Purchase) — null for a purely provisional weighing where the buyer isn't decided yet.
-    /// Purely informational: it plays no part in the deduction calculation (see DeductionEngine),
-    /// which only ever looks at product/farmer/weight/gross.</summary>
+    /// <summary>Required at entry (validated, not enforced by the column) — nullable only for
+    /// rows created before Buyer became mandatory at Kachi stage.</summary>
     public int? BuyerId { get; set; }
     public Party? Buyer { get; set; }
 
@@ -47,7 +45,17 @@ public class Kachi : BaseEntity
     public decimal? RatePerUnit { get; set; }
 
     public decimal GrossAmount { get; set; }
+
+    /// <summary>Sum of farmer-charged deduction lines only — this is what actually reduces Total.
+    /// Buyer-charged lines (see DeductionRule.ChargedTo) are in DeductionLines but excluded here
+    /// and from BuyerChargesTotal instead.</summary>
     public decimal TotalDeductions { get; set; }
+
+    /// <summary>Sum of buyer-charged deduction lines — what the buyer owes on top of the farmer's
+    /// price, calculated and shown but not netted into Total and not posted to any ledger.</summary>
+    public decimal BuyerChargesTotal { get; set; }
+
+    /// <summary>Farmer's net payable: GrossAmount minus TotalDeductions (farmer-charged lines only).</summary>
     public decimal Total { get; set; }
 
     public InvoiceStatus Status { get; set; } = InvoiceStatus.Open;
@@ -72,4 +80,8 @@ public class KachiDeductionLine : BaseEntity
     public string NameUrdu { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public string? VehicleNumber { get; set; }
+
+    /// <summary>Copied from DeductionRule.ChargedTo at posting time, so historical lines keep
+    /// reading correctly even if the rule's ChargedTo is changed later.</summary>
+    public DeductionChargedTo ChargedTo { get; set; } = DeductionChargedTo.Farmer;
 }

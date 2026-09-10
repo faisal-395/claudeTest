@@ -32,8 +32,8 @@
                 <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Search product…" />
             </div>
             <div>
-                <label>Buyer / خریدار (optional at Kachi stage)</label>
-                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" Value="@(_buyerId ?? 0)" ValueChanged="@(v => _buyerId = v == 0 ? null : v)" Placeholder="Search buyer…" />
+                <label>Buyer / خریدار</label>
+                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
             </div>
             <div><label>Man (maund) / مَن</label><input type="number" step="0.01" @bind="_man" /></div>
             <div><label>Kilo / کلو</label><input type="number" step="0.01" @bind="_kilo" /></div>
@@ -59,7 +59,7 @@
     else
     {
         <table class="data-grid">
-            <thead><tr><th>Invoice</th><th>Receipt #</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Weight (Man)</th><th>Weight (kg)</th><th>Rate/Man</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Receipt #</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Weight (Man)</th><th>Weight (kg)</th><th>Rate/Man</th><th>Total</th><th>Buyer Charges</th><th>Status</th><th></th></tr></thead>
             <tbody>
                 @foreach (var k in _kachis)
                 {
@@ -74,6 +74,7 @@
                         <td>@k.NetWeightKg.ToString("N2")</td>
                         <td>@(k.RatePerUnit?.ToString("N2") ?? "—")</td>
                         <td>@k.Total.ToString("N2")</td>
+                        <td>@(k.BuyerChargesTotal > 0 ? k.BuyerChargesTotal.ToString("N2") : "—")</td>
                         <td>@k.Status</td>
                         <td>
                             <a href="#" @onclick="() => ToggleDetails(k.Id)" @onclick:preventDefault="true">@(_expandedId == k.Id ? "Hide" : "Details")</a>
@@ -89,26 +90,57 @@
                     @if (_expandedId == k.Id)
                     {
                         <tr>
-                            <td colspan="12" style="background:#f7f9f7;">
+                            <td colspan="13" style="background:#f7f9f7;">
                                 @if (k.DeductionLines.Count == 0)
                                 {
                                     <span style="color:#777;">No deductions on this Kachi.</span>
                                 }
                                 else
                                 {
-                                    <table style="width:auto;min-width:280px;">
-                                        <thead><tr><th style="text-align:left;padding:2px 12px 2px 0;">Deduction</th><th style="text-align:left;padding:2px 12px;">اردو</th><th style="text-align:right;padding:2px 0;">Amount</th></tr></thead>
-                                        <tbody>
-                                            @foreach (var line in k.DeductionLines)
+                                    <div style="display:flex;gap:24px;flex-wrap:wrap;">
+                                        <div>
+                                            <div style="font-weight:600;margin-bottom:2px;">From Farmer</div>
+                                            @if (k.DeductionLines.Any(l => l.ChargedTo == DeductionChargedTo.Farmer))
                                             {
-                                                <tr>
-                                                    <td style="padding:2px 12px 2px 0;">@line.Name</td>
-                                                    <td class="rtl-urdu" style="padding:2px 12px;font-size:1rem;">@line.NameUrdu</td>
-                                                    <td style="text-align:right;padding:2px 0;">@line.Amount.ToString("N2")</td>
-                                                </tr>
+                                                <table style="width:auto;min-width:280px;">
+                                                    <thead><tr><th style="text-align:left;padding:2px 12px 2px 0;">Deduction</th><th style="text-align:left;padding:2px 12px;">اردو</th><th style="text-align:right;padding:2px 0;">Amount</th></tr></thead>
+                                                    <tbody>
+                                                        @foreach (var line in k.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer))
+                                                        {
+                                                            <tr>
+                                                                <td style="padding:2px 12px 2px 0;">@line.Name</td>
+                                                                <td class="rtl-urdu" style="padding:2px 12px;font-size:1rem;">@line.NameUrdu</td>
+                                                                <td style="text-align:right;padding:2px 0;">@line.Amount.ToString("N2")</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
                                             }
-                                        </tbody>
-                                    </table>
+                                            else
+                                            {
+                                                <span style="color:#777;">None.</span>
+                                            }
+                                        </div>
+                                        @if (k.DeductionLines.Any(l => l.ChargedTo == DeductionChargedTo.Buyer))
+                                        {
+                                            <div>
+                                                <div style="font-weight:600;margin-bottom:2px;">From Buyer</div>
+                                                <table style="width:auto;min-width:280px;">
+                                                    <thead><tr><th style="text-align:left;padding:2px 12px 2px 0;">Charge</th><th style="text-align:left;padding:2px 12px;">اردو</th><th style="text-align:right;padding:2px 0;">Amount</th></tr></thead>
+                                                    <tbody>
+                                                        @foreach (var line in k.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer))
+                                                        {
+                                                            <tr>
+                                                                <td style="padding:2px 12px 2px 0;">@line.Name</td>
+                                                                <td class="rtl-urdu" style="padding:2px 12px;font-size:1rem;">@line.NameUrdu</td>
+                                                                <td style="text-align:right;padding:2px 0;">@line.Amount.ToString("N2")</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                    </div>
                                 }
                             </td>
                         </tr>
@@ -134,7 +166,7 @@
     private DateTime _date = DateTime.Today;
     private int _seasonId;
     private int _farmerId;
-    private int? _buyerId;
+    private int _buyerId;
     private int _productId;
     private decimal? _man;
     private decimal? _kilo;
@@ -143,7 +175,7 @@
     private decimal? _rate;
     private string? _vehicleNumber;
 
-    private bool CanSave => (_man ?? 0) + (_kilo ?? 0) + (_gram ?? 0) + (_bori ?? 0) > 0 && (_rate ?? 0) > 0;
+    private bool CanSave => _buyerId > 0 && (_man ?? 0) + (_kilo ?? 0) + (_gram ?? 0) + (_bori ?? 0) > 0 && (_rate ?? 0) > 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -197,7 +229,7 @@
         _date = k.Date;
         _seasonId = k.SeasonId;
         _farmerId = k.FarmerId;
-        _buyerId = k.BuyerId;
+        _buyerId = k.BuyerId ?? 0;
         _productId = k.ProductId;
         _man = k.ManQty;
         _kilo = k.KiloQty;
@@ -212,7 +244,7 @@
         _editingId = null;
         _receiptNumber = null;
         _date = DateTime.Today;
-        _buyerId = null;
+        _buyerId = 0;
         _man = null; _kilo = null; _gram = null; _bori = null; _rate = null; _vehicleNumber = null;
     }
 
