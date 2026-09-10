@@ -1,5 +1,6 @@
 using GrainMarket.Application.DeductionRules;
 using GrainMarket.Application.Kachis;
+using GrainMarket.Application.MultiPurchase;
 using GrainMarket.Application.Parties;
 using GrainMarket.Domain.Enums;
 using Xunit;
@@ -54,6 +55,43 @@ public class CreateKachiRequestValidatorTests
     public void Validate_NegativeRate_Fails()
     {
         var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 5m, null, null, null, -10m, null, null);
+        Assert.False(_validator.Validate(request).IsValid);
+    }
+}
+
+public class CreateMultiPurchaseRequestValidatorTests
+{
+    private readonly CreateMultiPurchaseRequestValidator _validator = new();
+
+    private static MultiPurchaseRowRequest ValidRow() => new(1, 1, 5m, null, null, null, 5000m, null, null);
+
+    [Fact]
+    public void Validate_NoRows_Fails()
+    {
+        var request = new CreateMultiPurchaseRequest(DateTime.Today, 1, 1, new List<MultiPurchaseRowRequest>());
+        Assert.False(_validator.Validate(request).IsValid);
+    }
+
+    [Fact]
+    public void Validate_OneValidRow_Passes()
+    {
+        var request = new CreateMultiPurchaseRequest(DateTime.Today, 1, 1, new List<MultiPurchaseRowRequest> { ValidRow() });
+        Assert.True(_validator.Validate(request).IsValid);
+    }
+
+    [Fact]
+    public void Validate_RowWithNoWeight_Fails()
+    {
+        var badRow = new MultiPurchaseRowRequest(1, 1, null, null, null, null, 5000m, null, null);
+        var request = new CreateMultiPurchaseRequest(DateTime.Today, 1, 1, new List<MultiPurchaseRowRequest> { ValidRow(), badRow });
+        Assert.False(_validator.Validate(request).IsValid);
+    }
+
+    [Fact]
+    public void Validate_RowWithZeroRate_Fails()
+    {
+        var badRow = new MultiPurchaseRowRequest(1, 1, 5m, null, null, null, 0m, null, null);
+        var request = new CreateMultiPurchaseRequest(DateTime.Today, 1, 1, new List<MultiPurchaseRowRequest> { badRow });
         Assert.False(_validator.Validate(request).IsValid);
     }
 }

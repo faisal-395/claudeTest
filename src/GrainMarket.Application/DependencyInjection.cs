@@ -9,6 +9,7 @@ using GrainMarket.Application.DualInvoice;
 using GrainMarket.Application.Expenses;
 using GrainMarket.Application.Kachis;
 using GrainMarket.Application.Ledger;
+using GrainMarket.Application.MultiPurchase;
 using GrainMarket.Application.Pakkis;
 using GrainMarket.Application.Parties;
 using GrainMarket.Application.Products;
@@ -44,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<IKachiService, KachiService>();
         services.AddScoped<IPakkiService, PakkiService>();
         services.AddScoped<IDualInvoiceService, DualInvoiceService>();
+        services.AddScoped<IMultiPurchaseService, MultiPurchaseService>();
         services.AddScoped<ISaleInvoiceService, SaleInvoiceService>();
         services.AddScoped<IPurchaseService, PurchaseService>();
         services.AddScoped<IVoucherService, VoucherService>();

@@ -239,6 +239,25 @@ permission, same as every other cancel action) that posts mirror-image ledger en
 supplier, income/expense account, and any cash applied — rather than deleting the row, preserving
 the audit trail the same way Kachi/Pakki/Voucher already do.
 
+## Multi-Farmer Purchase
+
+One buyer commonly purchases several products from several different farmers in one sitting.
+`Pages/MultiPurchase.razor` (`/multi-purchase`) handles that: pick the buyer, season and date
+once, then add one row per farmer/product/weight/rate. Each row still becomes its own Kachi +
+Pakki on submit — every farmer is still paid individually against their own net weight and
+deductions, exactly as if entered one at a time — but all rows are raised together
+(`Application/MultiPurchase/MultiPurchaseService`, reusing `IDualInvoiceService` per row) and land
+on one consolidated print page (`Pages/Print/MultiPurchasePrint.razor`) instead of separate
+printouts.
+
+Every row shows its calculated breakdown (paledari/labour, commission, association fund,
+withholding tax, ...) live as you fill it in, updating on every keystroke — not just after saving.
+This isn't a second, hand-written copy of the math: the page calls
+`Application.Common.Services.DeductionEngine`/`UnitConversionCalculator` directly (the exact same
+pure, stateless calculators the server uses to post the Pakki), since the Client project already
+references `GrainMarket.Application`. There is no live-preview API endpoint and nothing to keep in
+sync — what you see while typing is what actually gets posted.
+
 ## Open items — resolved
 
 The spec flagged four open items to confirm before/while building. Given the instruction to
