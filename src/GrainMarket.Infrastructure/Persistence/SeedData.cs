@@ -8,10 +8,10 @@ namespace GrainMarket.Infrastructure.Persistence;
 
 /// <summary>
 /// Idempotent runtime seed: default roles/permissions, an initial admin user, the chart of
-/// accounts, the market's three current Kachi-stage deduction rules (Setup &gt; Format — Pakki's
-/// own deductions aren't seeded yet), default unit conversions and a starter season/products.
-/// Everything here is editable afterwards from Setup — this only seeds sane defaults so the app is
-/// usable on first run.
+/// accounts, six deduction rules shared by Kachi and Pakki (Setup &gt; Format, AppliesTo = Both —
+/// only three have a configured rate, the rest are seeded inactive), default unit conversions, the
+/// current season and a starter product catalog. Everything here is editable afterwards from
+/// Setup — this only seeds sane defaults so the app is usable on first run.
 /// </summary>
 public static class SeedData
 {
@@ -118,6 +118,8 @@ public static class SeedData
             new ChartOfAccount { Code = DomainConstants.SalesIncomeAccountCode, Name = "Sales Income", NameUrdu = "آمدنی فروخت", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4100", Name = "Commission Income", NameUrdu = "آمدنی کمیشن", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4110", Name = "Brokerage Income", NameUrdu = "آمدنی بروکری", AccountType = AccountType.Income },
+            new ChartOfAccount { Code = "4120", Name = "Arhat Income", NameUrdu = "آمدنی آڑت", AccountType = AccountType.Income },
+            new ChartOfAccount { Code = "4300", Name = "Association Fund Income", NameUrdu = "آمدنی انجمن فنڈ", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4600", Name = "Labour (Palledari) Income", NameUrdu = "آمدنی پلیداری", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4500", Name = "Withholding Tax Payable", NameUrdu = "ویدہولڈنگ ٹیکس", AccountType = AccountType.Liability, IsProtected = true },
             new ChartOfAccount { Code = DomainConstants.UnallocatedDeductionsAccountCode, Name = "Unallocated Deductions (Suspense)", NameUrdu = "غیر مختص کٹوتیاں", AccountType = AccountType.Income },
@@ -144,14 +146,21 @@ public static class SeedData
 
     private static async Task SeedDeductionRulesAsync(AppDbContext db, Dictionary<string, ChartOfAccount> accounts, CancellationToken ct)
     {
-        // Kachi-stage tax/deductions only, for now — the market's current three rates. Pakki keeps
-        // its own separate deductions (Setup > Format, AppliesTo = Pakki), configured independently
-        // whenever that stage's rates are decided; nothing is seeded for it yet.
+        // All six rules apply to both Kachi and Pakki (AppliesTo = Both) — the same rate is charged
+        // whichever stage a transaction is recorded at, so it only needs configuring once. Only the
+        // first three have a real rate; the rest are seeded inactive at 0 until the market's actual
+        // rate is entered under Setup > Format. IsActive is what the Kachi/Pakki tax summary filters
+        // on (see KachiRules in Kachi.razor and its Pakki equivalent) and what DeductionEngine
+        // actually charges, so an inactive placeholder is safe to leave seeded — it shows nowhere
+        // and charges nothing until switched on.
         var rules = new[]
         {
-            new DeductionRule { Name = "Labour (Palledari)", NameUrdu = "پلیداری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.75m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 1, IncomeAccountId = accounts["4600"].Id },
-            new DeductionRule { Name = "Brokerage", NameUrdu = "بروکری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.15m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 2, IncomeAccountId = accounts["4110"].Id },
-            new DeductionRule { Name = "Commission", NameUrdu = "کمیشن", CalculationType = DeductionCalculationType.PercentOfGross, Value = 1.60m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 3, IncomeAccountId = accounts["4100"].Id }
+            new DeductionRule { Name = "Labour (Palledari)", NameUrdu = "پلیداری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.75m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 1, IsActive = true, IncomeAccountId = accounts["4600"].Id },
+            new DeductionRule { Name = "Brokerage", NameUrdu = "بروکری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.15m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 2, IsActive = true, IncomeAccountId = accounts["4110"].Id },
+            new DeductionRule { Name = "Commission", NameUrdu = "کمیشن", CalculationType = DeductionCalculationType.PercentOfGross, Value = 1.60m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 3, IsActive = true, IncomeAccountId = accounts["4100"].Id },
+            new DeductionRule { Name = "Withholding Tax", NameUrdu = "ویدہولڈنگ ٹیکس", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 4, IsActive = false, IncomeAccountId = accounts["4500"].Id },
+            new DeductionRule { Name = "Association Fund", NameUrdu = "انجمن فنڈ", CalculationType = DeductionCalculationType.FixedAmount, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 5, IsActive = false, IncomeAccountId = accounts["4300"].Id },
+            new DeductionRule { Name = "Arhat", NameUrdu = "آڑت", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 6, IsActive = false, IncomeAccountId = accounts["4120"].Id }
         };
 
         db.DeductionRules.AddRange(rules);
@@ -175,9 +184,7 @@ public static class SeedData
 
     private static async Task SeedSeasonAsync(AppDbContext db, CancellationToken ct)
     {
-        var today = DateTime.UtcNow.Date;
-        var label = today.Month >= 7 ? $"{today.Year}-{(today.Year + 1) % 100:D2}" : $"{today.Year - 1}-{today.Year % 100:D2}";
-        db.Seasons.Add(new Season { Name = label, StartDate = new DateTime(today.Year, 1, 1), IsActive = true });
+        db.Seasons.Add(new Season { Name = "2026-27", StartDate = new DateTime(2026, 7, 1), IsActive = true });
         await db.SaveChangesAsync(ct);
     }
 

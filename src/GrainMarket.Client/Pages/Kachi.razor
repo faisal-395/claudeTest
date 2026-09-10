@@ -84,21 +84,21 @@
                                     <span style="color:#999;">— (configure Dhrn under Setup &gt; Unit Conversions)</span>
                                 }
                             </div>
-                            <div>
-                                <span>Safi Wazan: <b>@calc.NetWeightKg.ToString("N2")</b> kg</span>
+                            <div class="rtl-urdu">
+                                <span>صافی وزن: <b>@calc.NetWeightKg.ToString("N2")</b> کلو</span>
                                 @if (calc.BoriQty is not null)
                                 {
-                                    <span>&nbsp;·&nbsp;Bori: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
+                                    <span>&nbsp;·&nbsp;بوری: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
                                 }
-                                <span>&nbsp;·&nbsp;Gross: <b>@calc.GrossAmount.ToString("N2")</b></span>
+                                <span>&nbsp;·&nbsp;مجموعی رقم: <b>@calc.GrossAmount.ToString("N2")</b></span>
                                 @if (calc.FarmerLines.Count > 0)
                                 {
-                                    <span>&nbsp;·&nbsp;Deductions (@calc.FarmerDeductionsTotal.ToString("N2")): @string.Join(", ", calc.FarmerLines.Select(l => $"{l.Name} {l.Amount:N2}"))</span>
+                                    <span>&nbsp;·&nbsp;کٹوتیاں (@calc.FarmerDeductionsTotal.ToString("N2")): @string.Join("، ", calc.FarmerLines.Select(l => $"{l.NameUrdu} {l.Amount:N2}"))</span>
                                 }
-                                <span>&nbsp;·&nbsp;Farmer Total: <b>@calc.Total.ToString("N2")</b></span>
+                                <span>&nbsp;·&nbsp;کل رقم (کسان): <b>@calc.Total.ToString("N2")</b></span>
                                 @if (calc.BuyerLines.Count > 0)
                                 {
-                                    <span>&nbsp;·&nbsp;Buyer Charges (@calc.BuyerChargesTotal.ToString("N2")): @string.Join(", ", calc.BuyerLines.Select(l => $"{l.Name} {l.Amount:N2}"))</span>
+                                    <span>&nbsp;·&nbsp;خریدار چارجز (@calc.BuyerChargesTotal.ToString("N2")): @string.Join("، ", calc.BuyerLines.Select(l => $"{l.NameUrdu} {l.Amount:N2}"))</span>
                                 }
                             </div>
                         }
@@ -112,13 +112,13 @@
         </tbody>
     </table>
 
-    <div class="total-figure" style="margin-top:12px;display:flex;gap:28px;flex-wrap:wrap;">
-        <span>Grand Gross: Rs @GrandGross.ToString("N2")</span>
-        <span>Grand Deductions: Rs @GrandDeductions.ToString("N2")</span>
-        <span>Grand Total (Farmer): Rs @GrandTotal.ToString("N2")</span>
+    <div class="total-figure rtl-urdu" style="margin-top:12px;display:flex;gap:28px;flex-wrap:wrap;">
+        <span>مجموعی رقم (کل): Rs @GrandGross.ToString("N2")</span>
+        <span>مجموعی کٹوتی (کل): Rs @GrandDeductions.ToString("N2")</span>
+        <span>مجموعی کل رقم (کسان): Rs @GrandTotal.ToString("N2")</span>
         @if (GrandBuyerCharges > 0)
         {
-            <span>Grand Buyer Charges: Rs @GrandBuyerCharges.ToString("N2")</span>
+            <span>مجموعی خریدار چارجز: Rs @GrandBuyerCharges.ToString("N2")</span>
         }
     </div>
     <div style="margin-top:8px;">
