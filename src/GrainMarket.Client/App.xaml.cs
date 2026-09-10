@@ -1,3 +1,7 @@
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
+using WinRT.Interop;
+
 namespace GrainMarket.Client;
 
 // Fully qualified: unqualified "Application" would otherwise resolve to the sibling
@@ -14,17 +18,26 @@ public partial class App : Microsoft.Maui.Controls.Application
     {
         var window = new Window(new MainPage()) { Title = "Umer Farooq & Brothers — Grain Market Management" };
 
-        // Size to 90% of the till PC's actual display instead of a fixed 1366x800, so the app
-        // fits monitors both smaller and larger than that. MainDisplayInfo is in raw pixels;
-        // MAUI Window.Width/Height are device-independent units, so divide out the density.
-        var display = DeviceDisplay.Current.MainDisplayInfo;
-        var screenWidth = display.Width / display.Density;
-        var screenHeight = display.Height / display.Density;
+        // Maximize via the native AppWindow once it exists, instead of computing DPI-adjusted
+        // Width/Height/X/Y in CreateWindow itself. CreateWindow runs before the native window is
+        // attached to a monitor, so DeviceDisplay.Current.MainDisplayInfo.Density can be wrong at
+        // that point (e.g. reads 1.0 on a scaled display) — that mis-sized the window just enough
+        // to desync WebView2's screen-space popups (the date-input calendar, native <select>
+        // dropdowns) from where the control actually is. AppWindow.Presenter.Maximize() lets
+        // Windows itself place the window on the correct monitor at the correct DPI, so nothing
+        // here has to compute pixels by hand.
+        window.Created += (_, _) =>
+        {
+            if (window.Handler?.PlatformView is not Microsoft.UI.Xaml.Window nativeWindow) return;
 
-        window.Width = screenWidth * 0.9;
-        window.Height = screenHeight * 0.9;
-        window.X = (screenWidth - window.Width) / 2;
-        window.Y = (screenHeight - window.Height) / 2;
+            var hwnd = WindowNative.GetWindowHandle(nativeWindow);
+            var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
+            var appWindow = AppWindow.GetFromWindowId(windowId);
+            if (appWindow?.Presenter is OverlappedPresenter presenter)
+            {
+                presenter.Maximize();
+            }
+        };
 
         return window;
     }

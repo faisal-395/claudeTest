@@ -24,9 +24,7 @@
         <div><label>Date / تاریخ</label><input type="date" @bind="_date" /></div>
         <div>
             <label>Season / سیزن</label>
-            <select @bind="_seasonId">
-                @if (_seasons is not null) { @foreach (var s in _seasons) { <option value="@s.Id">@s.Name</option> } }
-            </select>
+            <SearchSelect TItem="SeasonDto" Items="_seasons" IdSelector="@(s => s.Id)" TextSelector="@(s => s.Name)" @bind-Value="_seasonId" Placeholder="Search season…" />
         </div>
         <div style="grid-column: span 2;">
             <label>Buyer / خریدار</label>

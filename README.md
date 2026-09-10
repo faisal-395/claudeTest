@@ -219,15 +219,25 @@ whose SHA-256 hash is stored in the `RefreshTokens` table (`Jwt:RefreshTokenExpi
   turns into a redirect to `/login?expired=1` with a plain-language message — instead of the app
   ever falling through to Blazor's fatal "An unhandled error has occurred" overlay.
 
-## Searchable dropdowns
+## Searchable dropdowns, and the window-resize bug behind them
 
-Native `<select>` popups are rendered by WebView2 as an OS-level overlay outside Blazor's own
-layout — after the host window is resized, moved, or hits a display's DPI scaling, that popup can
-render detached from the control it belongs to. `Components/SearchSelect.razor` replaces it for
-every farmer/buyer/product/party/account picker: a type-to-filter text input plus a menu that
-renders in normal page flow, so it can never separate from its control. Static, short enum lists
-(season, role, print format, account type, …) are left as native `<select>` — no benefit there,
-and it keeps those forms simpler.
+Native `<select>` popups (and the native `<input type="date">` calendar) are rendered by WebView2
+as an OS-level overlay outside Blazor's own layout — after the host window is resized, moved, or
+hits a display's DPI scaling, that popup can render detached from the control it belongs to,
+appearing somewhere else on screen entirely. `Components/SearchSelect.razor` sidesteps this for
+every farmer/buyer/product/party/account/season picker: a type-to-filter text input plus a menu
+that renders in normal page flow, so it can never separate from its control (Kachi and Kachi
+Records' Season field was still a native `<select>` until this was traced down — now SearchSelect
+like everything else on those two screens). The `<input type="date">` calendar itself has no such
+replacement (there's no reliable custom date-picker here) — the actual fix was the trigger:
+`App.xaml.cs`'s `CreateWindow` used to compute `Window.Width/Height/X/Y` from
+`DeviceDisplay.Current.MainDisplayInfo` *inside* `CreateWindow`, before the native window is
+attached to a monitor — `Density` can read wrong at that point (e.g. 1.0 on a scaled display),
+mis-sizing the window enough to desync every screen-space popup, calendar included. It now hooks
+`Window.Created` and calls `AppWindow.Presenter.Maximize()` on the native window instead, once
+Windows has already placed it on the right monitor at the right DPI — sizing math no longer happens
+by hand at all. Print format / print language toggles remain native `<select>` (two-three fixed
+options, no meaningful list to search) since they're unaffected in practice.
 
 ## Cancelling Sale Invoices and Purchases
 
