@@ -12,7 +12,7 @@ public class KachiConfiguration : IEntityTypeConfiguration<Kachi>
         builder.HasIndex(k => k.InvoiceNo).IsUnique();
         builder.Property(k => k.ReceiptNumber).HasMaxLength(30);
 
-        foreach (var name in new[] { nameof(Kachi.ManQty), nameof(Kachi.KiloQty), nameof(Kachi.GramQty), nameof(Kachi.BoriQty) })
+        foreach (var name in new[] { nameof(Kachi.BhartiKgPerBag), nameof(Kachi.TotalWeightKg), nameof(Kachi.DhrnKg), nameof(Kachi.BoriQty) })
         {
             builder.Property(name).HasPrecision(18, 4);
         }

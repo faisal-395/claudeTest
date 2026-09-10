@@ -36,7 +36,7 @@ public class KachiLedgerPostingTests : IClassFixture<CustomWebApplicationFactory
 
         var request = new CreateKachiRequest(
             DateTime.Today, season.Id, farmer.Id, buyer.Id, product.Id,
-            ManQty: 10m, KiloQty: null, GramQty: null, BoriQty: null,
+            BhartiKgPerBag: 60m, TotalWeightKg: 3000m, DhrnKg: null,
             RatePerUnit: 2000m, VehicleNumber: null, Notes: null);
 
         var createResponse = await admin.PostAsJsonAsync("/api/kachis", request);
@@ -67,7 +67,7 @@ public class KachiLedgerPostingTests : IClassFixture<CustomWebApplicationFactory
 
         var request = new CreateKachiRequest(
             DateTime.Today, season.Id, farmer.Id, buyer.Id, product.Id,
-            ManQty: 5m, KiloQty: null, GramQty: null, BoriQty: null,
+            BhartiKgPerBag: 65m, TotalWeightKg: 2000m, DhrnKg: 20m,
             RatePerUnit: 3000m, VehicleNumber: null, Notes: null);
 
         var createResponse = await admin.PostAsJsonAsync("/api/kachis", request);

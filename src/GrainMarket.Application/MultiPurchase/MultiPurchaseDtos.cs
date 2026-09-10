@@ -5,7 +5,7 @@ namespace GrainMarket.Application.MultiPurchase;
 /// </summary>
 public record MultiPurchaseRowRequest(
     int FarmerId, int ProductId,
-    decimal? ManQty, decimal? KiloQty, decimal? GramQty, decimal? BoriQty,
+    decimal? BhartiKgPerBag, decimal? TotalWeightKg, decimal? DhrnKg,
     decimal? RatePerUnit, string? VehicleNumber, string? Notes);
 
 /// <summary>

@@ -47,8 +47,16 @@
                         <td>جنس: @k.ProductName</td>
                     </tr>
                     <tr>
-                        <td>کل وزن (کلو): <span class="ltr-inline">@k.NetWeightKg.ToString("N2")</span></td>
+                        <td>بھرتی: <span class="ltr-inline">@(k.BhartiKgPerBag?.ToString("N2") ?? "-")</span></td>
+                        <td>کل وزن (کلو): <span class="ltr-inline">@(k.TotalWeightKg?.ToString("N2") ?? "-")</span></td>
+                        <td>دھرن (کلو): <span class="ltr-inline">@(k.DhrnKg?.ToString("N2") ?? "-")</span></td>
+                    </tr>
+                    <tr>
+                        <td>بوری: <span class="ltr-inline">@(k.BoriQty?.ToString("N2") ?? "-")</span></td>
+                        <td>صافی وزن (کلو): <span class="ltr-inline">@k.NetWeightKg.ToString("N2")</span></td>
                         <td>ریٹ فی مَن: <span class="ltr-inline">@(k.RatePerUnit?.ToString("N2") ?? "طے نہیں")</span></td>
+                    </tr>
+                    <tr>
                         <td>مجموعی رقم: <span class="ltr-inline">@k.GrossAmount.ToString("N2")</span></td>
                     </tr>
                 </table>

@@ -49,7 +49,7 @@
                 <th style="width:24px;"></th>
                 <th style="min-width:150px;">Farmer / کسان</th>
                 <th style="min-width:130px;">Product / جنس</th>
-                <th>Man</th><th>Kilo</th><th>Gram</th><th>Bori</th>
+                <th>Bharti (kg/bag)</th><th>Total Weight (kg)</th><th>Dhrn (kg)</th>
                 <th>Rate/Man</th>
             </tr>
         </thead>
@@ -63,17 +63,20 @@
                     <td style="text-align:center;"><input type="radio" name="rowSelect" checked="@(_selectedIndex == index)" @onchange="() => _selectedIndex = index" /></td>
                     <td><SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Farmer…" /></td>
                     <td><SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@row.ProductId" ValueChanged="@(v => row.ProductId = v)" Placeholder="Product…" /></td>
-                    <td><input type="number" step="0.01" style="width:65px;" @bind="row.ManQty" /></td>
-                    <td><input type="number" step="0.01" style="width:65px;" @bind="row.KiloQty" /></td>
-                    <td><input type="number" step="1" style="width:55px;" @bind="row.GramQty" /></td>
-                    <td><input type="number" step="0.01" style="width:55px;" @bind="row.BoriQty" /></td>
+                    <td><input type="number" step="0.01" style="width:80px;" @bind="row.BhartiKgPerBag" /></td>
+                    <td><input type="number" step="0.01" style="width:90px;" @bind="row.TotalWeightKg" /></td>
+                    <td><input type="number" step="0.01" style="width:80px;" @bind="row.DhrnKg" /></td>
                     <td><input type="number" step="0.01" style="width:80px;" @bind="row.RatePerUnit" /></td>
                 </tr>
                 <tr>
-                    <td colspan="8" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
+                    <td colspan="7" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
                         @if (calc is not null)
                         {
-                            <span>Net Wt: <b>@calc.NetWeightKg.ToString("N2")</b> kg</span>
+                            <span>Safi Wazan: <b>@calc.NetWeightKg.ToString("N2")</b> kg</span>
+                            @if (calc.BoriQty is not null)
+                            {
+                                <span>&nbsp;·&nbsp;Bori: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
+                            }
                             <span>&nbsp;·&nbsp;Gross: <b>@calc.GrossAmount.ToString("N2")</b></span>
                             @if (calc.FarmerLines.Count > 0)
                             {
@@ -87,7 +90,7 @@
                         }
                         else
                         {
-                            <span style="color:#999;">Enter weight and a rate to see the calculation</span>
+                            <span style="color:#999;">Enter Bharti, Total Weight and a rate to see the calculation</span>
                         }
                     </td>
                 </tr>
@@ -152,7 +155,7 @@
     private bool CanSave =>
         _buyerId > 0 && _rows.Count > 0 &&
         _rows.All(r => r.FarmerId > 0 && r.ProductId > 0 && (r.RatePerUnit ?? 0) > 0 &&
-                        (r.ManQty ?? 0) + (r.KiloQty ?? 0) + (r.GramQty ?? 0) + (r.BoriQty ?? 0) > 0);
+                        (r.BhartiKgPerBag ?? 0) > 0 && (r.TotalWeightKg ?? 0) > (r.DhrnKg ?? 0));
 
     protected override async Task OnInitializedAsync()
     {
@@ -206,18 +209,24 @@
     /// the product's conversion factor isn't configured.</summary>
     private RowCalculation? Calculate(RowModel row)
     {
-        if (_deductionRuleEntities is null || _unitConversionEntities is null || row.RatePerUnit is not > 0) return null;
+        if (_deductionRuleEntities is null || _unitConversionEntities is null || row.RatePerUnit is not > 0
+            || row.TotalWeightKg is not > 0) return null;
 
         try
         {
-            var netWeightKg = UnitConversionCalculator.ToBaseKg(row.ManQty, row.KiloQty, row.GramQty, row.BoriQty, row.ProductId, _unitConversionEntities);
+            var netWeightKg = row.TotalWeightKg.Value - (row.DhrnKg ?? 0m);
+            if (netWeightKg <= 0) return null;
+
+            var boriFactor = UnitConversionCalculator.FactorFor(WeightUnit.Bori, row.ProductId, _unitConversionEntities);
+            var boriQty = netWeightKg / boriFactor;
+
             var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, row.ProductId, _unitConversionEntities);
             var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Kachi, row.ProductId, row.FarmerId, _deductionRuleEntities);
             var farmerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).ToList();
             var buyerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).ToList();
             var farmerTotal = farmerLines.Sum(l => l.Amount);
             var buyerTotal = buyerLines.Sum(l => l.Amount);
-            return new RowCalculation(netWeightKg, gross, farmerLines, buyerLines, farmerTotal, buyerTotal, gross - farmerTotal);
+            return new RowCalculation(netWeightKg, boriQty, gross, farmerLines, buyerLines, farmerTotal, buyerTotal, gross - farmerTotal);
         }
         catch (InvalidCalculationException)
         {
@@ -233,7 +242,7 @@
         try
         {
             var request = new CreateMultiPurchaseRequest(_date, _seasonId, _buyerId,
-                _rows.Select(r => new MultiPurchaseRowRequest(r.FarmerId, r.ProductId, r.ManQty, r.KiloQty, r.GramQty, r.BoriQty, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList());
+                _rows.Select(r => new MultiPurchaseRowRequest(r.FarmerId, r.ProductId, r.BhartiKgPerBag, r.TotalWeightKg, r.DhrnKg, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList());
 
             var result = await Api.CreateMultiPurchaseAsync(request);
 
@@ -257,17 +266,16 @@
     {
         public int FarmerId { get; set; }
         public int ProductId { get; set; }
-        public decimal? ManQty { get; set; }
-        public decimal? KiloQty { get; set; }
-        public decimal? GramQty { get; set; }
-        public decimal? BoriQty { get; set; }
+        public decimal? BhartiKgPerBag { get; set; }
+        public decimal? TotalWeightKg { get; set; }
+        public decimal? DhrnKg { get; set; }
         public decimal? RatePerUnit { get; set; }
         public string? VehicleNumber { get; set; }
         public string? Notes { get; set; }
     }
 
     private record RowCalculation(
-        decimal NetWeightKg, decimal GrossAmount,
+        decimal NetWeightKg, decimal? BoriQty, decimal GrossAmount,
         List<DeductionLineResult> FarmerLines, List<DeductionLineResult> BuyerLines,
         decimal FarmerDeductionsTotal, decimal BuyerChargesTotal, decimal Total);
 }

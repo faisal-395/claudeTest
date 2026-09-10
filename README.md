@@ -275,6 +275,13 @@ the entry grid, and both print templates, but never netted into the farmer's `To
 Pakki (which only ever reads those two fields) is completely unaffected; only `KachiService` and
 the Kachi entry screen split `calc.Lines` by `ChargedTo` themselves.
 
+Setup ▸ Format also has an **Income Account** picker per rule now — until this existed, every rule
+created through that screen posted with `IncomeAccountId = null` (the form didn't expose the field
+at all), so every deduction — Aarat/Broker/Labour included — silently fell into the "Unallocated
+Deductions" suspense account instead of its own chart-of-accounts row regardless of what was
+configured elsewhere. Pick a specific account per rule to route it properly; leave it blank to keep
+using Unallocated Deductions on purpose.
+
 ### Kachi now posts to the ledger
 
 `KachiService.CreateAsync` posts a farmer/buyer double-entry the moment a Kachi is created (same
@@ -288,11 +295,13 @@ like Pakki does). The two sides always balance: buyer debit = farmer credit + su
 them outright — both mirror `PakkiService`'s existing reverse-then-repost pattern (posted rows are
 never deleted or mutated, only offset).
 
-Converting a Kachi to a Pakki (via Dual Invoice, `PakkiService.CreateFromKachiAsync`) would
-otherwise double-post the same underlying transaction once as Kachi and again as Pakki —
-`IKachiService.ReverseLedgerForConversionAsync` is called first to reverse the Kachi's own entries,
-and if that Pakki is later cancelled, `RepostLedgerAfterPakkiCancellationAsync` restores them so
-the reopened Kachi isn't left with no ledger presence at all.
+`PakkiService.CreateFromKachiAsync` (the old Kachi→Pakki conversion path — no longer reachable from
+the UI; Dual Invoice, its one entry point, was removed outright since Kachi is meant to be a fully
+separate, independent entity from Pakki) would otherwise double-post the same underlying
+transaction once as Kachi and again as Pakki if it were ever called — `IKachiService.
+ReverseLedgerForConversionAsync` reverses the Kachi's own entries first, and
+`RepostLedgerAfterPakkiCancellationAsync` restores them if that Pakki is later cancelled, so this
+stays correct even though the path is currently dead code.
 
 ## Farmer / Purchase Account report
 
@@ -317,10 +326,34 @@ internally) — this never touches Pakki; finalizing each farmer's sale stays a 
 step per farmer, and there's no "Convert to Pakki" shortcut from the Kachi side anymore (Kachi and
 Pakki are kept fully separate — use the Pakki screen directly).
 
-The grid itself only takes entry fields (Farmer, Product, Man/Kilo/Gram/Bori, Rate) as columns; the
-Gross/Deductions/Total for each row is instead shown as a compact info line in the row beneath it,
-so the grid columns stay narrow. A row is removed by selecting its radio button and clicking
-"Remove" (next to "Add"), rather than a per-row button eating into the grid's width. A
+### Weighing model: Bharti, not Man
+
+Kachi weight entry is **Bharti-based**, not Man-based (`Kachi.ManQty`/`KiloQty`/`GramQty` don't
+exist any more — Pakki keeps its own, separate copies of those fields, untouched). Per row, the
+operator enters three things: **Rate** (per Man, unchanged), **Bharti** (`BhartiKgPerBag`) — the
+weight per bag for this crop, which varies by product (e.g. ~60kg for one crop, ~65kg for
+another) — and **Total Weight** (`TotalWeightKg`), the gross scale reading. From those,
+`KachiService.CalculateWeights` derives:
+- **Dhrn** (`DhrnKg`) — a tare/wastage weight subtracted from Total Weight. There's no standard
+  formula for this yet, so it's entered manually (optional, defaults to 0) rather than guessed at;
+  automate it once a formula is confirmed.
+- **Safi Wazan** (net weight, still stored in `NetWeightKg`) = Total Weight − Dhrn. This is what
+  feeds `GrossAmountFromRatePerMan`, the deduction engine, and the ledger post — exactly the role
+  the old Man/Kilo/Gram/Bori sum used to play.
+- **Bori** (`BoriQty`) — Safi Wazan re-expressed in the market's Bori unit (kg-per-Bori from
+  Setup > Unit Conversions, 100kg by default) — calculated, never entered directly.
+
+`CreateKachiRequest`/`UpdateKachiRequest`/`MultiPurchaseRowRequest` carry `BhartiKgPerBag`,
+`TotalWeightKg`, `DhrnKg` in place of the old four weight fields; `KachiDto` adds the same plus the
+calculated `BoriQty`. Bharti and Total Weight are both required (`NotNull().GreaterThan(0)`); Dhrn
+must be less than Total Weight if provided. The Kachi Records edit form, and both print templates,
+were updated to match — the single-Kachi print shows بھرتی / کل وزن / دھرن / بوری / صافی وزن in
+place of the old مَن/کلو/گرام/بوری rows.
+
+The grid itself only takes entry fields (Farmer, Product, Bharti, Total Weight, Dhrn, Rate) as
+columns; the Gross/Deductions/Total for each row is instead shown as a compact info line in the row
+beneath it, so the grid columns stay narrow. A row is removed by selecting its radio button and
+clicking "Remove" (next to "Add"), rather than a per-row button eating into the grid's width. A
 **Grand Gross / Grand Deductions / Grand Total** summary row above the buttons still reflects live
 totals across every row — computed by calling `Application.Common.Services.DeductionEngine`/
 `UnitConversionCalculator` directly with `DeductionAppliesTo.Kachi` (the exact same pure, stateless

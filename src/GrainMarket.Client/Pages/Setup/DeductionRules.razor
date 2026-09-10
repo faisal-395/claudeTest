@@ -37,6 +37,10 @@
                 <option value="@DeductionChargedTo.Buyer">Buyer (what the buyer owes on top)</option>
             </select>
         </div>
+        <div>
+            <label>Income Account</label>
+            <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_incomeAccountId ?? 0)" ValueChanged="@(v => _incomeAccountId = v == 0 ? null : v)" Placeholder="Search account… (blank = Unallocated Deductions)" />
+        </div>
         <div><label>Sort Order</label><input type="number" @bind="_sortOrder" /></div>
         <div><label><input type="checkbox" @bind="_requiresVehicle" /> Requires vehicle number (Freight)</label></div>
         <div style="grid-column: span 2;">
@@ -52,7 +56,7 @@
     else
     {
         <table class="data-grid">
-            <thead><tr><th>#</th><th>Name</th><th class="rtl-urdu">اردو</th><th>Type</th><th>Value</th><th>Applies To</th><th>Charged To</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Name</th><th class="rtl-urdu">اردو</th><th>Type</th><th>Value</th><th>Applies To</th><th>Charged To</th><th>Income Account</th><th></th></tr></thead>
             <tbody>
                 @foreach (var r in _rules.OrderBy(r => r.SortOrder))
                 {
@@ -64,6 +68,7 @@
                         <td>@r.Value.ToString("N2")</td>
                         <td>@r.AppliesTo</td>
                         <td>@r.ChargedTo</td>
+                        <td>@(_accounts?.FirstOrDefault(a => a.Id == r.IncomeAccountId) is { } acc ? DisplayText.Account(acc) : "— Unallocated —")</td>
                         <td>
                             <button class="btn secondary" @onclick="() => Edit(r)">Edit</button>
                             <button class="btn danger" @onclick="() => DeleteAsync(r.Id)">Delete</button>
@@ -77,6 +82,7 @@
 
 @code {
     private List<DeductionRuleDto>? _rules;
+    private List<ChartOfAccountDto>? _accounts;
     private int? _editingId;
     private string? _error;
 
@@ -86,10 +92,16 @@
     private decimal _value;
     private DeductionAppliesTo _appliesTo = DeductionAppliesTo.Both;
     private DeductionChargedTo _chargedTo = DeductionChargedTo.Farmer;
+    private int? _incomeAccountId;
     private int _sortOrder;
     private bool _requiresVehicle;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        try { _accounts = await Api.GetChartOfAccountsAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
@@ -101,19 +113,21 @@
     {
         _editingId = r.Id;
         _name = r.Name; _nameUrdu = r.NameUrdu; _calcType = r.CalculationType;
-        _value = r.Value; _appliesTo = r.AppliesTo; _chargedTo = r.ChargedTo; _sortOrder = r.SortOrder; _requiresVehicle = r.RequiresVehicleNumber;
+        _value = r.Value; _appliesTo = r.AppliesTo; _chargedTo = r.ChargedTo; _incomeAccountId = r.IncomeAccountId;
+        _sortOrder = r.SortOrder; _requiresVehicle = r.RequiresVehicleNumber;
     }
 
     private void ResetForm()
     {
         _editingId = null; _name = ""; _nameUrdu = ""; _calcType = DeductionCalculationType.FixedAmount;
-        _value = 0; _appliesTo = DeductionAppliesTo.Both; _chargedTo = DeductionChargedTo.Farmer; _sortOrder = 0; _requiresVehicle = false;
+        _value = 0; _appliesTo = DeductionAppliesTo.Both; _chargedTo = DeductionChargedTo.Farmer; _incomeAccountId = null;
+        _sortOrder = 0; _requiresVehicle = false;
     }
 
     private async Task SaveAsync()
     {
         _error = null;
-        var request = new UpsertDeductionRuleRequest(_name, _nameUrdu, _calcType, _value, _appliesTo, _chargedTo, _sortOrder, true, null, null, _requiresVehicle, null);
+        var request = new UpsertDeductionRuleRequest(_name, _nameUrdu, _calcType, _value, _appliesTo, _chargedTo, _sortOrder, true, null, null, _requiresVehicle, _incomeAccountId);
         try
         {
             if (_editingId is null) await Api.CreateDeductionRuleAsync(request);

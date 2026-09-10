@@ -38,23 +38,37 @@ public class CreateKachiRequestValidatorTests
     private readonly CreateKachiRequestValidator _validator = new();
 
     [Fact]
-    public void Validate_NoWeightEntered_Fails()
+    public void Validate_NoBharti_Fails()
     {
-        var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, null, null, null, null, null, null, null);
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 1, null, 3000m, null, 5000m, null, null);
         Assert.False(_validator.Validate(request).IsValid);
     }
 
     [Fact]
-    public void Validate_ManQtyAndRateEntered_Passes()
+    public void Validate_NoTotalWeight_Fails()
     {
-        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 1, 5m, null, null, null, 5000m, null, null);
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 1, 60m, null, null, 5000m, null, null);
+        Assert.False(_validator.Validate(request).IsValid);
+    }
+
+    [Fact]
+    public void Validate_BhartiTotalWeightAndRateEntered_Passes()
+    {
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 1, 60m, 3000m, null, 5000m, null, null);
         Assert.True(_validator.Validate(request).IsValid);
+    }
+
+    [Fact]
+    public void Validate_DhrnGreaterThanOrEqualToTotalWeight_Fails()
+    {
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 1, 60m, 3000m, 3000m, 5000m, null, null);
+        Assert.False(_validator.Validate(request).IsValid);
     }
 
     [Fact]
     public void Validate_NegativeRate_Fails()
     {
-        var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, -10m, null, null);
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 1, 60m, 3000m, null, -10m, null, null);
         Assert.False(_validator.Validate(request).IsValid);
     }
 
@@ -62,7 +76,7 @@ public class CreateKachiRequestValidatorTests
     public void Validate_NoRate_Fails()
     {
         // Rate is required — Kachi no longer allows a purely provisional, unpriced weighing.
-        var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, null, null, null);
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 1, 60m, 3000m, null, null, null, null);
         Assert.False(_validator.Validate(request).IsValid);
     }
 
@@ -70,14 +84,14 @@ public class CreateKachiRequestValidatorTests
     public void Validate_NoBuyer_Fails()
     {
         // Buyer is required at Kachi stage.
-        var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, 5000m, null, null);
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, 60m, 3000m, null, 5000m, null, null);
         Assert.False(_validator.Validate(request).IsValid);
     }
 
     [Fact]
     public void Validate_InvalidBuyerId_Fails()
     {
-        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 0, 1, 5m, null, null, null, 5000m, null, null);
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 0, 1, 60m, 3000m, null, 5000m, null, null);
         Assert.False(_validator.Validate(request).IsValid);
     }
 }
@@ -89,14 +103,14 @@ public class UpdateKachiRequestValidatorTests
     [Fact]
     public void Validate_NoBuyer_Fails()
     {
-        var request = new UpdateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, 5000m, null, null);
+        var request = new UpdateKachiRequest(DateTime.Today, 1, 1, null, 1, 60m, 3000m, null, 5000m, null, null);
         Assert.False(_validator.Validate(request).IsValid);
     }
 
     [Fact]
     public void Validate_ValidRequest_Passes()
     {
-        var request = new UpdateKachiRequest(DateTime.Today, 1, 1, 1, 1, 5m, null, null, null, 5000m, null, null);
+        var request = new UpdateKachiRequest(DateTime.Today, 1, 1, 1, 1, 60m, 3000m, null, 5000m, null, null);
         Assert.True(_validator.Validate(request).IsValid);
     }
 }
@@ -105,7 +119,7 @@ public class CreateMultiPurchaseRequestValidatorTests
 {
     private readonly CreateMultiPurchaseRequestValidator _validator = new();
 
-    private static MultiPurchaseRowRequest ValidRow() => new(1, 1, 5m, null, null, null, 5000m, null, null);
+    private static MultiPurchaseRowRequest ValidRow() => new(1, 1, 60m, 3000m, null, 5000m, null, null);
 
     [Fact]
     public void Validate_NoRows_Fails()
@@ -122,9 +136,9 @@ public class CreateMultiPurchaseRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_RowWithNoWeight_Fails()
+    public void Validate_RowWithNoTotalWeight_Fails()
     {
-        var badRow = new MultiPurchaseRowRequest(1, 1, null, null, null, null, 5000m, null, null);
+        var badRow = new MultiPurchaseRowRequest(1, 1, 60m, null, null, 5000m, null, null);
         var request = new CreateMultiPurchaseRequest(DateTime.Today, 1, 1, new List<MultiPurchaseRowRequest> { ValidRow(), badRow });
         Assert.False(_validator.Validate(request).IsValid);
     }
@@ -132,7 +146,7 @@ public class CreateMultiPurchaseRequestValidatorTests
     [Fact]
     public void Validate_RowWithNegativeRate_Fails()
     {
-        var badRow = new MultiPurchaseRowRequest(1, 1, 5m, null, null, null, -1m, null, null);
+        var badRow = new MultiPurchaseRowRequest(1, 1, 60m, 3000m, null, -1m, null, null);
         var request = new CreateMultiPurchaseRequest(DateTime.Today, 1, 1, new List<MultiPurchaseRowRequest> { badRow });
         Assert.False(_validator.Validate(request).IsValid);
     }
@@ -140,7 +154,15 @@ public class CreateMultiPurchaseRequestValidatorTests
     [Fact]
     public void Validate_RowWithNoRate_Fails()
     {
-        var row = new MultiPurchaseRowRequest(1, 1, 5m, null, null, null, null, null, null);
+        var row = new MultiPurchaseRowRequest(1, 1, 60m, 3000m, null, null, null, null);
+        var request = new CreateMultiPurchaseRequest(DateTime.Today, 1, 1, new List<MultiPurchaseRowRequest> { row });
+        Assert.False(_validator.Validate(request).IsValid);
+    }
+
+    [Fact]
+    public void Validate_RowWithDhrnEqualToTotalWeight_Fails()
+    {
+        var row = new MultiPurchaseRowRequest(1, 1, 60m, 3000m, 3000m, 5000m, null, null);
         var request = new CreateMultiPurchaseRequest(DateTime.Today, 1, 1, new List<MultiPurchaseRowRequest> { row });
         Assert.False(_validator.Validate(request).IsValid);
     }

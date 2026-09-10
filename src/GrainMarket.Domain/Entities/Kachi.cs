@@ -31,13 +31,24 @@ public class Kachi : BaseEntity
     public int? BuyerId { get; set; }
     public Party? Buyer { get; set; }
 
-    // Raw entered weights, as keyed in by the operator (nulls where not used).
-    public decimal? ManQty { get; set; }
-    public decimal? KiloQty { get; set; }
-    public decimal? GramQty { get; set; }
+    /// <summary>Weight per bag for this crop/batch ("bharti"), as keyed in by the operator — varies
+    /// by product (e.g. ~60kg for one crop, ~65kg for another), required at entry.</summary>
+    public decimal? BhartiKgPerBag { get; set; }
+
+    /// <summary>Gross scale weight in kg, as keyed in by the operator — required at entry. This is
+    /// before Dhrn; NetWeightKg (Safi Wazan) is TotalWeightKg minus DhrnKg.</summary>
+    public decimal? TotalWeightKg { get; set; }
+
+    /// <summary>Tare/wastage weight deducted from TotalWeightKg to arrive at NetWeightKg (Safi
+    /// Wazan) — entered manually for now (there's no standard formula for it yet). Null/0 means no
+    /// deduction.</summary>
+    public decimal? DhrnKg { get; set; }
+
+    /// <summary>Bag count expressed in the market's Bori unit (kg-per-Bori from Setup > Unit
+    /// Conversions, product-specific if configured) — calculated from NetWeightKg, not entered.</summary>
     public decimal? BoriQty { get; set; }
 
-    /// <summary>Computed total weight in the base unit (kg), derived from the raw quantities via UnitConversion. Never recomputed silently after posting.</summary>
+    /// <summary>Net weight in kg ("Safi Wazan") = TotalWeightKg - DhrnKg. Never recomputed silently after posting.</summary>
     public decimal NetWeightKg { get; set; }
 
     /// <summary>Required at entry (validated, not enforced by the column) — nullable only for rows

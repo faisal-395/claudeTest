@@ -41,11 +41,11 @@
             </table>
             <hr />
             <table style="width:100%;">
-                <tr><td>مَن</td><td class="ltr-inline">@(_kachi.ManQty?.ToString("N2") ?? "-")</td></tr>
-                <tr><td>کلو</td><td class="ltr-inline">@(_kachi.KiloQty?.ToString("N2") ?? "-")</td></tr>
-                <tr><td>گرام</td><td class="ltr-inline">@(_kachi.GramQty?.ToString("N2") ?? "-")</td></tr>
+                <tr><td>بھرتی (کلو فی بوری)</td><td class="ltr-inline">@(_kachi.BhartiKgPerBag?.ToString("N2") ?? "-")</td></tr>
+                <tr><td>کل وزن (کلو)</td><td class="ltr-inline">@(_kachi.TotalWeightKg?.ToString("N2") ?? "-")</td></tr>
+                <tr><td>دھرن (کلو)</td><td class="ltr-inline">@(_kachi.DhrnKg?.ToString("N2") ?? "-")</td></tr>
                 <tr><td>بوری</td><td class="ltr-inline">@(_kachi.BoriQty?.ToString("N2") ?? "-")</td></tr>
-                <tr><td><b>کل وزن (کلو)</b></td><td class="ltr-inline"><b>@_kachi.NetWeightKg.ToString("N2")</b></td></tr>
+                <tr><td><b>صافی وزن (کلو)</b></td><td class="ltr-inline"><b>@_kachi.NetWeightKg.ToString("N2")</b></td></tr>
                 <tr><td>ریٹ فی مَن</td><td class="ltr-inline">@(_kachi.RatePerUnit?.ToString("N2") ?? "طے نہیں")</td></tr>
             </table>
             <hr />
