@@ -1,0 +1,95 @@
+@* Custom in-page calendar — replaces native <input type="date">. The native date-input calendar
+   is a WebView2 OS-level overlay outside Blazor's own layout, same class of bug SearchSelect.razor
+   was built to avoid for <select>: it can render detached from the control (wrong position)
+   after a resize, move, or DPI change. This renders entirely in normal page flow instead, so it
+   can never separate from the input it belongs to. *@
+
+<div class="date-picker" tabindex="-1" @onfocusout="HandleFocusOut">
+    <input class="date-picker-input" type="text" autocomplete="off" readonly
+           value="@_displayText"
+           placeholder="yyyy-mm-dd"
+           @onclick="Toggle" />
+    @if (_open)
+    {
+        <div class="date-picker-menu">
+            <div class="date-picker-header">
+                <button type="button" class="date-picker-nav" @onmousedown:preventDefault="true" @onmousedown="PrevMonth">‹</button>
+                <span>@_viewMonth.ToString("MMMM yyyy")</span>
+                <button type="button" class="date-picker-nav" @onmousedown:preventDefault="true" @onmousedown="NextMonth">›</button>
+            </div>
+            <div class="date-picker-grid">
+                @foreach (var dow in DayNames)
+                {
+                    <div class="date-picker-dow">@dow</div>
+                }
+                @foreach (var day in DaysInView())
+                {
+                    var thisDay = day;
+                    <div class="date-picker-day @(thisDay.Month != _viewMonth.Month ? "outside" : "") @(thisDay == Value.Date ? "selected" : "")"
+                         @onmousedown:preventDefault="true"
+                         @onmousedown="() => Select(thisDay)">
+                        @thisDay.Day
+                    </div>
+                }
+            </div>
+            <div class="date-picker-footer">
+                <button type="button" class="date-picker-today" @onmousedown:preventDefault="true" @onmousedown="SelectToday">Today</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public DateTime Value { get; set; }
+    [Parameter] public EventCallback<DateTime> ValueChanged { get; set; }
+
+    private static readonly string[] DayNames = { "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" };
+
+    private bool _open;
+    private DateTime _viewMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private string _displayText = string.Empty;
+    private DateTime? _lastValue;
+
+    protected override void OnParametersSet()
+    {
+        if (_lastValue != Value)
+        {
+            _displayText = Value.ToString("yyyy-MM-dd");
+            _viewMonth = new DateTime(Value.Year, Value.Month, 1);
+            _lastValue = Value;
+        }
+    }
+
+    private void Toggle()
+    {
+        _open = !_open;
+        if (_open) _viewMonth = new DateTime(Value.Year, Value.Month, 1);
+    }
+
+    private void HandleFocusOut() => _open = false;
+
+    private void PrevMonth() => _viewMonth = _viewMonth.AddMonths(-1);
+    private void NextMonth() => _viewMonth = _viewMonth.AddMonths(1);
+
+    private IEnumerable<DateTime> DaysInView()
+    {
+        var startOffset = (int)_viewMonth.DayOfWeek;
+        var gridStart = _viewMonth.AddDays(-startOffset);
+        for (var i = 0; i < 42; i++)
+        {
+            yield return gridStart.AddDays(i);
+        }
+    }
+
+    private async Task Select(DateTime day)
+    {
+        _open = false;
+        await ValueChanged.InvokeAsync(day.Date);
+    }
+
+    private async Task SelectToday()
+    {
+        _open = false;
+        await ValueChanged.InvokeAsync(DateTime.Today);
+    }
+}

@@ -4,7 +4,6 @@ using GrainMarket.Application.Auth;
 using GrainMarket.Application.ChartOfAccounts;
 using GrainMarket.Application.Dashboard;
 using GrainMarket.Application.DeductionRules;
-using GrainMarket.Application.DualInvoice;
 using GrainMarket.Application.Expenses;
 using GrainMarket.Application.Kachis;
 using GrainMarket.Application.Ledger;
@@ -100,8 +99,6 @@ public class ApiClient
     public Task<PakkiDto> CreateStandalonePakkiAsync(CreateStandalonePakkiRequest request) => PostAsync<CreateStandalonePakkiRequest, PakkiDto>("api/pakkis/standalone", request);
     public Task<PakkiDto> UpdatePakkiAsync(int id, UpdatePakkiRequest request) => PutAsync<UpdatePakkiRequest, PakkiDto>($"api/pakkis/{id}", request);
     public Task CancelPakkiAsync(int id) => PostAsync($"api/pakkis/{id}/cancel");
-
-    public Task<DualInvoiceResultDto> CreateDualInvoiceAsync(CreateDualInvoiceRequest request) => PostAsync<CreateDualInvoiceRequest, DualInvoiceResultDto>("api/dual-invoice", request);
 
     public Task<MultiPurchaseResultDto> CreateMultiPurchaseAsync(CreateMultiPurchaseRequest request) => PostAsync<CreateMultiPurchaseRequest, MultiPurchaseResultDto>("api/multi-purchase", request);
 

@@ -349,10 +349,13 @@ are different tasks.
 The spec flagged four open items to confirm before/while building. Given the instruction to
 proceed autonomously, here's what was decided and why — all four are trivially changeable later:
 
-1. **Dual Invoice.** Implemented as a single-screen shortcut
-   (`Pages/DualInvoice.razor`, `Application/DualInvoice/`) that raises a Kachi and immediately
-   converts it to a Pakki in one submit, for when the farmer, buyer and rate are all known up
-   front. The standalone Kachi screen still exists for the provisional/unpriced case.
+1. **Dual Invoice — removed.** Originally a single-screen shortcut that raised a Kachi and
+   immediately converted it to a Pakki in one submit. Kachi and Pakki are treated as fully
+   separate, independent stages (see "Kachi and Pakki are separate stages" above) — nothing in
+   this app converts a Kachi into a Pakki anymore, so the shortcut no longer made sense and was
+   deleted outright (page, controller, service, DTOs, nav link). `ModuleName.DualInvoice` stays in
+   the enum, unused, only so existing seeded Role/Permission rows that reference its numeric value
+   don't shift.
 2. **"Trading" menu item.** Kept in scope as a stock-position report
    (`Pages/Trading.razor`, `/api/trading/stock-position`) — Purchase-in vs. Sale-out, grouped by
    product, for the business's own-account trading. This is explicitly separate from the

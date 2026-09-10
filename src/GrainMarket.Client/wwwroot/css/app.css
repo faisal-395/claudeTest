@@ -199,6 +199,109 @@ table.data-grid tbody tr.selected-row:hover {
     cursor: default;
 }
 
+/* DatePicker — replaces native <input type="date"> for the same reason as SearchSelect: the
+   native calendar overlay can render detached from the control after a resize/DPI change. */
+.date-picker {
+    position: relative;
+}
+
+.date-picker-input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+    background: white;
+    cursor: pointer;
+}
+
+.date-picker-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 50;
+    width: 240px;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    padding: 8px;
+}
+
+.date-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.date-picker-nav {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 8px;
+    color: #2D6A4F;
+}
+
+.date-picker-nav:hover {
+    background: #eef4ee;
+    border-radius: 3px;
+}
+
+.date-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.date-picker-dow {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #999;
+    padding: 2px 0;
+}
+
+.date-picker-day {
+    text-align: center;
+    font-size: 0.85rem;
+    padding: 4px 0;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.date-picker-day:hover {
+    background: #eef4ee;
+}
+
+.date-picker-day.outside {
+    color: #ccc;
+}
+
+.date-picker-day.selected {
+    background: #2D6A4F;
+    color: white;
+}
+
+.date-picker-footer {
+    margin-top: 6px;
+    text-align: center;
+}
+
+.date-picker-today {
+    border: 1px solid #ccc;
+    background: white;
+    border-radius: 3px;
+    padding: 3px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.date-picker-today:hover {
+    background: #eef4ee;
+}
+
 .btn {
     padding: 8px 18px;
     border: none;

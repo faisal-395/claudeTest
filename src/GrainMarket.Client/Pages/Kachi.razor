@@ -21,7 +21,7 @@
     }
 
     <div class="form-grid" style="max-width:1100px;margin-bottom:12px;">
-        <div><label>Date / تاریخ</label><input type="date" @bind="_date" /></div>
+        <div><label>Date / تاریخ</label><DatePicker @bind-Value="_date" /></div>
         <div>
             <label>Season / سیزن</label>
             <SearchSelect TItem="SeasonDto" Items="_seasons" IdSelector="@(s => s.Id)" TextSelector="@(s => s.Name)" @bind-Value="_seasonId" Placeholder="Search season…" />

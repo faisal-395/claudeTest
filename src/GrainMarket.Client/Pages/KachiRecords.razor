@@ -16,7 +16,7 @@
     {
         <div class="form-grid" style="margin-bottom:20px;">
             <div><label>Receipt Number / رسید نمبر</label><div style="padding:6px 0;">@(_receiptNumber ?? "—")</div></div>
-            <div><label>Date / تاریخ</label><input type="date" @bind="_date" /></div>
+            <div><label>Date / تاریخ</label><DatePicker @bind-Value="_date" /></div>
             <div>
                 <label>Season / سیزن</label>
                 <SearchSelect TItem="SeasonDto" Items="_seasons" IdSelector="@(s => s.Id)" TextSelector="@(s => s.Name)" @bind-Value="_seasonId" Placeholder="Search season…" />
