@@ -94,15 +94,14 @@ cd src/GrainMarket.Client
 dotnet build -f net10.0-windows10.0.19041.0    # or open in Visual Studio and F5
 ```
 
-On first launch it points at `http://localhost:5080/`. Use **Connection Settings** on the
-Login screen to repoint it once the API moves to a LAN server.
+On first launch it points at `https://localhost:7200/` (the API's `https` launch profile). Use
+**Connection Settings** on the Login screen to repoint it once the API moves to a LAN server.
 
-Two assets are referenced but intentionally not generated here (binary font files aren't
-something this environment can produce) — drop real files at:
-- `Resources/Fonts/JameelNooriNastaleeq.ttf` and `Resources/Fonts/OpenSans-Regular.ttf`
-  (any Nastaliq-capable Urdu font works; the CSS/MauiProgram references are already wired up)
-- `wwwroot/fonts/JameelNooriNastaleeq.ttf` (same font, used by the web-rendered print templates'
-  `@font-face` in `wwwroot/css/app.css`)
+Fonts are bundled and committed — **Noto Nastaliq Urdu** (Urdu labels and print templates) and
+**Open Sans** (Latin UI text), both SIL Open Font License, at `Resources/Fonts/*.ttf` and
+`wwwroot/fonts/NotoNastaliqUrdu-Regular.ttf` (the web-rendered print templates' `@font-face` in
+`wwwroot/css/app.css`). Swap in a different Nastaliq-capable font by replacing those files and
+updating the two references (`app.css`'s `@font-face` and `MauiProgram.cs`'s `fonts.AddFont`).
 
 ## A note on the MAUI client, and what's verified vs. not
 

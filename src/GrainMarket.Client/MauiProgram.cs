@@ -20,7 +20,7 @@ public static class MauiProgram
             {
                 // Bundled so Urdu labels and print templates never depend on the till PC having
                 // the font installed — see Resources/Fonts and wwwroot/css/app.css @font-face.
-                fonts.AddFont("JameelNooriNastaleeq.ttf", "JameelNooriNastaleeq");
+                fonts.AddFont("NotoNastaliqUrdu-Regular.ttf", "NotoNastaliqUrdu");
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
             });
 

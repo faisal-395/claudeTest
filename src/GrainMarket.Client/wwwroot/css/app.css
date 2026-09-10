@@ -1,9 +1,10 @@
-/* Bundled Nastaliq-capable Urdu font (see Resources/Fonts) so Urdu labels and print templates
-   render correctly regardless of what's installed on the till PC. Drop the real .ttf file at
-   wwwroot/fonts/JameelNooriNastaleeq.ttf — see README "Bilingual / Urdu requirements". */
+/* Bundled Nastaliq-capable Urdu font (Noto Nastaliq Urdu, SIL Open Font License — see
+   Resources/Fonts) so Urdu labels and print templates render correctly regardless of what's
+   installed on the till PC. See README "Bilingual / Urdu requirements" to swap in a different
+   licensed font instead. */
 @font-face {
-    font-family: 'JameelNooriNastaleeq';
-    src: url('../fonts/JameelNooriNastaleeq.ttf') format('truetype');
+    font-family: 'NotoNastaliqUrdu';
+    src: url('../fonts/NotoNastaliqUrdu-Regular.ttf') format('truetype');
     font-display: swap;
 }
 
@@ -28,7 +29,7 @@ html, body {
 .rtl-urdu {
     direction: rtl;
     text-align: right;
-    font-family: 'JameelNooriNastaleeq', 'Noto Nastaliq Urdu', serif;
+    font-family: 'NotoNastaliqUrdu', 'Noto Nastaliq Urdu', serif;
     font-size: 1.15rem;
     line-height: 2.1;
     unicode-bidi: embed;
