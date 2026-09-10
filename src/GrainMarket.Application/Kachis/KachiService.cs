@@ -55,7 +55,7 @@ public class KachiService : IKachiService
         var kachi = new Kachi
         {
             InvoiceNo = await _numberGenerator.NextAsync("K", ct),
-            ReceiptNumber = request.ReceiptNumber,
+            ReceiptNumber = await _numberGenerator.NextAsync("KR", ct),
             Date = request.Date,
             SeasonId = request.SeasonId,
             FarmerId = request.FarmerId,
@@ -111,7 +111,6 @@ public class KachiService : IKachiService
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);
 
-        kachi.ReceiptNumber = request.ReceiptNumber;
         kachi.Date = request.Date;
         kachi.SeasonId = request.SeasonId;
         kachi.FarmerId = request.FarmerId;

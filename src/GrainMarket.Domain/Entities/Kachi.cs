@@ -11,8 +11,9 @@ public class Kachi : BaseEntity
 {
     public string InvoiceNo { get; set; } = string.Empty;
 
-    /// <summary>Physical pre-printed receipt-book number the clerk transcribes from, as entered at
-    /// Kachi stage — distinct from InvoiceNo (the system-generated invoice number). Optional.</summary>
+    /// <summary>System-generated, read-only identifier assigned at creation (via the same number
+    /// generator as InvoiceNo, prefix "KR") — never entered manually. Nullable only for rows
+    /// created before this field existed.</summary>
     public string? ReceiptNumber { get; set; }
 
     public DateTime Date { get; set; }

@@ -13,11 +13,11 @@ public record KachiDto(
     List<KachiDeductionLineDto> DeductionLines);
 
 public record CreateKachiRequest(
-    string? ReceiptNumber, DateTime Date, int SeasonId, int FarmerId, int? BuyerId, int ProductId,
+    DateTime Date, int SeasonId, int FarmerId, int? BuyerId, int ProductId,
     decimal? ManQty, decimal? KiloQty, decimal? GramQty, decimal? BoriQty,
     decimal? RatePerUnit, string? VehicleNumber, string? Notes);
 
 public record UpdateKachiRequest(
-    string? ReceiptNumber, DateTime Date, int SeasonId, int FarmerId, int? BuyerId, int ProductId,
+    DateTime Date, int SeasonId, int FarmerId, int? BuyerId, int ProductId,
     decimal? ManQty, decimal? KiloQty, decimal? GramQty, decimal? BoriQty,
     decimal? RatePerUnit, string? VehicleNumber, string? Notes);

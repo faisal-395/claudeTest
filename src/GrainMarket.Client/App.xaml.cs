@@ -13,8 +13,19 @@ public partial class App : Microsoft.Maui.Controls.Application
     protected override Window CreateWindow(IActivationState? activationState)
     {
         var window = new Window(new MainPage()) { Title = "Umer Farooq & Brothers — Grain Market Management" };
-        window.Width = 1366;
-        window.Height = 800;
+
+        // Size to 90% of the till PC's actual display instead of a fixed 1366x800, so the app
+        // fits monitors both smaller and larger than that. MainDisplayInfo is in raw pixels;
+        // MAUI Window.Width/Height are device-independent units, so divide out the density.
+        var display = DeviceDisplay.Current.MainDisplayInfo;
+        var screenWidth = display.Width / display.Density;
+        var screenHeight = display.Height / display.Density;
+
+        window.Width = screenWidth * 0.9;
+        window.Height = screenHeight * 0.9;
+        window.X = (screenWidth - window.Width) / 2;
+        window.Y = (screenHeight - window.Height) / 2;
+
         return window;
     }
 }

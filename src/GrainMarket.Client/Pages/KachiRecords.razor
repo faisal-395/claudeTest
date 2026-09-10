@@ -15,7 +15,7 @@
     @if (_editingId is not null)
     {
         <div class="form-grid" style="margin-bottom:20px;">
-            <div><label>Receipt Number / رسید نمبر</label><input @bind="_receiptNumber" /></div>
+            <div><label>Receipt Number / رسید نمبر</label><div style="padding:6px 0;">@(_receiptNumber ?? "—")</div></div>
             <div><label>Date / تاریخ</label><input type="date" @bind="_date" /></div>
             <div>
                 <label>Season / سیزن</label>
@@ -222,7 +222,7 @@
         _error = null;
         try
         {
-            var request = new UpdateKachiRequest(_receiptNumber, _date, _seasonId, _farmerId, _buyerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
+            var request = new UpdateKachiRequest(_date, _seasonId, _farmerId, _buyerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
             await Api.UpdateKachiAsync(_editingId.Value, request);
             ResetForm();
             await LoadAsync();

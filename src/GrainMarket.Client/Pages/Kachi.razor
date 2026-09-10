@@ -6,21 +6,9 @@
 @inject NavigationManager Nav
 
 <RequireAuth>
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <h1 class="page-title" style="margin-bottom:4px;">Kachi <span class="rtl-urdu" style="font-size:1rem;">کچی رسید</span></h1>
-        <div style="text-align:right;">
-            <a href="kachi-records">View Kachi Records</a>
-            @if (KachiRules.Count > 0)
-            {
-                <div style="margin-top:6px;font-size:0.8rem;color:#555;background:#f7f9f7;border:1px solid #e2e2e2;padding:6px 10px;border-radius:4px;text-align:left;">
-                    <div style="font-weight:600;margin-bottom:2px;">Kachi Tax / Deductions</div>
-                    @foreach (var r in KachiRules)
-                    {
-                        <div>@r.Name: @FormatRuleValue(r)</div>
-                    }
-                </div>
-            }
-        </div>
+        <a href="kachi-records">View Kachi Records</a>
     </div>
 
     @if (_error is not null)
@@ -33,7 +21,6 @@
     }
 
     <div class="form-grid" style="max-width:1100px;margin-bottom:12px;">
-        <div><label>Receipt Number / رسید نمبر</label><input @bind="_receiptNumber" /></div>
         <div><label>Date / تاریخ</label><input type="date" @bind="_date" /></div>
         <div>
             <label>Season / سیزن</label>
@@ -46,6 +33,17 @@
             <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
         </div>
     </div>
+
+    @if (KachiRules.Count > 0)
+    {
+        <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:0.85rem;color:#444;background:#f7f9f7;border:1px solid #e2e2e2;border-radius:4px;padding:6px 12px;margin-bottom:10px;">
+            <span style="font-weight:600;">Kachi Tax / Deductions:</span>
+            @foreach (var r in KachiRules)
+            {
+                <span>@r.Name: <b>@FormatRuleValue(r)</b></span>
+            }
+        </div>
+    }
 
     <table class="data-grid multi-purchase-grid">
         <thead>
@@ -119,7 +117,6 @@
     private string? _successMessage;
     private bool _saving;
 
-    private string? _receiptNumber;
     private DateTime _date = DateTime.Today;
     private int _seasonId;
     private int _buyerId;
@@ -224,7 +221,7 @@
         _saving = true;
         try
         {
-            var request = new CreateMultiPurchaseRequest(_receiptNumber, _date, _seasonId, _buyerId,
+            var request = new CreateMultiPurchaseRequest(_date, _seasonId, _buyerId,
                 _rows.Select(r => new MultiPurchaseRowRequest(r.FarmerId, r.ProductId, r.ManQty, r.KiloQty, r.GramQty, r.BoriQty, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList());
 
             var result = await Api.CreateMultiPurchaseAsync(request);
@@ -237,7 +234,6 @@
             }
 
             _successMessage = $"Saved {result.Rows.Count} Kachi record(s) for {result.BuyerName}.";
-            _receiptNumber = null;
             _rows.Clear();
             _selectedIndex = null;
             AddRow();

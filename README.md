@@ -283,15 +283,14 @@ Client project already references `GrainMarket.Application` — not a second, ha
 the math that could drift from it. **Save** posts everything and clears the grid for the next
 batch; **Save & Print** posts and jumps straight to the consolidated print page.
 
-A **Receipt Number** field (`Kachi.ReceiptNumber`, optional, distinct from the system-generated
-`InvoiceNo`) sits before Date on the entry form — it's the physical pre-printed receipt-book number
-the clerk transcribes from, applied to every row in that batch submission. It flows end-to-end
-(domain entity, `CreateKachiRequest`/`UpdateKachiRequest`/`KachiDto`, Kachi Records' edit form and
-list, and both print templates) alongside the existing system-generated `InvoiceNo`.
+A **Receipt Number** (`Kachi.ReceiptNumber`) is assigned to every Kachi alongside its `InvoiceNo` —
+both are system-generated at creation (`IInvoiceNumberGenerator.NextAsync`, prefixes `"K"` and
+`"KR"`) and read-only from then on; there's no input for it anywhere, only a display column in
+Kachi Records and both print templates, the same way `InvoiceNo` already worked.
 
-The header also shows a read-only **Kachi Tax / Deductions** box (top-right, above the entry grid)
-listing every active deduction rule that applies at the Kachi stage with its configured value —
-so the operator can see current rates without leaving the page.
+A **Kachi Tax / Deductions** row (read-only, above the entry grid, spanning the page width) lists
+every active deduction rule that applies at the Kachi stage with its configured value — so the
+operator can see current rates without leaving the page.
 
 **Kachi Records** (`Pages/KachiRecords.razor`, `/kachi-records`) is the separate management view —
 every Kachi ever raised, with per-row edit/cancel/print and the deduction-line detail toggle, and

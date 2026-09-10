@@ -6,7 +6,6 @@ public class CreateKachiRequestValidator : AbstractValidator<CreateKachiRequest>
 {
     public CreateKachiRequestValidator()
     {
-        RuleFor(x => x.ReceiptNumber).MaximumLength(30);
         RuleFor(x => x.SeasonId).GreaterThan(0);
         RuleFor(x => x.FarmerId).GreaterThan(0);
         RuleFor(x => x.BuyerId).GreaterThan(0).When(x => x.BuyerId.HasValue);
@@ -23,7 +22,6 @@ public class UpdateKachiRequestValidator : AbstractValidator<UpdateKachiRequest>
 {
     public UpdateKachiRequestValidator()
     {
-        RuleFor(x => x.ReceiptNumber).MaximumLength(30);
         RuleFor(x => x.SeasonId).GreaterThan(0);
         RuleFor(x => x.FarmerId).GreaterThan(0);
         RuleFor(x => x.BuyerId).GreaterThan(0).When(x => x.BuyerId.HasValue);
