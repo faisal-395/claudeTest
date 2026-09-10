@@ -11,6 +11,7 @@ public class KachiConfiguration : IEntityTypeConfiguration<Kachi>
         builder.Property(k => k.InvoiceNo).IsRequired().HasMaxLength(30);
         builder.HasIndex(k => k.InvoiceNo).IsUnique();
         builder.Property(k => k.ReceiptNumber).HasMaxLength(30);
+        builder.Property(k => k.BillNumber).HasMaxLength(30);
 
         foreach (var name in new[] { nameof(Kachi.BhartiKgPerBag), nameof(Kachi.TotalWeightKg), nameof(Kachi.BoriQty) })
         {

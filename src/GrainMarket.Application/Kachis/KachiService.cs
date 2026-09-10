@@ -61,6 +61,7 @@ public class KachiService : IKachiService
         {
             InvoiceNo = await _numberGenerator.NextAsync("K", ct),
             ReceiptNumber = await _numberGenerator.NextAsync("KR", ct),
+            BillNumber = request.BillNumber,
             Date = request.Date,
             SeasonId = request.SeasonId,
             FarmerId = request.FarmerId,
@@ -128,6 +129,7 @@ public class KachiService : IKachiService
         await ReverseLedgerAsync(kachi, $"Reversal: {kachi.InvoiceNo} edited", ct);
 
         kachi.Date = request.Date;
+        kachi.BillNumber = request.BillNumber;
         kachi.SeasonId = request.SeasonId;
         kachi.FarmerId = request.FarmerId;
         kachi.BuyerId = request.BuyerId;
@@ -315,7 +317,7 @@ public class KachiService : IKachiService
     }
 
     private static KachiDto ToDto(Kachi k) => new(
-        k.Id, k.InvoiceNo, k.ReceiptNumber, k.Date, k.SeasonId, k.Season.Name, k.FarmerId, k.Farmer.Name, k.BuyerId, k.Buyer?.Name,
+        k.Id, k.InvoiceNo, k.ReceiptNumber, k.BillNumber, k.Date, k.SeasonId, k.Season.Name, k.FarmerId, k.Farmer.Name, k.BuyerId, k.Buyer?.Name,
         k.ProductId, k.Product.Name, k.BhartiKgPerBag, k.TotalWeightKg, k.BoriQty, k.NetWeightKg,
         k.RatePerUnit, k.GrossAmount, k.TotalDeductions, k.BuyerChargesTotal, k.Total, k.Status, k.ConvertedToPakkiId, k.Notes,
         k.DeductionLines.Select(l => new KachiDeductionLineDto(l.DeductionRuleId, l.Name, l.NameUrdu, l.Amount, l.VehicleNumber, l.ChargedTo)).ToList());

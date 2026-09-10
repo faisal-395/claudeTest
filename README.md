@@ -373,6 +373,13 @@ both are system-generated at creation (`IInvoiceNumberGenerator.NextAsync`, pref
 `"KR"`) and read-only from then on; there's no input for it anywhere, only a display column in
 Kachi Records and both print templates, the same way `InvoiceNo` already worked.
 
+A **Bill Number** (`Kachi.BillNumber`) is the opposite: a free-text field the operator types in
+(never validated, never fed into any calculation) to cross-reference the paper bill the clerk wrote
+at the mandi before it was entered into the system. On the Kachi entry grid it's a single top-level
+field next to Date and Season, applying to every row in that batch (like Product); Kachi Records'
+edit form lets it be changed per Kachi afterwards. Shown on both print templates next to Receipt
+Number when set.
+
 A **Kachi Tax / Deductions** row (read-only, above the entry grid, spanning the page width) lists
 every active deduction rule that applies at the Kachi stage with its configured value — so the
 operator can see current rates without leaving the page.

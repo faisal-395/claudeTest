@@ -35,6 +35,12 @@
                         <td colspan="2">رسید نمبر: <span class="ltr-inline">@_kachi.ReceiptNumber</span></td>
                     </tr>
                 }
+                @if (_kachi.BillNumber is not null)
+                {
+                    <tr>
+                        <td colspan="2">بل نمبر: <span class="ltr-inline">@_kachi.BillNumber</span></td>
+                    </tr>
+                }
                 <tr>
                     <td>کسان: @_kachi.FarmerName</td>
                     <td>جنس: @_kachi.ProductName</td>

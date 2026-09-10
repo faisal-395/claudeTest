@@ -15,6 +15,7 @@
     {
         <div class="form-grid" style="margin-bottom:20px;">
             <div><label>Receipt Number / رسید نمبر</label><div style="padding:6px 0;">@(_receiptNumber ?? "—")</div></div>
+            <div><label>Bill Number / بل نمبر</label><input @bind="_billNumber" placeholder="Bill #" /></div>
             <div><label>Date / تاریخ</label><DatePicker @bind-Value="_date" /></div>
             <div>
                 <label>Season / سیزن</label>
@@ -108,6 +109,7 @@
     private int? _editingId;
 
     private string? _receiptNumber;
+    private string? _billNumber;
     private DateTime _date = DateTime.Today;
     private int _seasonId;
     private int _farmerId;
@@ -163,6 +165,7 @@
     {
         _editingId = k.Id;
         _receiptNumber = k.ReceiptNumber;
+        _billNumber = k.BillNumber;
         _date = k.Date;
         _seasonId = k.SeasonId;
         _farmerId = k.FarmerId;
@@ -178,6 +181,7 @@
     {
         _editingId = null;
         _receiptNumber = null;
+        _billNumber = null;
         _date = DateTime.Today;
         _buyerId = 0;
         _bhartiKgPerBag = null; _totalWeightKg = null; _rate = null; _vehicleNumber = null;
@@ -189,7 +193,7 @@
         _error = null;
         try
         {
-            var request = new UpdateKachiRequest(_date, _seasonId, _farmerId, _buyerId, _productId, _bhartiKgPerBag, _totalWeightKg, _rate, _vehicleNumber, null);
+            var request = new UpdateKachiRequest(_date, _seasonId, _farmerId, _buyerId, _productId, _bhartiKgPerBag, _totalWeightKg, _rate, _vehicleNumber, null, _billNumber);
             await Api.UpdateKachiAsync(_editingId.Value, request);
             ResetForm();
             await LoadAsync();

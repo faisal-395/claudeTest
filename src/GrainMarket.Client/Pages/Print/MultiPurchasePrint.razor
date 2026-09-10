@@ -37,6 +37,12 @@
                         <td colspan="2">رسید نمبر: <span class="ltr-inline">@_kachis[0].ReceiptNumber</span></td>
                     </tr>
                 }
+                @if (_kachis[0].BillNumber is not null)
+                {
+                    <tr>
+                        <td colspan="2">بل نمبر: <span class="ltr-inline">@_kachis[0].BillNumber</span></td>
+                    </tr>
+                }
             </table>
             <hr />
             @foreach (var k in _kachis)

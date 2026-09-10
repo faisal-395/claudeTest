@@ -16,6 +16,12 @@ public class Kachi : BaseEntity
     /// created before this field existed.</summary>
     public string? ReceiptNumber { get; set; }
 
+    /// <summary>The physical/paper bill number the clerk wrote down at the mandi before entering
+    /// this Kachi into the system — manually keyed in, unlike ReceiptNumber (system-generated).
+    /// Purely a cross-reference for reconciling against that paper bill; never validated or used in
+    /// any calculation.</summary>
+    public string? BillNumber { get; set; }
+
     public DateTime Date { get; set; }
     public int SeasonId { get; set; }
     public Season Season { get; set; } = null!;

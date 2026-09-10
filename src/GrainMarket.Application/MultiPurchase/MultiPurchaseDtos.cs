@@ -16,7 +16,7 @@ public record MultiPurchaseRowRequest(
 /// Finalizing the sale (converting to a Pakki) stays a deliberate, separate step per farmer, same
 /// as converting any other Kachi.
 /// </summary>
-public record CreateMultiPurchaseRequest(DateTime Date, int SeasonId, int BuyerId, List<MultiPurchaseRowRequest> Rows);
+public record CreateMultiPurchaseRequest(DateTime Date, int SeasonId, int BuyerId, List<MultiPurchaseRowRequest> Rows, string? BillNumber = null);
 
 public record MultiPurchaseRowResultDto(int KachiId, string KachiInvoiceNo);
 
