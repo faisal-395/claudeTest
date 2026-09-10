@@ -1,4 +1,5 @@
 @page "/kachi-records"
+@using GrainMarket.Application.Common.Services
 @inject ApiClient Api
 
 <RequireAuth>
@@ -33,13 +34,13 @@
             </div>
             <div><label>Bharti (kg/bag) / بھرتی</label><input type="number" step="0.01" @bind="_bhartiKgPerBag" /></div>
             <div><label>Total Weight (kg) / کل وزن</label><input type="number" step="0.01" @bind="_totalWeightKg" /></div>
-            <div><label>Dhrn (kg, default 5) / دھرن</label><input type="number" step="0.01" @bind="_dhrnKg" /></div>
-            <div><label>Rate per Man / ریٹ فی مَن</label><input type="number" step="0.01" @bind="_rate" /></div>
+            <div><label>Man / Dhrn / Kg &nbsp;<span class="rtl-urdu">من / دھرن / کلو</span></label><div style="padding:6px 0;">@EditBreakdownText</div></div>
+            <div><label>Rate per Man (Darr) / ریٹ فی مَن (دَر)</label><input type="number" step="0.01" @bind="_rate" /></div>
             <div><label>Vehicle Number / گاڑی نمبر (for freight)</label><input @bind="_vehicleNumber" /></div>
             <div style="grid-column: span 2;">
                 @if (!CanSave)
                 {
-                    <div class="invalid-total">Enter Bharti, Total Weight and a rate greater than zero (Dhrn must be less than Total Weight) before saving.</div>
+                    <div class="invalid-total">Enter Bharti, Total Weight and a rate greater than zero before saving.</div>
                 }
                 <button class="btn" disabled="@(!CanSave)" @onclick="SaveAsync">Update Kachi</button>
                 <button class="btn secondary" @onclick="ResetForm">Cancel Edit</button>
@@ -88,6 +89,7 @@
     private List<PartyDto>? _farmers;
     private List<PartyDto>? _buyers;
     private List<ProductDto>? _products;
+    private List<UnitConversion>? _unitConversionEntities;
     private string? _error;
     private int? _editingId;
 
@@ -99,13 +101,25 @@
     private int _productId;
     private decimal? _bhartiKgPerBag;
     private decimal? _totalWeightKg;
-    private decimal? _dhrnKg;
     private decimal? _rate;
     private string? _vehicleNumber;
 
     private bool CanSave =>
-        _buyerId > 0 && (_bhartiKgPerBag ?? 0) > 0 && (_rate ?? 0) > 0 &&
-        (_totalWeightKg ?? 0) > (_dhrnKg ?? 0);
+        _buyerId > 0 && (_bhartiKgPerBag ?? 0) > 0 && (_rate ?? 0) > 0 && (_totalWeightKg ?? 0) > 0;
+
+    private string EditBreakdownText
+    {
+        get
+        {
+            if (_unitConversionEntities is null || _totalWeightKg is not > 0) return "—";
+            try
+            {
+                var (manCount, dhrnCount, kgRemainder) = UnitConversionCalculator.BreakdownIntoManDhrnKg(_totalWeightKg.Value, _productId, _unitConversionEntities);
+                return $"{manCount} / {dhrnCount} / {kgRemainder:N2}";
+            }
+            catch (Application.Common.Exceptions.InvalidCalculationException) { return "—"; }
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -115,6 +129,12 @@
             _farmers = await Api.GetPartiesAsync(PartyType.Farmer);
             _buyers = await Api.GetPartiesAsync(PartyType.Buyer);
             _products = await Api.GetProductsAsync();
+
+            var conversions = await Api.GetUnitConversionsAsync();
+            _unitConversionEntities = conversions.Select(c => new UnitConversion
+            {
+                Id = c.Id, Unit = c.Unit, FactorToKg = c.FactorToKg, ProductId = c.ProductId, IsActive = c.IsActive
+            }).ToList();
         }
         catch (Models.ApiException ex) { _error = ex.Message; return; }
         await LoadAsync();
@@ -137,7 +157,6 @@
         _productId = k.ProductId;
         _bhartiKgPerBag = k.BhartiKgPerBag;
         _totalWeightKg = k.TotalWeightKg;
-        _dhrnKg = k.DhrnKg;
         _rate = k.RatePerUnit;
         _vehicleNumber = k.DeductionLines.FirstOrDefault(l => l.VehicleNumber is not null)?.VehicleNumber;
     }
@@ -148,7 +167,7 @@
         _receiptNumber = null;
         _date = DateTime.Today;
         _buyerId = 0;
-        _bhartiKgPerBag = null; _totalWeightKg = null; _dhrnKg = null; _rate = null; _vehicleNumber = null;
+        _bhartiKgPerBag = null; _totalWeightKg = null; _rate = null; _vehicleNumber = null;
     }
 
     private async Task SaveAsync()
@@ -157,7 +176,7 @@
         _error = null;
         try
         {
-            var request = new UpdateKachiRequest(_date, _seasonId, _farmerId, _buyerId, _productId, _bhartiKgPerBag, _totalWeightKg, _dhrnKg, _rate, _vehicleNumber, null);
+            var request = new UpdateKachiRequest(_date, _seasonId, _farmerId, _buyerId, _productId, _bhartiKgPerBag, _totalWeightKg, _rate, _vehicleNumber, null);
             await Api.UpdateKachiAsync(_editingId.Value, request);
             ResetForm();
             await LoadAsync();

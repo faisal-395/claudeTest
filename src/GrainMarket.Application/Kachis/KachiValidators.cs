@@ -1,5 +1,4 @@
 using FluentValidation;
-using GrainMarket.Application.Common;
 
 namespace GrainMarket.Application.Kachis;
 
@@ -14,12 +13,6 @@ public class CreateKachiRequestValidator : AbstractValidator<CreateKachiRequest>
         RuleFor(x => x.RatePerUnit).NotNull().GreaterThan(0).WithMessage("Rate per Man is required.");
         RuleFor(x => x.BhartiKgPerBag).NotNull().GreaterThan(0).WithMessage("Bharti (weight per bag) is required.");
         RuleFor(x => x.TotalWeightKg).NotNull().GreaterThan(0).WithMessage("Total weight is required.");
-        RuleFor(x => x.DhrnKg).GreaterThanOrEqualTo(0).When(x => x.DhrnKg.HasValue).WithMessage("Dhrn cannot be negative.");
-        RuleFor(x => x)
-            .Must(x => (x.DhrnKg ?? DomainConstants.DefaultDhrnKg) < (x.TotalWeightKg ?? 0))
-            .When(x => x.TotalWeightKg.HasValue)
-            .WithMessage("Dhrn cannot be greater than or equal to total weight.")
-            .WithName("Dhrn");
     }
 }
 
@@ -34,11 +27,5 @@ public class UpdateKachiRequestValidator : AbstractValidator<UpdateKachiRequest>
         RuleFor(x => x.RatePerUnit).NotNull().GreaterThan(0).WithMessage("Rate per Man is required.");
         RuleFor(x => x.BhartiKgPerBag).NotNull().GreaterThan(0).WithMessage("Bharti (weight per bag) is required.");
         RuleFor(x => x.TotalWeightKg).NotNull().GreaterThan(0).WithMessage("Total weight is required.");
-        RuleFor(x => x.DhrnKg).GreaterThanOrEqualTo(0).When(x => x.DhrnKg.HasValue).WithMessage("Dhrn cannot be negative.");
-        RuleFor(x => x)
-            .Must(x => (x.DhrnKg ?? DomainConstants.DefaultDhrnKg) < (x.TotalWeightKg ?? 0))
-            .When(x => x.TotalWeightKg.HasValue)
-            .WithMessage("Dhrn cannot be greater than or equal to total weight.")
-            .WithName("Dhrn");
     }
 }

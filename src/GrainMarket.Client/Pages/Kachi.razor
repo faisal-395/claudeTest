@@ -50,8 +50,8 @@
                 <th style="width:24px;"></th>
                 <th style="min-width:150px;">Farmer / کسان</th>
                 <th style="min-width:130px;">Product / جنس</th>
-                <th>Bharti (kg/bag)</th><th>Total Weight (kg)</th><th>Dhrn (kg, default 5)</th>
-                <th>Rate/Man</th>
+                <th>Bharti / بھرتی (kg/bag)</th><th>Total Weight (kg)</th><th>Man / Dhrn / Kg &nbsp;<span class="rtl-urdu">من / دھرن / کلو</span></th>
+                <th>Rate/Man (Darr) &nbsp;<span class="rtl-urdu">ریٹ فی مَن (دَر)</span></th>
             </tr>
         </thead>
         <tbody>
@@ -66,7 +66,16 @@
                     <td><SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@row.ProductId" ValueChanged="@(v => row.ProductId = v)" Placeholder="Product…" /></td>
                     <td><input type="number" step="0.01" style="width:80px;" @bind="row.BhartiKgPerBag" /></td>
                     <td><input type="number" step="0.01" style="width:90px;" @bind="row.TotalWeightKg" /></td>
-                    <td><input type="number" step="0.01" style="width:80px;" @bind="row.DhrnKg" /></td>
+                    <td style="white-space:nowrap;">
+                        @if (calc is not null)
+                        {
+                            <span>@calc.ManCount من &nbsp;@calc.DhrnCount دھرن &nbsp;@calc.KgRemainder.ToString("N2") کلو</span>
+                        }
+                        else
+                        {
+                            <span style="color:#999;">—</span>
+                        }
+                    </td>
                     <td><input type="number" step="0.01" style="width:80px;" @bind="row.RatePerUnit" /></td>
                 </tr>
                 <tr>
@@ -78,6 +87,7 @@
                             {
                                 <span>&nbsp;·&nbsp;Bori: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
                             }
+                            <span>&nbsp;·&nbsp;<span class="rtl-urdu">من/دھرن/کلو</span>: <b>@calc.ManCount / @calc.DhrnCount / @calc.KgRemainder.ToString("N2")</b></span>
                             <span>&nbsp;·&nbsp;Gross: <b>@calc.GrossAmount.ToString("N2")</b></span>
                             @if (calc.FarmerLines.Count > 0)
                             {
@@ -156,7 +166,7 @@
     private bool CanSave =>
         _buyerId > 0 && _rows.Count > 0 &&
         _rows.All(r => r.FarmerId > 0 && r.ProductId > 0 && (r.RatePerUnit ?? 0) > 0 &&
-                        (r.BhartiKgPerBag ?? 0) > 0 && (r.TotalWeightKg ?? 0) > (r.DhrnKg ?? DomainConstants.DefaultDhrnKg));
+                        (r.BhartiKgPerBag ?? 0) > 0 && (r.TotalWeightKg ?? 0) > 0);
 
     protected override async Task OnInitializedAsync()
     {
@@ -192,8 +202,7 @@
     private void AddRow() => _rows.Add(new RowModel
     {
         FarmerId = _farmers?.FirstOrDefault()?.Id ?? 0,
-        ProductId = _products?.FirstOrDefault()?.Id ?? 0,
-        DhrnKg = DomainConstants.DefaultDhrnKg
+        ProductId = _products?.FirstOrDefault()?.Id ?? 0
     });
 
     private void RemoveSelectedRow()
@@ -216,11 +225,12 @@
 
         try
         {
-            var netWeightKg = row.TotalWeightKg.Value - (row.DhrnKg ?? DomainConstants.DefaultDhrnKg);
-            if (netWeightKg <= 0) return null;
+            var netWeightKg = row.TotalWeightKg.Value;
 
             var boriFactor = UnitConversionCalculator.FactorFor(WeightUnit.Bori, row.ProductId, _unitConversionEntities);
             var boriQty = netWeightKg / boriFactor;
+
+            var (manCount, dhrnCount, kgRemainder) = UnitConversionCalculator.BreakdownIntoManDhrnKg(netWeightKg, row.ProductId, _unitConversionEntities);
 
             var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, row.ProductId, _unitConversionEntities);
             var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Kachi, row.ProductId, row.FarmerId, _deductionRuleEntities);
@@ -228,7 +238,7 @@
             var buyerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).ToList();
             var farmerTotal = farmerLines.Sum(l => l.Amount);
             var buyerTotal = buyerLines.Sum(l => l.Amount);
-            return new RowCalculation(netWeightKg, boriQty, gross, farmerLines, buyerLines, farmerTotal, buyerTotal, gross - farmerTotal);
+            return new RowCalculation(netWeightKg, boriQty, manCount, dhrnCount, kgRemainder, gross, farmerLines, buyerLines, farmerTotal, buyerTotal, gross - farmerTotal);
         }
         catch (InvalidCalculationException)
         {
@@ -244,7 +254,7 @@
         try
         {
             var request = new CreateMultiPurchaseRequest(_date, _seasonId, _buyerId,
-                _rows.Select(r => new MultiPurchaseRowRequest(r.FarmerId, r.ProductId, r.BhartiKgPerBag, r.TotalWeightKg, r.DhrnKg, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList());
+                _rows.Select(r => new MultiPurchaseRowRequest(r.FarmerId, r.ProductId, r.BhartiKgPerBag, r.TotalWeightKg, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList());
 
             var result = await Api.CreateMultiPurchaseAsync(request);
 
@@ -270,14 +280,13 @@
         public int ProductId { get; set; }
         public decimal? BhartiKgPerBag { get; set; }
         public decimal? TotalWeightKg { get; set; }
-        public decimal? DhrnKg { get; set; }
         public decimal? RatePerUnit { get; set; }
         public string? VehicleNumber { get; set; }
         public string? Notes { get; set; }
     }
 
     private record RowCalculation(
-        decimal NetWeightKg, decimal? BoriQty, decimal GrossAmount,
+        decimal NetWeightKg, decimal? BoriQty, int ManCount, int DhrnCount, decimal KgRemainder, decimal GrossAmount,
         List<DeductionLineResult> FarmerLines, List<DeductionLineResult> BuyerLines,
         decimal FarmerDeductionsTotal, decimal BuyerChargesTotal, decimal Total);
 }

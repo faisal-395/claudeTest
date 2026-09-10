@@ -187,7 +187,8 @@ public static class SeedData
             new UnitConversion { Unit = WeightUnit.Kilo, FactorToKg = 1m },
             new UnitConversion { Unit = WeightUnit.Gram, FactorToKg = 0.001m },
             new UnitConversion { Unit = WeightUnit.Man, FactorToKg = 40m },
-            new UnitConversion { Unit = WeightUnit.Bori, FactorToKg = 100m }
+            new UnitConversion { Unit = WeightUnit.Bori, FactorToKg = 100m },
+            new UnitConversion { Unit = WeightUnit.Dhrn, FactorToKg = 5m }
         );
         await db.SaveChangesAsync(ct);
     }

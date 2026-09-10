@@ -46,7 +46,7 @@ public class KachiService : IKachiService
         await EnsureBuyerExistsAsync(request.BuyerId, ct);
 
         var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
-        var (netWeightKg, boriQty, resolvedDhrnKg) = CalculateWeights(request.TotalWeightKg, request.DhrnKg, request.ProductId, conversions);
+        var (netWeightKg, boriQty) = CalculateWeights(request.TotalWeightKg, request.ProductId, conversions);
 
         var grossAmount = request.RatePerUnit.HasValue
             ? UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit.Value, netWeightKg, request.ProductId, conversions)
@@ -68,7 +68,6 @@ public class KachiService : IKachiService
             ProductId = request.ProductId,
             BhartiKgPerBag = request.BhartiKgPerBag,
             TotalWeightKg = request.TotalWeightKg,
-            DhrnKg = resolvedDhrnKg,
             BoriQty = boriQty,
             NetWeightKg = netWeightKg,
             RatePerUnit = request.RatePerUnit,
@@ -114,7 +113,7 @@ public class KachiService : IKachiService
         await EnsureBuyerExistsAsync(request.BuyerId, ct);
 
         var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
-        var (netWeightKg, boriQty, resolvedDhrnKg) = CalculateWeights(request.TotalWeightKg, request.DhrnKg, request.ProductId, conversions);
+        var (netWeightKg, boriQty) = CalculateWeights(request.TotalWeightKg, request.ProductId, conversions);
         var grossAmount = request.RatePerUnit.HasValue
             ? UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit.Value, netWeightKg, request.ProductId, conversions)
             : 0m;
@@ -135,7 +134,6 @@ public class KachiService : IKachiService
         kachi.ProductId = request.ProductId;
         kachi.BhartiKgPerBag = request.BhartiKgPerBag;
         kachi.TotalWeightKg = request.TotalWeightKg;
-        kachi.DhrnKg = resolvedDhrnKg;
         kachi.BoriQty = boriQty;
         kachi.NetWeightKg = netWeightKg;
         kachi.RatePerUnit = request.RatePerUnit;
@@ -229,31 +227,23 @@ public class KachiService : IKachiService
             throw new NotFoundException(nameof(Party), buyerId.Value);
     }
 
-    /// <summary>Net weight ("Safi Wazan") is TotalWeightKg minus Dhrn (a tare/wastage allowance).
-    /// Dhrn defaults to DomainConstants.DefaultDhrnKg (5kg, the market's current standard) when not
-    /// entered — an explicit 0 (or any other value) always overrides it. The resolved Dhrn is
-    /// returned too, so it's what actually gets stored on the Kachi, not the null that came in.
-    /// Bori is the same net weight re-expressed in the market's Bori unit (kg-per-Bori from
-    /// Setup &gt; Unit Conversions), purely for display — it's calculated, never entered, unlike
-    /// BhartiKgPerBag (the weight-per-bag for this crop, which is required at entry but only used
-    /// for GrossAmountFromRatePerMan indirectly via NetWeightKg — it doesn't feed this calculation
-    /// directly).</summary>
-    private static (decimal NetWeightKg, decimal? BoriQty, decimal DhrnKg) CalculateWeights(
-        decimal? totalWeightKg, decimal? dhrnKg, int? productId, IReadOnlyCollection<UnitConversion> conversions)
+    /// <summary>Net weight ("Safi Wazan") is simply TotalWeightKg — there's no deduction applied
+    /// here. (Dhrn is a display-only breakdown of this weight into Man/Dhrn/Kg denominations,
+    /// computed on demand by UnitConversionCalculator.BreakdownIntoManDhrnKg — it never reduces
+    /// this value.) Bori is the same net weight re-expressed in the market's Bori unit (kg-per-Bori
+    /// from Setup &gt; Unit Conversions), purely for display — it's calculated, never entered,
+    /// unlike BhartiKgPerBag (the weight-per-bag for this crop, which is required at entry but only
+    /// informational — it doesn't feed this calculation).</summary>
+    private static (decimal NetWeightKg, decimal? BoriQty) CalculateWeights(
+        decimal? totalWeightKg, int? productId, IReadOnlyCollection<UnitConversion> conversions)
     {
-        if (totalWeightKg is not > 0) return (0m, null, 0m);
+        if (totalWeightKg is not > 0) return (0m, null);
 
-        var resolvedDhrnKg = dhrnKg ?? DomainConstants.DefaultDhrnKg;
-        var netWeightKg = totalWeightKg.Value - resolvedDhrnKg;
-        if (netWeightKg <= 0)
-        {
-            throw new InvalidCalculationException("Dhrn cannot be greater than or equal to total weight.");
-        }
-
+        var netWeightKg = totalWeightKg.Value;
         var boriFactor = UnitConversionCalculator.FactorFor(WeightUnit.Bori, productId, conversions);
         var boriQty = netWeightKg / boriFactor;
 
-        return (netWeightKg, boriQty, resolvedDhrnKg);
+        return (netWeightKg, boriQty);
     }
 
     /// <summary>Posts the Kachi's farmer/buyer double-entry: the buyer is debited for what they owe
@@ -326,7 +316,7 @@ public class KachiService : IKachiService
 
     private static KachiDto ToDto(Kachi k) => new(
         k.Id, k.InvoiceNo, k.ReceiptNumber, k.Date, k.SeasonId, k.Season.Name, k.FarmerId, k.Farmer.Name, k.BuyerId, k.Buyer?.Name,
-        k.ProductId, k.Product.Name, k.BhartiKgPerBag, k.TotalWeightKg, k.DhrnKg, k.BoriQty, k.NetWeightKg,
+        k.ProductId, k.Product.Name, k.BhartiKgPerBag, k.TotalWeightKg, k.BoriQty, k.NetWeightKg,
         k.RatePerUnit, k.GrossAmount, k.TotalDeductions, k.BuyerChargesTotal, k.Total, k.Status, k.ConvertedToPakkiId, k.Notes,
         k.DeductionLines.Select(l => new KachiDeductionLineDto(l.DeductionRuleId, l.Name, l.NameUrdu, l.Amount, l.VehicleNumber, l.ChargedTo)).ToList());
 }

@@ -33,7 +33,7 @@ public class MultiPurchaseService : IMultiPurchaseService
         {
             var kachi = await _kachiService.CreateAsync(new CreateKachiRequest(
                 request.Date, request.SeasonId, row.FarmerId, request.BuyerId, row.ProductId,
-                row.BhartiKgPerBag, row.TotalWeightKg, row.DhrnKg, row.RatePerUnit, row.VehicleNumber, row.Notes), ct);
+                row.BhartiKgPerBag, row.TotalWeightKg, row.RatePerUnit, row.VehicleNumber, row.Notes), ct);
 
             rows.Add(new MultiPurchaseRowResultDto(kachi.Id, kachi.InvoiceNo));
 

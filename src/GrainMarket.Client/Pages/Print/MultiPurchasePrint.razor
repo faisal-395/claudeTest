@@ -1,4 +1,5 @@
 @page "/print/multi-purchase"
+@using GrainMarket.Application.Common.Services
 @inject ApiClient Api
 @inject IJSRuntime JS
 
@@ -49,7 +50,7 @@
                     <tr>
                         <td>بھرتی: <span class="ltr-inline">@(k.BhartiKgPerBag?.ToString("N2") ?? "-")</span></td>
                         <td>کل وزن (کلو): <span class="ltr-inline">@(k.TotalWeightKg?.ToString("N2") ?? "-")</span></td>
-                        <td>دھرن (کلو): <span class="ltr-inline">@(k.DhrnKg?.ToString("N2") ?? "-")</span></td>
+                        <td>من / دھرن / کلو: <span class="ltr-inline">@ManDhrnKgBreakdownText(k)</span></td>
                     </tr>
                     <tr>
                         <td>بوری: <span class="ltr-inline">@(k.BoriQty?.ToString("N2") ?? "-")</span></td>
@@ -96,6 +97,7 @@
     [SupplyParameterFromQuery] public string? Ids { get; set; }
 
     private List<KachiDto>? _kachis;
+    private List<UnitConversion>? _unitConversionEntities;
     private string? _error;
 
     protected override async Task OnInitializedAsync()
@@ -121,8 +123,25 @@
                 kachis.Add(await Api.GetKachiAsync(id));
             }
             _kachis = kachis;
+
+            var conversions = await Api.GetUnitConversionsAsync();
+            _unitConversionEntities = conversions.Select(c => new UnitConversion
+            {
+                Id = c.Id, Unit = c.Unit, FactorToKg = c.FactorToKg, ProductId = c.ProductId, IsActive = c.IsActive
+            }).ToList();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private string ManDhrnKgBreakdownText(KachiDto k)
+    {
+        if (_unitConversionEntities is null) return "-";
+        try
+        {
+            var (manCount, dhrnCount, kgRemainder) = UnitConversionCalculator.BreakdownIntoManDhrnKg(k.NetWeightKg, k.ProductId, _unitConversionEntities);
+            return $"{manCount} / {dhrnCount} / {kgRemainder:N2}";
+        }
+        catch (Application.Common.Exceptions.InvalidCalculationException) { return "-"; }
     }
 
     private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();

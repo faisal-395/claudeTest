@@ -52,7 +52,14 @@ public enum WeightUnit
     Kilo = 1,
     Gram = 2,
     Man = 3,
-    Bori = 4
+    Bori = 4,
+
+    /// <summary>A traditional sub-Man weight denomination (5kg by default, configurable under
+    /// Setup &gt; Unit Conversions like every other unit) — used to express the remainder of a
+    /// Kachi's net weight after whole Mans are extracted, e.g. 52kg = 1 Man + 2 Dhrn + 2 Kg. Purely
+    /// a display breakdown (see UnitConversionCalculator.BreakdownIntoManDhrnKg); it never affects
+    /// GrossAmount, which is still computed from the continuous net weight.</summary>
+    Dhrn = 5
 }
 
 public enum InvoiceStatus

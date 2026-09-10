@@ -36,7 +36,7 @@ public class KachiLedgerPostingTests : IClassFixture<CustomWebApplicationFactory
 
         var request = new CreateKachiRequest(
             DateTime.Today, season.Id, farmer.Id, buyer.Id, product.Id,
-            BhartiKgPerBag: 60m, TotalWeightKg: 3000m, DhrnKg: null,
+            BhartiKgPerBag: 60m, TotalWeightKg: 3000m,
             RatePerUnit: 2000m, VehicleNumber: null, Notes: null);
 
         var createResponse = await admin.PostAsJsonAsync("/api/kachis", request);
@@ -56,26 +56,27 @@ public class KachiLedgerPostingTests : IClassFixture<CustomWebApplicationFactory
     }
 
     [Fact]
-    public async Task CreateKachi_NoDhrnEntered_DefaultsToFiveKg()
+    public async Task CreateKachi_NetWeightEqualsTotalWeight_NoSubtraction()
     {
+        // Dhrn is a display-only Man/Dhrn/Kg breakdown of the net weight, not a deduction — Safi
+        // Wazan (NetWeightKg) always equals TotalWeightKg exactly, e.g. 1000kg stays 1000kg.
         var admin = await TestAuthHelper.AsAdminAsync(_factory);
 
-        var farmer = await CreatePartyAsync(admin, PartyType.Farmer, "Ledger Default Dhrn Farmer");
-        var buyer = await CreatePartyAsync(admin, PartyType.Buyer, "Ledger Default Dhrn Buyer");
+        var farmer = await CreatePartyAsync(admin, PartyType.Farmer, "Ledger Net Weight Farmer");
+        var buyer = await CreatePartyAsync(admin, PartyType.Buyer, "Ledger Net Weight Buyer");
         var season = (await admin.GetFromJsonAsync<List<SeasonDto>>("/api/seasons"))!.First();
         var product = (await admin.GetFromJsonAsync<List<ProductDto>>("/api/products"))!.First();
 
         var request = new CreateKachiRequest(
             DateTime.Today, season.Id, farmer.Id, buyer.Id, product.Id,
-            BhartiKgPerBag: 60m, TotalWeightKg: 1000m, DhrnKg: null,
+            BhartiKgPerBag: 60m, TotalWeightKg: 1000m,
             RatePerUnit: 2000m, VehicleNumber: null, Notes: null);
 
         var createResponse = await admin.PostAsJsonAsync("/api/kachis", request);
         createResponse.EnsureSuccessStatusCode();
         var kachi = await createResponse.Content.ReadFromJsonAsync<KachiDto>();
 
-        Assert.Equal(5m, kachi!.DhrnKg);
-        Assert.Equal(995m, kachi.NetWeightKg); // Safi Wazan = 1000 - 5
+        Assert.Equal(1000m, kachi!.NetWeightKg);
     }
 
     [Fact]
@@ -90,7 +91,7 @@ public class KachiLedgerPostingTests : IClassFixture<CustomWebApplicationFactory
 
         var request = new CreateKachiRequest(
             DateTime.Today, season.Id, farmer.Id, buyer.Id, product.Id,
-            BhartiKgPerBag: 65m, TotalWeightKg: 2000m, DhrnKg: 20m,
+            BhartiKgPerBag: 65m, TotalWeightKg: 2000m,
             RatePerUnit: 3000m, VehicleNumber: null, Notes: null);
 
         var createResponse = await admin.PostAsJsonAsync("/api/kachis", request);

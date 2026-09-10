@@ -13,7 +13,8 @@ public class UnitConversionCalculatorTests
         new UnitConversion { Id = 1, Unit = WeightUnit.Kilo, FactorToKg = 1m, IsActive = true },
         new UnitConversion { Id = 2, Unit = WeightUnit.Gram, FactorToKg = 0.001m, IsActive = true },
         new UnitConversion { Id = 3, Unit = WeightUnit.Man, FactorToKg = 40m, IsActive = true },
-        new UnitConversion { Id = 4, Unit = WeightUnit.Bori, FactorToKg = 100m, IsActive = true }
+        new UnitConversion { Id = 4, Unit = WeightUnit.Bori, FactorToKg = 100m, IsActive = true },
+        new UnitConversion { Id = 5, Unit = WeightUnit.Dhrn, FactorToKg = 5m, IsActive = true }
     };
 
     [Fact]
@@ -102,5 +103,46 @@ public class UnitConversionCalculatorTests
 
         Assert.Throws<InvalidCalculationException>(() =>
             UnitConversionCalculator.GrossAmountFromRatePerMan(1000m, 400m, null, conversions));
+    }
+
+    [Fact]
+    public void BreakdownIntoManDhrnKg_52Kg_Is1Man2Dhrn2Kg()
+    {
+        // 52kg = 1 Man (40kg) + 2 Dhrn (2 * 5kg = 10kg) + 2kg remainder.
+        var (manCount, dhrnCount, kgRemainder) = UnitConversionCalculator.BreakdownIntoManDhrnKg(52m, productId: null, DefaultConversions());
+
+        Assert.Equal(1, manCount);
+        Assert.Equal(2, dhrnCount);
+        Assert.Equal(2m, kgRemainder);
+    }
+
+    [Fact]
+    public void BreakdownIntoManDhrnKg_ExactMultipleOfMan_HasNoDhrnOrRemainder()
+    {
+        var (manCount, dhrnCount, kgRemainder) = UnitConversionCalculator.BreakdownIntoManDhrnKg(80m, productId: null, DefaultConversions());
+
+        Assert.Equal(2, manCount);
+        Assert.Equal(0, dhrnCount);
+        Assert.Equal(0m, kgRemainder);
+    }
+
+    [Fact]
+    public void BreakdownIntoManDhrnKg_LessThanOneMan_HasZeroManCount()
+    {
+        // 17kg = 0 Man + 3 Dhrn (15kg) + 2kg remainder.
+        var (manCount, dhrnCount, kgRemainder) = UnitConversionCalculator.BreakdownIntoManDhrnKg(17m, productId: null, DefaultConversions());
+
+        Assert.Equal(0, manCount);
+        Assert.Equal(3, dhrnCount);
+        Assert.Equal(2m, kgRemainder);
+    }
+
+    [Fact]
+    public void BreakdownIntoManDhrnKg_MissingDhrnFactor_ThrowsInvalidCalculation()
+    {
+        var conversions = DefaultConversions().Where(c => c.Unit != WeightUnit.Dhrn).ToList();
+
+        Assert.Throws<InvalidCalculationException>(() =>
+            UnitConversionCalculator.BreakdownIntoManDhrnKg(52m, null, conversions));
     }
 }

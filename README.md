@@ -330,41 +330,43 @@ Pakki are kept fully separate — use the Pakki screen directly).
 
 Kachi weight entry is **Bharti-based**, not Man-based (`Kachi.ManQty`/`KiloQty`/`GramQty` don't
 exist any more — Pakki keeps its own, separate copies of those fields, untouched). Per row, the
-operator enters three things: **Rate** (per Man, unchanged), **Bharti** (`BhartiKgPerBag`) — the
-weight per bag for this crop, which varies by product (e.g. ~60kg for one crop, ~65kg for
-another) — and **Total Weight** (`TotalWeightKg`), the gross scale reading. From those,
-`KachiService.CalculateWeights` derives:
-- **Dhrn** (`DhrnKg`) — a tare/wastage weight subtracted from Total Weight. Defaults to
-  `DomainConstants.DefaultDhrnKg` (5kg, the market's current standard) whenever it's left blank —
-  an explicit 0 (or any other value) always overrides the default. The resolved value (5kg or
-  whatever was entered) is what actually gets stored on the Kachi, not a blank. The Kachi entry
-  grid pre-fills new rows with 5 so the operator sees it and can change it per row; the
-  cross-field "Dhrn must be less than Total Weight" validation accounts for the default too, not
-  just what was literally typed.
-- **Safi Wazan** (net weight, still stored in `NetWeightKg`) = Total Weight − Dhrn. This is what
-  feeds `GrossAmountFromRatePerMan`, the deduction engine, and the ledger post — exactly the role
-  the old Man/Kilo/Gram/Bori sum used to play.
+operator enters three things: **Rate/Man ("Darr")** (unchanged), **Bharti** (`BhartiKgPerBag`,
+بھرتی) — the weight per bag for this crop, which varies by product (e.g. ~60kg for one crop,
+~65kg for another; informational only, doesn't feed the calculation) — and **Total Weight**
+(`TotalWeightKg`), the gross scale reading. From those:
+- **Safi Wazan** (net weight, stored in `NetWeightKg`) = Total Weight, unchanged — there is no
+  subtraction. This is what feeds `GrossAmountFromRatePerMan`, the deduction engine, and the
+  ledger post — exactly the role the old Man/Kilo/Gram/Bori sum used to play.
 - **Bori** (`BoriQty`) — Safi Wazan re-expressed in the market's Bori unit (kg-per-Bori from
   Setup > Unit Conversions, 100kg by default) — calculated, never entered directly.
+- **Man / Dhrn / Kg breakdown** — a display-only mixed-radix breakdown of Safi Wazan, computed on
+  demand by `UnitConversionCalculator.BreakdownIntoManDhrnKg` (never stored, never fed back into
+  the math): whole Mans are extracted first (40kg each by default), then the remainder is
+  expressed in whole Dhrns (دھرن — a sub-Man denomination, 5kg by default, configurable under
+  Setup > Unit Conversions like every other unit), with whatever's left over shown as a final Kg
+  remainder. E.g. 52kg = 1 Man + 2 Dhrn + 2 Kg.
 
-`CreateKachiRequest`/`UpdateKachiRequest`/`MultiPurchaseRowRequest` carry `BhartiKgPerBag`,
-`TotalWeightKg`, `DhrnKg` in place of the old four weight fields; `KachiDto` adds the same plus the
-calculated `BoriQty`. Bharti and Total Weight are both required (`NotNull().GreaterThan(0)`); Dhrn
-(or its 5kg default) must be less than Total Weight. The Kachi Records edit form, and both print
-templates, were updated to match — the single-Kachi print shows بھرتی / کل وزن / دھرن / بوری /
-صافی وزن in place of the old مَن/کلو/گرام/بوری rows.
+`CreateKachiRequest`/`UpdateKachiRequest`/`MultiPurchaseRowRequest` carry only `BhartiKgPerBag` and
+`TotalWeightKg` as weight inputs (no `DhrnKg` — Dhrn is never entered, only displayed); `KachiDto`
+adds the same plus the calculated `BoriQty`. Bharti and Total Weight are both required
+(`NotNull().GreaterThan(0)`) — there's no other cross-field weight validation. The Kachi entry
+grid, Kachi Records edit form, and both print templates show the Man/Dhrn/Kg breakdown in place of
+a Dhrn input — the single-Kachi print shows بھرتی / کل وزن / من‑دھرن‑کلو / بوری / صافی وزن in
+place of the old مَن/کلو/گرام/بوری rows. The Kachi entry screen (`Kachi.razor`) labels these in
+Urdu alongside English: بھرتی (Bharti), دھرن (Dhrn), and ریٹ فی مَن (دَر) for Rate/Man (Darr).
 
-The grid itself only takes entry fields (Farmer, Product, Bharti, Total Weight, Dhrn, Rate) as
-columns; the Gross/Deductions/Total for each row is instead shown as a compact info line in the row
-beneath it, so the grid columns stay narrow. A row is removed by selecting its radio button and
-clicking "Remove" (next to "Add"), rather than a per-row button eating into the grid's width. A
-**Grand Gross / Grand Deductions / Grand Total** summary row above the buttons still reflects live
-totals across every row — computed by calling `Application.Common.Services.DeductionEngine`/
-`UnitConversionCalculator` directly with `DeductionAppliesTo.Kachi` (the exact same pure, stateless
-calculators and the same code path `KachiService.CreateAsync` uses to post the Kachi), since the
-Client project already references `GrainMarket.Application` — not a second, hand-written copy of
-the math that could drift from it. **Save** posts everything and clears the grid for the next
-batch; **Save & Print** posts and jumps straight to the consolidated print page.
+The grid itself only takes entry fields (Farmer, Product, Bharti, Total Weight, Rate) as editable
+columns, with the calculated Man/Dhrn/Kg breakdown shown read-only per row; the Gross/Deductions/
+Total for each row is instead shown as a compact info line in the row beneath it, so the grid
+columns stay narrow. A row is removed by selecting its radio button and clicking "Remove" (next to
+"Add"), rather than a per-row button eating into the grid's width. A **Grand Gross / Grand
+Deductions / Grand Total** summary row above the buttons still reflects live totals across every
+row — computed by calling `Application.Common.Services.DeductionEngine`/`UnitConversionCalculator`
+directly with `DeductionAppliesTo.Kachi` (the exact same pure, stateless calculators and the same
+code path `KachiService.CreateAsync` uses to post the Kachi), since the Client project already
+references `GrainMarket.Application` — not a second, hand-written copy of the math that could
+drift from it. **Save** posts everything and clears the grid for the next batch; **Save & Print**
+posts and jumps straight to the consolidated print page.
 
 A **Receipt Number** (`Kachi.ReceiptNumber`) is assigned to every Kachi alongside its `InvoiceNo` —
 both are system-generated at creation (`IInvoiceNumberGenerator.NextAsync`, prefixes `"K"` and

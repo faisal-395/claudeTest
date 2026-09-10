@@ -32,23 +32,24 @@ public class Kachi : BaseEntity
     public Party? Buyer { get; set; }
 
     /// <summary>Weight per bag for this crop/batch ("bharti"), as keyed in by the operator — varies
-    /// by product (e.g. ~60kg for one crop, ~65kg for another), required at entry.</summary>
+    /// by product (e.g. ~60kg for one crop, ~65kg for another), required at entry. Informational —
+    /// it doesn't feed NetWeightKg or GrossAmount.</summary>
     public decimal? BhartiKgPerBag { get; set; }
 
-    /// <summary>Gross scale weight in kg, as keyed in by the operator — required at entry. This is
-    /// before Dhrn; NetWeightKg (Safi Wazan) is TotalWeightKg minus DhrnKg.</summary>
+    /// <summary>Gross scale weight in kg, as keyed in by the operator — required at entry. This IS
+    /// the net weight ("Safi Wazan") — see NetWeightKg. Kept as a separate field from NetWeightKg
+    /// for API/schema stability (everything downstream — deductions, ledger, print — reads
+    /// NetWeightKg), even though the two are always equal.</summary>
     public decimal? TotalWeightKg { get; set; }
-
-    /// <summary>Tare/wastage weight deducted from TotalWeightKg to arrive at NetWeightKg (Safi
-    /// Wazan) — entered manually for now (there's no standard formula for it yet). Null/0 means no
-    /// deduction.</summary>
-    public decimal? DhrnKg { get; set; }
 
     /// <summary>Bag count expressed in the market's Bori unit (kg-per-Bori from Setup > Unit
     /// Conversions, product-specific if configured) — calculated from NetWeightKg, not entered.</summary>
     public decimal? BoriQty { get; set; }
 
-    /// <summary>Net weight in kg ("Safi Wazan") = TotalWeightKg - DhrnKg. Never recomputed silently after posting.</summary>
+    /// <summary>Net weight in kg ("Safi Wazan") = TotalWeightKg, unchanged — there's no deduction
+    /// applied here. (Dhrn is a display-only breakdown of this weight into Man/Dhrn/Kg
+    /// denominations, computed on demand by UnitConversionCalculator.BreakdownIntoManDhrnKg — it
+    /// isn't stored and never reduces this value.) Never recomputed silently after posting.</summary>
     public decimal NetWeightKg { get; set; }
 
     /// <summary>Required at entry (validated, not enforced by the column) — nullable only for rows

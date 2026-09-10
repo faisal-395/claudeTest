@@ -52,6 +52,28 @@ public static class UnitConversionCalculator
         return Math.Round(ratePerMan * netWeightMan, 2, MidpointRounding.AwayFromZero);
     }
 
+    /// <summary>
+    /// Breaks a net weight down into whole Mans, whole Dhrns (a sub-Man denomination, 5kg by
+    /// default) and a final Kg remainder — e.g. 52kg = 1 Man + 2 Dhrn + 2 Kg, using each unit's
+    /// configured kg factor (Setup &gt; Unit Conversions). Purely a display breakdown: it never
+    /// feeds GrossAmount, which is computed from the continuous net weight in
+    /// GrossAmountFromRatePerMan, not from these rounded-down counts.
+    /// </summary>
+    public static (int ManCount, int DhrnCount, decimal KgRemainder) BreakdownIntoManDhrnKg(
+        decimal netWeightKg, int? productId, IReadOnlyCollection<UnitConversion> conversions)
+    {
+        var manFactor = FactorFor(WeightUnit.Man, productId, conversions);
+        var dhrnFactor = FactorFor(WeightUnit.Dhrn, productId, conversions);
+
+        var manCount = (int)Math.Floor(netWeightKg / manFactor);
+        var afterMan = netWeightKg - manCount * manFactor;
+
+        var dhrnCount = (int)Math.Floor(afterMan / dhrnFactor);
+        var kgRemainder = afterMan - dhrnCount * dhrnFactor;
+
+        return (manCount, dhrnCount, kgRemainder);
+    }
+
     public static decimal FactorFor(WeightUnit unit, int? productId, IReadOnlyCollection<UnitConversion> conversions)
     {
         var productSpecific = productId.HasValue
