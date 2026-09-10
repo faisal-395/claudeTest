@@ -113,6 +113,16 @@ table.data-grid tbody tr:hover {
     background: #f4faf4;
 }
 
+/* A wide grid of narrow input/picker columns (Multi-Farmer Purchase). Deliberately NOT wrapped in
+   an overflow-x:auto container — that clips the SearchSelect dropdown menu below it (setting one
+   overflow axis makes the other default to auto too, so the dropdown's popup gets cut off instead
+   of overlaying the rest of the page). Tighter padding keeps it closer to fitting without a
+   scrollbar at all; if it still doesn't fit, the page scrolls as a whole, which doesn't clip anything. */
+.multi-purchase-grid th, .multi-purchase-grid td {
+    padding: 6px 6px;
+    font-size: 0.85rem;
+}
+
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(220px, 1fr));

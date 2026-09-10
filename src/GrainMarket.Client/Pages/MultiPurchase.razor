@@ -31,48 +31,46 @@
         </div>
     </div>
 
-    <div style="overflow-x:auto;">
-        <table class="data-grid" style="min-width:1300px;">
-            <thead>
+    <table class="data-grid multi-purchase-grid">
+        <thead>
+            <tr>
+                <th style="min-width:150px;">Farmer / کسان</th>
+                <th style="min-width:130px;">Product / جنس</th>
+                <th>Man</th><th>Kilo</th><th>Gram</th><th>Bori</th>
+                <th>Rate/Man</th><th>Net Wt (kg)</th><th>Gross</th><th>Deductions</th><th>Net Payable</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (var i = 0; i < _rows.Count; i++)
+            {
+                var index = i;
+                var row = _rows[index];
+                var calc = Calculate(row);
                 <tr>
-                    <th style="min-width:170px;">Farmer / کسان</th>
-                    <th style="min-width:150px;">Product / جنس</th>
-                    <th>Man</th><th>Kilo</th><th>Gram</th><th>Bori</th>
-                    <th>Rate/Man</th><th>Net Wt (kg)</th><th>Gross</th><th>Deductions</th><th>Net Payable</th><th></th>
+                    <td><SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Farmer…" /></td>
+                    <td><SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@row.ProductId" ValueChanged="@(v => row.ProductId = v)" Placeholder="Product…" /></td>
+                    <td><input type="number" step="0.01" style="width:65px;" @bind="row.ManQty" /></td>
+                    <td><input type="number" step="0.01" style="width:65px;" @bind="row.KiloQty" /></td>
+                    <td><input type="number" step="1" style="width:55px;" @bind="row.GramQty" /></td>
+                    <td><input type="number" step="0.01" style="width:55px;" @bind="row.BoriQty" /></td>
+                    <td><input type="number" step="0.01" style="width:75px;" @bind="row.RatePerUnit" /></td>
+                    <td class="ltr-inline">@(calc is not null ? calc.NetWeightKg.ToString("N2") : "—")</td>
+                    <td class="ltr-inline">@(calc is not null ? calc.GrossAmount.ToString("N2") : "—")</td>
+                    <td class="ltr-inline">@(calc is not null ? calc.Deductions.TotalDeductions.ToString("N2") : "—")</td>
+                    <td class="ltr-inline"><b>@(calc is not null ? calc.NetPayable.ToString("N2") : "—")</b></td>
+                    <td><button class="btn danger" @onclick="() => RemoveRow(index)">Remove</button></td>
                 </tr>
-            </thead>
-            <tbody>
-                @for (var i = 0; i < _rows.Count; i++)
+                @if (calc is not null && calc.Deductions.Lines.Count > 0)
                 {
-                    var index = i;
-                    var row = _rows[index];
-                    var calc = Calculate(row);
                     <tr>
-                        <td><SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Farmer…" /></td>
-                        <td><SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@row.ProductId" ValueChanged="@(v => row.ProductId = v)" Placeholder="Product…" /></td>
-                        <td><input type="number" step="0.01" style="width:75px;" @bind="row.ManQty" /></td>
-                        <td><input type="number" step="0.01" style="width:75px;" @bind="row.KiloQty" /></td>
-                        <td><input type="number" step="1" style="width:65px;" @bind="row.GramQty" /></td>
-                        <td><input type="number" step="0.01" style="width:65px;" @bind="row.BoriQty" /></td>
-                        <td><input type="number" step="0.01" style="width:85px;" @bind="row.RatePerUnit" /></td>
-                        <td class="ltr-inline">@(calc is not null ? calc.NetWeightKg.ToString("N2") : "—")</td>
-                        <td class="ltr-inline">@(calc is not null ? calc.GrossAmount.ToString("N2") : "—")</td>
-                        <td class="ltr-inline">@(calc is not null ? calc.Deductions.TotalDeductions.ToString("N2") : "—")</td>
-                        <td class="ltr-inline"><b>@(calc is not null ? calc.NetPayable.ToString("N2") : "—")</b></td>
-                        <td><button class="btn danger" @onclick="() => RemoveRow(index)">Remove</button></td>
+                        <td colspan="12" style="background:#f7f9f7;padding:4px 10px;font-size:0.85rem;color:#444;">
+                            @string.Join("   ·   ", calc.Deductions.Lines.Select(l => $"{l.Name}: {l.Amount:N2}"))
+                        </td>
                     </tr>
-                    @if (calc is not null && calc.Deductions.Lines.Count > 0)
-                    {
-                        <tr>
-                            <td colspan="12" style="background:#f7f9f7;padding:4px 10px;font-size:0.85rem;color:#444;">
-                                @string.Join("   ·   ", calc.Deductions.Lines.Select(l => $"{l.Name}: {l.Amount:N2}"))
-                            </td>
-                        </tr>
-                    }
                 }
-            </tbody>
-        </table>
-    </div>
+            }
+        </tbody>
+    </table>
     <button class="btn secondary" style="margin-top:8px;" @onclick="AddRow">+ Add Row</button>
 
     <div class="form-grid" style="max-width:700px;margin-top:16px;">
