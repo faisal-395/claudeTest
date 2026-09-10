@@ -27,9 +27,13 @@
             <label>Season / سیزن</label>
             <SearchSelect TItem="SeasonDto" Items="_seasons" IdSelector="@(s => s.Id)" TextSelector="@(s => s.Name)" @bind-Value="_seasonId" Placeholder="Search season…" />
         </div>
-        <div style="grid-column: span 2;">
+        <div>
             <label>Buyer / خریدار</label>
             <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
+        </div>
+        <div>
+            <label>Product / جنس</label>
+            <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Search product…" />
         </div>
     </div>
 
@@ -48,7 +52,7 @@
         <thead>
             <tr>
                 <th style="width:24px;"></th>
-                <th style="min-width:150px;" class="rtl-urdu">کسان / جنس</th>
+                <th style="min-width:150px;" class="rtl-urdu">کسان</th>
                 <th class="rtl-urdu">بھرتی</th><th class="rtl-urdu">کل وزن (کلو)</th>
                 <th class="rtl-urdu">ریٹ فی مَن (دَر)</th>
             </tr>
@@ -61,12 +65,7 @@
                 var calc = Calculate(row);
                 <tr class="@(_selectedIndex == index ? "selected-row" : "")">
                     <td style="text-align:center;"><input type="radio" name="rowSelect" checked="@(_selectedIndex == index)" @onchange="() => _selectedIndex = index" /></td>
-                    <td>
-                        <SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Farmer…" />
-                        <div style="margin-top:4px;">
-                            <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@row.ProductId" ValueChanged="@(v => row.ProductId = v)" Placeholder="Product…" />
-                        </div>
-                    </td>
+                    <td><SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Farmer…" /></td>
                     <td><input type="number" step="0.01" style="width:80px;" @bind="row.BhartiKgPerBag" /></td>
                     <td><input type="number" step="0.01" style="width:90px;" @bind="row.TotalWeightKg" /></td>
                     <td><input type="number" step="0.01" style="width:80px;" @bind="row.RatePerUnit" /></td>
@@ -92,9 +91,9 @@
                                     <span>&nbsp;·&nbsp;بوری: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
                                 }
                                 <span>&nbsp;·&nbsp;مجموعی رقم: <b>@calc.GrossAmount.ToString("N2")</b></span>
-                                @if (calc.FarmerLines.Count > 0)
+                                @if (calc.FarmerLines.Count > 0 || calc.BuyerLines.Count > 0)
                                 {
-                                    <span>&nbsp;·&nbsp;کٹوتیاں (@calc.FarmerDeductionsTotal.ToString("N2")): @string.Join("، ", calc.FarmerLines.Select(l => $"{l.NameUrdu} {l.Amount:N2}"))</span>
+                                    <span>&nbsp;·&nbsp;@string.Join("، ", calc.FarmerLines.Concat(calc.BuyerLines).Select(l => $"{l.NameUrdu} {l.Amount:N2}"))</span>
                                 }
                             </div>
                         }
@@ -139,6 +138,7 @@
     private DateTime _date = DateTime.Today;
     private int _seasonId;
     private int _buyerId;
+    private int _productId;
     private int? _selectedIndex;
     private readonly List<RowModel> _rows = new();
 
@@ -163,8 +163,8 @@
     };
 
     private bool CanSave =>
-        _buyerId > 0 && _rows.Count > 0 &&
-        _rows.All(r => r.FarmerId > 0 && r.ProductId > 0 && (r.RatePerUnit ?? 0) > 0 &&
+        _buyerId > 0 && _productId > 0 && _rows.Count > 0 &&
+        _rows.All(r => r.FarmerId > 0 && (r.RatePerUnit ?? 0) > 0 &&
                         (r.BhartiKgPerBag ?? 0) > 0 && (r.TotalWeightKg ?? 0) > 0);
 
     protected override async Task OnInitializedAsync()
@@ -177,6 +177,7 @@
             _products = await Api.GetProductsAsync();
             if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
             if (_buyers.Count > 0) _buyerId = _buyers[0].Id;
+            if (_products.Count > 0) _productId = _products[0].Id;
 
             var rules = await Api.GetDeductionRulesAsync();
             _deductionRuleEntities = rules.Select(r => new DeductionRule
@@ -200,8 +201,7 @@
 
     private void AddRow() => _rows.Add(new RowModel
     {
-        FarmerId = _farmers?.FirstOrDefault()?.Id ?? 0,
-        ProductId = _products?.FirstOrDefault()?.Id ?? 0
+        FarmerId = _farmers?.FirstOrDefault()?.Id ?? 0
     });
 
     private void RemoveSelectedRow()
@@ -226,7 +226,7 @@
         {
             var netWeightKg = row.TotalWeightKg.Value;
 
-            var boriFactor = UnitConversionCalculator.FactorFor(WeightUnit.Bori, row.ProductId, _unitConversionEntities);
+            var boriFactor = UnitConversionCalculator.FactorFor(WeightUnit.Bori, _productId, _unitConversionEntities);
             var boriQty = netWeightKg / boriFactor;
 
             // Man/Dhrn/Kg is a display-only breakdown — if Dhrn's conversion factor isn't
@@ -235,12 +235,12 @@
             (int ManCount, int DhrnCount, decimal KgRemainder)? breakdown = null;
             try
             {
-                breakdown = UnitConversionCalculator.BreakdownIntoManDhrnKg(netWeightKg, row.ProductId, _unitConversionEntities);
+                breakdown = UnitConversionCalculator.BreakdownIntoManDhrnKg(netWeightKg, _productId, _unitConversionEntities);
             }
             catch (InvalidCalculationException) { }
 
-            var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, row.ProductId, _unitConversionEntities);
-            var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Kachi, row.ProductId, row.FarmerId, _deductionRuleEntities);
+            var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, _productId, _unitConversionEntities);
+            var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Kachi, _productId, row.FarmerId, _deductionRuleEntities);
             var farmerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).ToList();
             var buyerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).ToList();
             var farmerTotal = farmerLines.Sum(l => l.Amount);
@@ -261,7 +261,7 @@
         try
         {
             var request = new CreateMultiPurchaseRequest(_date, _seasonId, _buyerId,
-                _rows.Select(r => new MultiPurchaseRowRequest(r.FarmerId, r.ProductId, r.BhartiKgPerBag, r.TotalWeightKg, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList());
+                _rows.Select(r => new MultiPurchaseRowRequest(r.FarmerId, _productId, r.BhartiKgPerBag, r.TotalWeightKg, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList());
 
             var result = await Api.CreateMultiPurchaseAsync(request);
 
@@ -284,7 +284,6 @@
     private class RowModel
     {
         public int FarmerId { get; set; }
-        public int ProductId { get; set; }
         public decimal? BhartiKgPerBag { get; set; }
         public decimal? TotalWeightKg { get; set; }
         public decimal? RatePerUnit { get; set; }
