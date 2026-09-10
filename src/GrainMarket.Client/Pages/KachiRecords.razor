@@ -38,14 +38,14 @@
             <div><label>Kilo / کلو</label><input type="number" step="0.01" @bind="_kilo" /></div>
             <div><label>Gram / گرام</label><input type="number" step="1" @bind="_gram" /></div>
             <div><label>Bori (bags) / بوری</label><input type="number" step="0.01" @bind="_bori" /></div>
-            <div><label>Rate per Man / ریٹ فی مَن (optional at Kachi stage)</label><input type="number" step="0.01" @bind="_rate" /></div>
+            <div><label>Rate per Man / ریٹ فی مَن</label><input type="number" step="0.01" @bind="_rate" /></div>
             <div><label>Vehicle Number / گاڑی نمبر (for freight)</label><input @bind="_vehicleNumber" /></div>
             <div style="grid-column: span 2;">
-                @if (!HasWeight)
+                @if (!CanSave)
                 {
-                    <div class="invalid-total">Enter at least one weight (Man/Kilo/Gram/Bori) before saving.</div>
+                    <div class="invalid-total">Enter at least one weight (Man/Kilo/Gram/Bori) and a rate greater than zero before saving.</div>
                 }
-                <button class="btn" disabled="@(!HasWeight)" @onclick="SaveAsync">Update Kachi</button>
+                <button class="btn" disabled="@(!CanSave)" @onclick="SaveAsync">Update Kachi</button>
                 <button class="btn secondary" @onclick="ResetForm">Cancel Edit</button>
             </div>
         </div>
@@ -140,7 +140,7 @@
     private decimal? _rate;
     private string? _vehicleNumber;
 
-    private bool HasWeight => (_man ?? 0) + (_kilo ?? 0) + (_gram ?? 0) + (_bori ?? 0) > 0;
+    private bool CanSave => (_man ?? 0) + (_kilo ?? 0) + (_gram ?? 0) + (_bori ?? 0) > 0 && (_rate ?? 0) > 0;
 
     protected override async Task OnInitializedAsync()
     {

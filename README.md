@@ -241,8 +241,8 @@ the audit trail the same way Kachi/Pakki/Voucher already do.
 
 ## Kachi and Pakki are separate stages with separate deductions
 
-Kachi (provisional receipt — farmer's produce weighed, sale rate often not settled yet) and Pakki
-(the finalized sale, once a buyer and rate are locked in) are independent stages, each with their
+Kachi (a priced receipt — farmer's produce weighed and rated, but the sale not yet finalized) and
+Pakki (the finalized sale, once the sale is confirmed) are independent stages, each with their
 own independently configurable deductions under Setup ▸ Format (`DeductionRule.AppliesTo`: Kachi,
 Pakki, or Both). Commission, Market Fee, Association Fund and Withholding Tax are seeded as
 **separate rows for each stage** (e.g. "Commission" for Pakki, "Commission (Kachi)" for Kachi,
@@ -262,25 +262,32 @@ product/farmer/weight/gross.
 One buyer commonly receives from several different farmers in one sitting, so the **Kachi** screen
 (`Pages/Kachi.razor`, `/kachi` — this *is* the "Multi-Farmer Purchase" screen; the old single-row
 Kachi entry form no longer exists) is entry-only: pick the buyer, season and date once, then add
-one row per farmer/product/weight — rate is optional, same as any Kachi. Each row becomes its own
-Kachi with this buyer already attached (`Application/MultiPurchase/MultiPurchaseService`, calling
+one row per farmer/product/weight/rate — **rate is required** (`CreateKachiRequestValidator`/
+`MultiPurchaseRowRequestValidator`: `NotNull().GreaterThan(0)`), not optional; a Kachi is now
+always priced at entry, just not yet finalized as a sale. Each row becomes its own Kachi with this
+buyer already attached (`Application/MultiPurchase/MultiPurchaseService`, calling
 `IKachiService.CreateAsync` per row, still under the `Application.MultiPurchase` namespace/route
-internally) — this never touches Pakki; finalizing each farmer's sale (choosing/confirming the
-buyer, locking in the rate) stays a deliberate, separate step per farmer from the printed receipt.
+internally) — this never touches Pakki; finalizing each farmer's sale stays a deliberate, separate
+step per farmer, and there's no "Convert to Pakki" shortcut from the Kachi side anymore (Kachi and
+Pakki are kept fully separate — use the Pakki screen directly).
 
-Every row shows its calculated breakdown (paledari/labour, Kachi-stage commission, association
-fund, withholding tax, ...) live as you fill it in, updating on every keystroke — not just after
-saving. This isn't a second, hand-written copy of the math: the page calls
+The grid itself only takes entry fields (Farmer, Product, Man/Kilo/Gram/Bori, Rate) — no per-row
+Gross/Deductions/Total columns, since those didn't reliably fit/render there. A row is removed by
+selecting its radio button and clicking "Remove Selected Row" (next to "+ Add Row"), rather than a
+per-row button eating into the grid's width. A **Grand Gross / Grand Deductions / Grand Total**
+summary row above the buttons still reflects live totals across every row — computed by calling
 `Application.Common.Services.DeductionEngine`/`UnitConversionCalculator` directly with
 `DeductionAppliesTo.Kachi` (the exact same pure, stateless calculators and the same code path
 `KachiService.CreateAsync` uses to post the Kachi), since the Client project already references
-`GrainMarket.Application`. There is no live-preview API endpoint and nothing to keep in sync — what
-you see while typing is what actually gets posted.
+`GrainMarket.Application` — not a second, hand-written copy of the math that could drift from it.
+**Save** posts everything and clears the grid for the next batch; **Save & Print** posts and jumps
+straight to the consolidated print page.
 
 **Kachi Records** (`Pages/KachiRecords.razor`, `/kachi-records`) is the separate management view —
-every Kachi ever raised, with per-row edit/cancel/print/"Convert to Pakki" and the deduction-line
-detail toggle. It's where the printed receipt's "View / edit all Kachi records" link goes, and it's
-its own nav item since entry (`/kachi`) and browsing/managing existing records are different tasks.
+every Kachi ever raised, with per-row edit/cancel/print and the deduction-line detail toggle, and
+weight shown in both Man and kg. It's where the printed receipt's "View / edit all Kachi records"
+link goes, and it's its own nav item since entry (`/kachi`) and browsing/managing existing records
+are different tasks.
 
 ## Open items — resolved
 

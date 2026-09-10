@@ -15,6 +15,10 @@
     {
         <div class="error-banner">@_error</div>
     }
+    @if (_successMessage is not null)
+    {
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+    }
 
     <div class="form-grid" style="max-width:1100px;margin-bottom:12px;">
         <div><label>Date / تاریخ</label><input type="date" @bind="_date" /></div>
@@ -34,10 +38,10 @@
         <thead>
             <tr>
                 <th style="width:24px;"></th>
-                <th style="min-width:135px;">Farmer / کسان</th>
-                <th style="min-width:115px;">Product / جنس</th>
+                <th style="min-width:150px;">Farmer / کسان</th>
+                <th style="min-width:130px;">Product / جنس</th>
                 <th>Man</th><th>Kilo</th><th>Gram</th><th>Bori</th>
-                <th>Rate/Man</th><th>Net Wt (kg)</th><th>Gross</th><th>Deductions</th><th>Total</th>
+                <th>Rate/Man</th>
             </tr>
         </thead>
         <tbody>
@@ -45,48 +49,35 @@
             {
                 var index = i;
                 var row = _rows[index];
-                var calc = Calculate(row);
                 <tr class="@(_selectedIndex == index ? "selected-row" : "")">
                     <td style="text-align:center;"><input type="radio" name="rowSelect" checked="@(_selectedIndex == index)" @onchange="() => _selectedIndex = index" /></td>
                     <td><SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Farmer…" /></td>
                     <td><SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@row.ProductId" ValueChanged="@(v => row.ProductId = v)" Placeholder="Product…" /></td>
-                    <td><input type="number" step="0.01" style="width:60px;" @bind="row.ManQty" /></td>
-                    <td><input type="number" step="0.01" style="width:60px;" @bind="row.KiloQty" /></td>
-                    <td><input type="number" step="1" style="width:50px;" @bind="row.GramQty" /></td>
-                    <td><input type="number" step="0.01" style="width:50px;" @bind="row.BoriQty" /></td>
-                    <td><input type="number" step="0.01" style="width:70px;" @bind="row.RatePerUnit" placeholder="optional" /></td>
-                    <td class="ltr-inline">@(calc is not null ? calc.NetWeightKg.ToString("N2") : "—")</td>
-                    <td class="ltr-inline">@(calc is not null ? calc.GrossAmount.ToString("N2") : "—")</td>
-                    <td class="ltr-inline">@(calc is not null ? calc.Deductions.TotalDeductions.ToString("N2") : "—")</td>
-                    <td class="ltr-inline"><b>@(calc is not null ? calc.Total.ToString("N2") : "—")</b></td>
+                    <td><input type="number" step="0.01" style="width:65px;" @bind="row.ManQty" /></td>
+                    <td><input type="number" step="0.01" style="width:65px;" @bind="row.KiloQty" /></td>
+                    <td><input type="number" step="1" style="width:55px;" @bind="row.GramQty" /></td>
+                    <td><input type="number" step="0.01" style="width:55px;" @bind="row.BoriQty" /></td>
+                    <td><input type="number" step="0.01" style="width:80px;" @bind="row.RatePerUnit" /></td>
                 </tr>
-                @if (calc is not null && calc.Deductions.Lines.Count > 0)
-                {
-                    <tr>
-                        <td colspan="12" style="background:#f7f9f7;padding:4px 10px;font-size:0.85rem;color:#444;">
-                            @string.Join("   ·   ", calc.Deductions.Lines.Select(l => $"{l.Name}: {l.Amount:N2}"))
-                        </td>
-                    </tr>
-                }
             }
         </tbody>
     </table>
+
+    <div class="total-figure" style="margin-top:12px;display:flex;gap:28px;flex-wrap:wrap;">
+        <span>Grand Gross: Rs @GrandGross.ToString("N2")</span>
+        <span>Grand Deductions: Rs @GrandDeductions.ToString("N2")</span>
+        <span>Grand Total: Rs @GrandTotal.ToString("N2")</span>
+    </div>
+    @if (!CanSave)
+    {
+        <div class="invalid-total" style="margin-top:6px;">Pick a buyer, and give every row a farmer, product, weight and a rate greater than zero.</div>
+    }
+
     <div style="margin-top:8px;">
         <button class="btn secondary" @onclick="AddRow">+ Add Row</button>
         <button class="btn danger" disabled="@(_selectedIndex is null)" @onclick="RemoveSelectedRow">Remove Selected Row</button>
-    </div>
-
-    <div class="form-grid" style="max-width:700px;margin-top:12px;">
-        <div class="total-figure">Grand Gross: Rs @GrandGross.ToString("N2")</div>
-        <div class="total-figure">Grand Deductions: Rs @GrandDeductions.ToString("N2")</div>
-        <div class="total-figure">Grand Total: Rs @GrandTotal.ToString("N2")</div>
-        <div style="grid-column: span 2;">
-            @if (!CanSave)
-            {
-                <div class="invalid-total">Pick a buyer, and give every row a farmer, product and weight (rate is optional).</div>
-            }
-            <button class="btn" disabled="@(!CanSave || _saving)" @onclick="SaveAsync">@(_saving ? "Saving…" : "Save & Print Receipt")</button>
-        </div>
+        <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: false)">@(_saving ? "Saving…" : "Save")</button>
+        <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: true)">@(_saving ? "Saving…" : "Save & Print")</button>
     </div>
 </RequireAuth>
 
@@ -98,6 +89,7 @@
     private List<DeductionRule>? _deductionRuleEntities;
     private List<UnitConversion>? _unitConversionEntities;
     private string? _error;
+    private string? _successMessage;
     private bool _saving;
 
     private DateTime _date = DateTime.Today;
@@ -112,7 +104,7 @@
 
     private bool CanSave =>
         _buyerId > 0 && _rows.Count > 0 &&
-        _rows.All(r => r.FarmerId > 0 && r.ProductId > 0 &&
+        _rows.All(r => r.FarmerId > 0 && r.ProductId > 0 && (r.RatePerUnit ?? 0) > 0 &&
                         (r.ManQty ?? 0) + (r.KiloQty ?? 0) + (r.GramQty ?? 0) + (r.BoriQty ?? 0) > 0);
 
     protected override async Task OnInitializedAsync()
@@ -159,21 +151,20 @@
         _selectedIndex = null;
     }
 
-    /// <summary>Live per-row preview — reuses the exact same DeductionEngine/UnitConversionCalculator
-    /// the server's KachiService uses to post the Kachi (AppliesTo.Kachi, matching the Kachi-stage
-    /// deduction rules, not Pakki's), so this always matches what actually gets charged rather than
-    /// being a second, hand-written copy of the math that could drift from it. Returns null while
-    /// the row has no weight yet or the product's conversion factor isn't configured.</summary>
+    /// <summary>Feeds the grand-total summary only — reuses the exact same DeductionEngine/
+    /// UnitConversionCalculator the server's KachiService uses to post the Kachi (AppliesTo.Kachi,
+    /// matching the Kachi-stage deduction rules, not Pakki's), so the totals shown always match what
+    /// actually gets charged rather than being a second, hand-written copy of the math that could
+    /// drift from it. Returns null while the row has no weight/rate yet or the product's conversion
+    /// factor isn't configured.</summary>
     private RowCalculation? Calculate(RowModel row)
     {
-        if (_deductionRuleEntities is null || _unitConversionEntities is null) return null;
+        if (_deductionRuleEntities is null || _unitConversionEntities is null || row.RatePerUnit is not > 0) return null;
 
         try
         {
             var netWeightKg = UnitConversionCalculator.ToBaseKg(row.ManQty, row.KiloQty, row.GramQty, row.BoriQty, row.ProductId, _unitConversionEntities);
-            var gross = row.RatePerUnit is > 0
-                ? UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, row.ProductId, _unitConversionEntities)
-                : 0m;
+            var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, row.ProductId, _unitConversionEntities);
             var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Kachi, row.ProductId, row.FarmerId, _deductionRuleEntities);
             return new RowCalculation(netWeightKg, gross, deductions, deductions.NetAmount);
         }
@@ -183,9 +174,10 @@
         }
     }
 
-    private async Task SaveAsync()
+    private async Task SaveAsync(bool andPrint)
     {
         _error = null;
+        _successMessage = null;
         _saving = true;
         try
         {
@@ -193,8 +185,18 @@
                 _rows.Select(r => new MultiPurchaseRowRequest(r.FarmerId, r.ProductId, r.ManQty, r.KiloQty, r.GramQty, r.BoriQty, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList());
 
             var result = await Api.CreateMultiPurchaseAsync(request);
-            var ids = string.Join(",", result.Rows.Select(r => r.KachiId));
-            Nav.NavigateTo($"/print/multi-purchase?ids={ids}");
+
+            if (andPrint)
+            {
+                var ids = string.Join(",", result.Rows.Select(r => r.KachiId));
+                Nav.NavigateTo($"/print/multi-purchase?ids={ids}");
+                return;
+            }
+
+            _successMessage = $"Saved {result.Rows.Count} Kachi record(s) for {result.BuyerName}.";
+            _rows.Clear();
+            _selectedIndex = null;
+            AddRow();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
         finally { _saving = false; }

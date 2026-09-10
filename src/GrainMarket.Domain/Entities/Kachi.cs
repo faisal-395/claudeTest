@@ -3,7 +3,10 @@ using GrainMarket.Domain.Enums;
 
 namespace GrainMarket.Domain.Entities;
 
-/// <summary>Provisional receipt: a farmer's produce is received and weighed before a final sale rate is agreed.</summary>
+/// <summary>Provisional receipt: a farmer's produce is received, weighed and priced, before the
+/// sale is finalized (converted to a Pakki) — a deliberate, separate later step. Rate is required
+/// at entry (see CreateKachiRequestValidator); the nullable type here is only for historical rows
+/// created before that rule existed.</summary>
 public class Kachi : BaseEntity
 {
     public string InvoiceNo { get; set; } = string.Empty;
@@ -33,7 +36,8 @@ public class Kachi : BaseEntity
     /// <summary>Computed total weight in the base unit (kg), derived from the raw quantities via UnitConversion. Never recomputed silently after posting.</summary>
     public decimal NetWeightKg { get; set; }
 
-    /// <summary>Often unset at Kachi stage; filled in once negotiated.</summary>
+    /// <summary>Required at entry (validated, not enforced by the column) — nullable only for rows
+    /// created before rate became mandatory.</summary>
     public decimal? RatePerUnit { get; set; }
 
     public decimal GrossAmount { get; set; }

@@ -45,9 +45,9 @@ public class CreateKachiRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_ManQtyEntered_Passes()
+    public void Validate_ManQtyAndRateEntered_Passes()
     {
-        var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, null, null, null);
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, 5000m, null, null);
         Assert.True(_validator.Validate(request).IsValid);
     }
 
@@ -59,17 +59,25 @@ public class CreateKachiRequestValidatorTests
     }
 
     [Fact]
+    public void Validate_NoRate_Fails()
+    {
+        // Rate is required — Kachi no longer allows a purely provisional, unpriced weighing.
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, null, null, null);
+        Assert.False(_validator.Validate(request).IsValid);
+    }
+
+    [Fact]
     public void Validate_NoBuyerYet_Passes()
     {
-        // Buyer is optional at Kachi stage — a purely provisional weighing has no buyer yet.
-        var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, null, null, null);
+        // Buyer is still optional at Kachi stage even though rate is now required.
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, null, 1, 5m, null, null, null, 5000m, null, null);
         Assert.True(_validator.Validate(request).IsValid);
     }
 
     [Fact]
     public void Validate_InvalidBuyerId_Fails()
     {
-        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 0, 1, 5m, null, null, null, null, null, null);
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 0, 1, 5m, null, null, null, 5000m, null, null);
         Assert.False(_validator.Validate(request).IsValid);
     }
 }
@@ -111,12 +119,11 @@ public class CreateMultiPurchaseRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_RowWithNoRateYet_Passes()
+    public void Validate_RowWithNoRate_Fails()
     {
-        // Kachi's rate is often unset at this stage — the buyer may not have settled a price yet.
         var row = new MultiPurchaseRowRequest(1, 1, 5m, null, null, null, null, null, null);
         var request = new CreateMultiPurchaseRequest(DateTime.Today, 1, 1, new List<MultiPurchaseRowRequest> { row });
-        Assert.True(_validator.Validate(request).IsValid);
+        Assert.False(_validator.Validate(request).IsValid);
     }
 }
 
