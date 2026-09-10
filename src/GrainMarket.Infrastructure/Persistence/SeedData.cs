@@ -121,6 +121,12 @@ public static class SeedData
             new ChartOfAccount { Code = "4120", Name = "Arhat Income", NameUrdu = "آمدنی آڑت", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4300", Name = "Association Fund Income", NameUrdu = "آمدنی انجمن فنڈ", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4600", Name = "Labour (Palledari) Income", NameUrdu = "آمدنی پلیداری", AccountType = AccountType.Income },
+            new ChartOfAccount { Code = "4610", Name = "Bharai Income", NameUrdu = "آمدنی بھرائی", AccountType = AccountType.Income },
+            new ChartOfAccount { Code = "4620", Name = "Silvai Income", NameUrdu = "آمدنی سلائی", AccountType = AccountType.Income },
+            new ChartOfAccount { Code = "4630", Name = "Dhaga Lagai Income", NameUrdu = "آمدنی دھاگہ لگائی", AccountType = AccountType.Income },
+            new ChartOfAccount { Code = "4640", Name = "Dumra Karai Income", NameUrdu = "آمدنی ڈمرہ کرائی", AccountType = AccountType.Income },
+            new ChartOfAccount { Code = "4650", Name = "Sotli Income", NameUrdu = "آمدنی سوتلی", AccountType = AccountType.Income },
+            new ChartOfAccount { Code = "4660", Name = "Bardana Income", NameUrdu = "آمدنی بردانہ", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4500", Name = "Withholding Tax Payable", NameUrdu = "ویدہولڈنگ ٹیکس", AccountType = AccountType.Liability, IsProtected = true },
             new ChartOfAccount { Code = DomainConstants.UnallocatedDeductionsAccountCode, Name = "Unallocated Deductions (Suspense)", NameUrdu = "غیر مختص کٹوتیاں", AccountType = AccountType.Income },
             new ChartOfAccount { Code = DomainConstants.PurchaseExpenseAccountCode, Name = "Purchases", NameUrdu = "خریداری", AccountType = AccountType.Expense },
@@ -160,7 +166,18 @@ public static class SeedData
             new DeductionRule { Name = "Commission", NameUrdu = "کمیشن", CalculationType = DeductionCalculationType.PercentOfGross, Value = 1.60m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 3, IsActive = true, IncomeAccountId = accounts["4100"].Id },
             new DeductionRule { Name = "Withholding Tax", NameUrdu = "ویدہولڈنگ ٹیکس", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 4, IsActive = false, IncomeAccountId = accounts["4500"].Id },
             new DeductionRule { Name = "Association Fund", NameUrdu = "انجمن فنڈ", CalculationType = DeductionCalculationType.FixedAmount, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 5, IsActive = false, IncomeAccountId = accounts["4300"].Id },
-            new DeductionRule { Name = "Arhat", NameUrdu = "آڑت", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 6, IsActive = false, IncomeAccountId = accounts["4120"].Id }
+            new DeductionRule { Name = "Arhat", NameUrdu = "آڑت", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 6, IsActive = false, IncomeAccountId = accounts["4120"].Id },
+
+            // Pakki-only bag-handling charges (bharai, silvai, dhaga lagai, dumra karai, sotli,
+            // bardana) — charged to the Vendor/Buyer, same percent-of-gross shape as Labour/
+            // Brokerage/Commission above. Seeded inactive at 0% until the market's actual rate is
+            // entered under Setup > Format.
+            new DeductionRule { Name = "Bharai", NameUrdu = "بھرائی", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 7, IsActive = false, IncomeAccountId = accounts["4610"].Id },
+            new DeductionRule { Name = "Silvai", NameUrdu = "سلائی", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 8, IsActive = false, IncomeAccountId = accounts["4620"].Id },
+            new DeductionRule { Name = "Dhaga Lagai", NameUrdu = "دھاگہ لگائی", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 9, IsActive = false, IncomeAccountId = accounts["4630"].Id },
+            new DeductionRule { Name = "Dumra Karai", NameUrdu = "ڈمرہ کرائی", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 10, IsActive = false, IncomeAccountId = accounts["4640"].Id },
+            new DeductionRule { Name = "Sotli", NameUrdu = "سوتلی", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 11, IsActive = false, IncomeAccountId = accounts["4650"].Id },
+            new DeductionRule { Name = "Bardana", NameUrdu = "بردانہ", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 12, IsActive = false, IncomeAccountId = accounts["4660"].Id }
         };
 
         db.DeductionRules.AddRange(rules);
