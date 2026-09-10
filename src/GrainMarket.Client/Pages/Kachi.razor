@@ -48,10 +48,10 @@
         <thead>
             <tr>
                 <th style="width:24px;"></th>
-                <th style="min-width:150px;">Farmer / کسان</th>
-                <th style="min-width:130px;">Product / جنس</th>
-                <th>Bharti / بھرتی (kg/bag)</th><th>Total Weight (kg)</th><th>Man / Dhrn / Kg &nbsp;<span class="rtl-urdu">من / دھرن / کلو</span></th>
-                <th>Rate/Man (Darr) &nbsp;<span class="rtl-urdu">ریٹ فی مَن (دَر)</span></th>
+                <th style="min-width:150px;" class="rtl-urdu">کسان</th>
+                <th style="min-width:130px;" class="rtl-urdu">جنس</th>
+                <th class="rtl-urdu">بھرتی</th><th class="rtl-urdu">کل وزن (کلو)</th>
+                <th class="rtl-urdu">ریٹ فی مَن (دَر)</th>
             </tr>
         </thead>
         <tbody>
@@ -66,38 +66,30 @@
                     <td><SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@row.ProductId" ValueChanged="@(v => row.ProductId = v)" Placeholder="Product…" /></td>
                     <td><input type="number" step="0.01" style="width:80px;" @bind="row.BhartiKgPerBag" /></td>
                     <td><input type="number" step="0.01" style="width:90px;" @bind="row.TotalWeightKg" /></td>
-                    <td style="white-space:nowrap;">
-                        @if (calc is not null)
-                        {
-                            <span>@calc.ManCount من &nbsp;@calc.DhrnCount دھرن &nbsp;@calc.KgRemainder.ToString("N2") کلو</span>
-                        }
-                        else
-                        {
-                            <span style="color:#999;">—</span>
-                        }
-                    </td>
                     <td><input type="number" step="0.01" style="width:80px;" @bind="row.RatePerUnit" /></td>
                 </tr>
                 <tr>
-                    <td colspan="7" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
+                    <td colspan="6" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
                         @if (calc is not null)
                         {
-                            <span>Safi Wazan: <b>@calc.NetWeightKg.ToString("N2")</b> kg</span>
-                            @if (calc.BoriQty is not null)
-                            {
-                                <span>&nbsp;·&nbsp;Bori: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
-                            }
-                            <span>&nbsp;·&nbsp;<span class="rtl-urdu">من/دھرن/کلو</span>: <b>@calc.ManCount / @calc.DhrnCount / @calc.KgRemainder.ToString("N2")</b></span>
-                            <span>&nbsp;·&nbsp;Gross: <b>@calc.GrossAmount.ToString("N2")</b></span>
-                            @if (calc.FarmerLines.Count > 0)
-                            {
-                                <span>&nbsp;·&nbsp;Deductions (@calc.FarmerDeductionsTotal.ToString("N2")): @string.Join(", ", calc.FarmerLines.Select(l => $"{l.Name} {l.Amount:N2}"))</span>
-                            }
-                            <span>&nbsp;·&nbsp;Farmer Total: <b>@calc.Total.ToString("N2")</b></span>
-                            @if (calc.BuyerLines.Count > 0)
-                            {
-                                <span>&nbsp;·&nbsp;Buyer Charges (@calc.BuyerChargesTotal.ToString("N2")): @string.Join(", ", calc.BuyerLines.Select(l => $"{l.Name} {l.Amount:N2}"))</span>
-                            }
+                            <div><span class="rtl-urdu">من / دھرن / کلو</span>: <b>@calc.ManCount / @calc.DhrnCount / @calc.KgRemainder.ToString("N2")</b></div>
+                            <div>
+                                <span>Safi Wazan: <b>@calc.NetWeightKg.ToString("N2")</b> kg</span>
+                                @if (calc.BoriQty is not null)
+                                {
+                                    <span>&nbsp;·&nbsp;Bori: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
+                                }
+                                <span>&nbsp;·&nbsp;Gross: <b>@calc.GrossAmount.ToString("N2")</b></span>
+                                @if (calc.FarmerLines.Count > 0)
+                                {
+                                    <span>&nbsp;·&nbsp;Deductions (@calc.FarmerDeductionsTotal.ToString("N2")): @string.Join(", ", calc.FarmerLines.Select(l => $"{l.Name} {l.Amount:N2}"))</span>
+                                }
+                                <span>&nbsp;·&nbsp;Farmer Total: <b>@calc.Total.ToString("N2")</b></span>
+                                @if (calc.BuyerLines.Count > 0)
+                                {
+                                    <span>&nbsp;·&nbsp;Buyer Charges (@calc.BuyerChargesTotal.ToString("N2")): @string.Join(", ", calc.BuyerLines.Select(l => $"{l.Name} {l.Amount:N2}"))</span>
+                                }
+                            </div>
                         }
                         else
                         {

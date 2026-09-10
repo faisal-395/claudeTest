@@ -8,9 +8,10 @@ namespace GrainMarket.Infrastructure.Persistence;
 
 /// <summary>
 /// Idempotent runtime seed: default roles/permissions, an initial admin user, the chart of
-/// accounts, the eight legacy deduction rules (Setup &gt; Format), default unit conversions and a
-/// starter season/products. Everything here is editable afterwards from Setup — this only seeds
-/// sane defaults so the app is usable on first run.
+/// accounts, the market's three current Kachi-stage deduction rules (Setup &gt; Format — Pakki's
+/// own deductions aren't seeded yet), default unit conversions and a starter season/products.
+/// Everything here is editable afterwards from Setup — this only seeds sane defaults so the app is
+/// usable on first run.
 /// </summary>
 public static class SeedData
 {
@@ -116,17 +117,9 @@ public static class SeedData
             new ChartOfAccount { Code = "3000", Name = "Owner's Equity", NameUrdu = "سرمایہ", AccountType = AccountType.Equity, IsProtected = true },
             new ChartOfAccount { Code = DomainConstants.SalesIncomeAccountCode, Name = "Sales Income", NameUrdu = "آمدنی فروخت", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4100", Name = "Commission Income", NameUrdu = "آمدنی کمیشن", AccountType = AccountType.Income },
-            new ChartOfAccount { Code = "4105", Name = "Kachi Commission Income", NameUrdu = "آمدنی کمیشن (کچی)", AccountType = AccountType.Income },
-            new ChartOfAccount { Code = "4200", Name = "Market Fee Income", NameUrdu = "آمدنی مارکیٹ فیس", AccountType = AccountType.Income },
-            new ChartOfAccount { Code = "4205", Name = "Kachi Market Fee Income", NameUrdu = "آمدنی مارکیٹ فیس (کچی)", AccountType = AccountType.Income },
-            new ChartOfAccount { Code = "4300", Name = "Association Fund Income", NameUrdu = "آمدنی انجمن فنڈ", AccountType = AccountType.Income },
-            new ChartOfAccount { Code = "4305", Name = "Kachi Association Fund Income", NameUrdu = "آمدنی انجمن فنڈ (کچی)", AccountType = AccountType.Income },
-            new ChartOfAccount { Code = "4400", Name = "Octroi Income", NameUrdu = "آمدنی چونگی", AccountType = AccountType.Income },
-            new ChartOfAccount { Code = "4500", Name = "Withholding Tax Payable", NameUrdu = "ویدہولڈنگ ٹیکس", AccountType = AccountType.Liability, IsProtected = true },
-            new ChartOfAccount { Code = "4505", Name = "Kachi Withholding Tax Payable", NameUrdu = "ویدہولڈنگ ٹیکس (کچی)", AccountType = AccountType.Liability, IsProtected = true },
+            new ChartOfAccount { Code = "4110", Name = "Brokerage Income", NameUrdu = "آمدنی بروکری", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4600", Name = "Labour (Palledari) Income", NameUrdu = "آمدنی پلیداری", AccountType = AccountType.Income },
-            new ChartOfAccount { Code = "4700", Name = "Bagging/Stitching Income", NameUrdu = "آمدنی بھرائی سلائی", AccountType = AccountType.Income },
-            new ChartOfAccount { Code = "4800", Name = "Freight Payable", NameUrdu = "کرایہ", AccountType = AccountType.Liability },
+            new ChartOfAccount { Code = "4500", Name = "Withholding Tax Payable", NameUrdu = "ویدہولڈنگ ٹیکس", AccountType = AccountType.Liability, IsProtected = true },
             new ChartOfAccount { Code = DomainConstants.UnallocatedDeductionsAccountCode, Name = "Unallocated Deductions (Suspense)", NameUrdu = "غیر مختص کٹوتیاں", AccountType = AccountType.Income },
             new ChartOfAccount { Code = DomainConstants.PurchaseExpenseAccountCode, Name = "Purchases", NameUrdu = "خریداری", AccountType = AccountType.Expense },
             new ChartOfAccount { Code = "5100", Name = "General Expenses", NameUrdu = "عمومی اخراجات", AccountType = AccountType.Expense }
@@ -143,9 +136,7 @@ public static class SeedData
         db.ChartOfAccountRoles.AddRange(
             new ChartOfAccountRole { ChartOfAccountId = accountsByCode["3000"].Id, RoleId = roles["Owner/Admin"].Id },
             new ChartOfAccountRole { ChartOfAccountId = accountsByCode["4500"].Id, RoleId = roles["Owner/Admin"].Id },
-            new ChartOfAccountRole { ChartOfAccountId = accountsByCode["4500"].Id, RoleId = roles["Accountant"].Id },
-            new ChartOfAccountRole { ChartOfAccountId = accountsByCode["4505"].Id, RoleId = roles["Owner/Admin"].Id },
-            new ChartOfAccountRole { ChartOfAccountId = accountsByCode["4505"].Id, RoleId = roles["Accountant"].Id });
+            new ChartOfAccountRole { ChartOfAccountId = accountsByCode["4500"].Id, RoleId = roles["Accountant"].Id });
         await db.SaveChangesAsync(ct);
 
         return accountsByCode;
@@ -153,25 +144,14 @@ public static class SeedData
 
     private static async Task SeedDeductionRulesAsync(AppDbContext db, Dictionary<string, ChartOfAccount> accounts, CancellationToken ct)
     {
+        // Kachi-stage tax/deductions only, for now — the market's current three rates. Pakki keeps
+        // its own separate deductions (Setup > Format, AppliesTo = Pakki), configured independently
+        // whenever that stage's rates are decided; nothing is seeded for it yet.
         var rules = new[]
         {
-            new DeductionRule { Name = "Commission", NameUrdu = "بروکری / کمیشن", CalculationType = DeductionCalculationType.PercentOfGross, Value = 2m, AppliesTo = DeductionAppliesTo.Pakki, SortOrder = 1, IncomeAccountId = accounts["4100"].Id },
-            new DeductionRule { Name = "Market Fee", NameUrdu = "مارکیٹ فیس", CalculationType = DeductionCalculationType.PercentOfGross, Value = 1m, AppliesTo = DeductionAppliesTo.Pakki, SortOrder = 2, IncomeAccountId = accounts["4200"].Id },
-            new DeductionRule { Name = "Association Fund", NameUrdu = "انجمن فنڈ", CalculationType = DeductionCalculationType.FixedAmount, Value = 10m, AppliesTo = DeductionAppliesTo.Pakki, SortOrder = 3, IncomeAccountId = accounts["4300"].Id },
-            new DeductionRule { Name = "Octroi", NameUrdu = "چونگی", CalculationType = DeductionCalculationType.PerUnitWeight, Value = 0.02m, AppliesTo = DeductionAppliesTo.Pakki, SortOrder = 4, IncomeAccountId = accounts["4400"].Id },
-            new DeductionRule { Name = "Withholding Tax", NameUrdu = "ویدہولڈنگ ٹیکس", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.5m, AppliesTo = DeductionAppliesTo.Pakki, SortOrder = 5, IncomeAccountId = accounts["4500"].Id },
-            new DeductionRule { Name = "Labour (Palledari)", NameUrdu = "پلیداری", CalculationType = DeductionCalculationType.PerUnitWeight, Value = 0.3m, AppliesTo = DeductionAppliesTo.Both, SortOrder = 6, IncomeAccountId = accounts["4600"].Id },
-            new DeductionRule { Name = "Bagging/Stitching", NameUrdu = "بھرائی سلائی", CalculationType = DeductionCalculationType.PerUnitWeight, Value = 0.2m, AppliesTo = DeductionAppliesTo.Both, SortOrder = 7, IncomeAccountId = accounts["4700"].Id },
-            new DeductionRule { Name = "Freight", NameUrdu = "کرایہ", CalculationType = DeductionCalculationType.FixedAmount, Value = 0m, AppliesTo = DeductionAppliesTo.Both, SortOrder = 8, RequiresVehicleNumber = true, IncomeAccountId = accounts["4800"].Id },
-
-            // Kachi-stage counterparts of Commission/Market Fee/Association Fund/Withholding Tax
-            // above — deliberately separate rows (own rate, own income account) so a Kachi and the
-            // Pakki it later becomes can charge different amounts, edited independently under
-            // Setup > Format. Seeded at 0 so nothing is charged twice until a rate is chosen here.
-            new DeductionRule { Name = "Commission (Kachi)", NameUrdu = "کمیشن (کچی)", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Kachi, SortOrder = 9, IncomeAccountId = accounts["4105"].Id },
-            new DeductionRule { Name = "Market Fee (Kachi)", NameUrdu = "مارکیٹ فیس (کچی)", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Kachi, SortOrder = 10, IncomeAccountId = accounts["4205"].Id },
-            new DeductionRule { Name = "Association Fund (Kachi)", NameUrdu = "انجمن فنڈ (کچی)", CalculationType = DeductionCalculationType.FixedAmount, Value = 0m, AppliesTo = DeductionAppliesTo.Kachi, SortOrder = 11, IncomeAccountId = accounts["4305"].Id },
-            new DeductionRule { Name = "Withholding Tax (Kachi)", NameUrdu = "ویدہولڈنگ ٹیکس (کچی)", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Kachi, SortOrder = 12, IncomeAccountId = accounts["4505"].Id }
+            new DeductionRule { Name = "Labour (Palledari)", NameUrdu = "پلیداری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.75m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 1, IncomeAccountId = accounts["4600"].Id },
+            new DeductionRule { Name = "Brokerage", NameUrdu = "بروکری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.15m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 2, IncomeAccountId = accounts["4110"].Id },
+            new DeductionRule { Name = "Commission", NameUrdu = "کمیشن", CalculationType = DeductionCalculationType.PercentOfGross, Value = 1.60m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 3, IncomeAccountId = accounts["4100"].Id }
         };
 
         db.DeductionRules.AddRange(rules);

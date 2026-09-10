@@ -12,8 +12,8 @@ namespace GrainMarket.Api.Tests;
 /// <summary>
 /// A Kachi must post to the ledger the moment it's created — the buyer owes GrossAmount plus
 /// whatever's charged to them, the farmer is owed GrossAmount minus what's charged to them. Seed
-/// data's Kachi-stage rules (Aarat, Labour, Broker) are all farmer-charged, so with no
-/// buyer-charged rule configured, BuyerChargesTotal is 0 and the buyer's debit equals GrossAmount.
+/// data's Kachi-stage rules are Labour (Palledari) and Brokerage (farmer-charged) plus Commission
+/// (buyer-charged), so BuyerChargesTotal is Commission's amount here, not zero.
 /// </summary>
 public class KachiLedgerPostingTests : IClassFixture<CustomWebApplicationFactory>
 {
