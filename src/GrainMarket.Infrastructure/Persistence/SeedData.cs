@@ -181,12 +181,22 @@ public static class SeedData
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>The ten crops most commonly traded through a Punjab grain market (mandi) — capped
+    /// at 10 deliberately, not an exhaustive product catalog. More can always be added from Setup >
+    /// Products afterwards.</summary>
     private static async Task SeedSampleProductsAsync(AppDbContext db, CancellationToken ct)
     {
         db.Products.AddRange(
             new Product { Name = "Wheat", NameUrdu = "گندم", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
             new Product { Name = "Rice", NameUrdu = "چاول", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Maize", NameUrdu = "مکئی", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m }
+            new Product { Name = "Maize", NameUrdu = "مکئی", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Gram", NameUrdu = "چنا", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Barley", NameUrdu = "جو", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Millet", NameUrdu = "باجرہ", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Sorghum", NameUrdu = "جوار", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Mustard", NameUrdu = "سرسوں", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Moong", NameUrdu = "مونگ", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Masoor", NameUrdu = "مسور", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m }
         );
         await db.SaveChangesAsync(ct);
     }
