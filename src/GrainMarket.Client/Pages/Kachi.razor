@@ -72,7 +72,17 @@
                     <td colspan="6" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
                         @if (calc is not null)
                         {
-                            <div><span class="rtl-urdu">من / دھرن / کلو</span>: <b>@calc.ManCount / @calc.DhrnCount / @calc.KgRemainder.ToString("N2")</b></div>
+                            <div>
+                                <span class="rtl-urdu">من / دھرن / کلو</span>:
+                                @if (calc.Breakdown is not null)
+                                {
+                                    <b>@calc.Breakdown.Value.ManCount / @calc.Breakdown.Value.DhrnCount / @calc.Breakdown.Value.KgRemainder.ToString("N2")</b>
+                                }
+                                else
+                                {
+                                    <span style="color:#999;">— (configure Dhrn under Setup &gt; Unit Conversions)</span>
+                                }
+                            </div>
                             <div>
                                 <span>Safi Wazan: <b>@calc.NetWeightKg.ToString("N2")</b> kg</span>
                                 @if (calc.BoriQty is not null)
@@ -222,7 +232,15 @@
             var boriFactor = UnitConversionCalculator.FactorFor(WeightUnit.Bori, row.ProductId, _unitConversionEntities);
             var boriQty = netWeightKg / boriFactor;
 
-            var (manCount, dhrnCount, kgRemainder) = UnitConversionCalculator.BreakdownIntoManDhrnKg(netWeightKg, row.ProductId, _unitConversionEntities);
+            // Man/Dhrn/Kg is a display-only breakdown — if Dhrn's conversion factor isn't
+            // configured yet (Setup > Unit Conversions), that must not blank out the whole row's
+            // Gross/Deductions/Total below it, only this one figure.
+            (int ManCount, int DhrnCount, decimal KgRemainder)? breakdown = null;
+            try
+            {
+                breakdown = UnitConversionCalculator.BreakdownIntoManDhrnKg(netWeightKg, row.ProductId, _unitConversionEntities);
+            }
+            catch (InvalidCalculationException) { }
 
             var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, row.ProductId, _unitConversionEntities);
             var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Kachi, row.ProductId, row.FarmerId, _deductionRuleEntities);
@@ -230,7 +248,7 @@
             var buyerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).ToList();
             var farmerTotal = farmerLines.Sum(l => l.Amount);
             var buyerTotal = buyerLines.Sum(l => l.Amount);
-            return new RowCalculation(netWeightKg, boriQty, manCount, dhrnCount, kgRemainder, gross, farmerLines, buyerLines, farmerTotal, buyerTotal, gross - farmerTotal);
+            return new RowCalculation(netWeightKg, boriQty, breakdown, gross, farmerLines, buyerLines, farmerTotal, buyerTotal, gross - farmerTotal);
         }
         catch (InvalidCalculationException)
         {
@@ -278,7 +296,7 @@
     }
 
     private record RowCalculation(
-        decimal NetWeightKg, decimal? BoriQty, int ManCount, int DhrnCount, decimal KgRemainder, decimal GrossAmount,
+        decimal NetWeightKg, decimal? BoriQty, (int ManCount, int DhrnCount, decimal KgRemainder)? Breakdown, decimal GrossAmount,
         List<DeductionLineResult> FarmerLines, List<DeductionLineResult> BuyerLines,
         decimal FarmerDeductionsTotal, decimal BuyerChargesTotal, decimal Total);
 }
