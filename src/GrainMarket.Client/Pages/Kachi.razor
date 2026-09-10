@@ -25,6 +25,10 @@
             <label>Product / جنس</label>
             <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Search product…" />
         </div>
+        <div>
+            <label>Buyer / خریدار (optional at Kachi stage)</label>
+            <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" Value="@(_buyerId ?? 0)" ValueChanged="@(v => _buyerId = v == 0 ? null : v)" Placeholder="Search buyer…" />
+        </div>
         <div><label>Man (maund) / مَن</label><input type="number" step="0.01" @bind="_man" /></div>
         <div><label>Kilo / کلو</label><input type="number" step="0.01" @bind="_kilo" /></div>
         <div><label>Gram / گرام</label><input type="number" step="1" @bind="_gram" /></div>
@@ -51,7 +55,7 @@
     else
     {
         <table class="data-grid">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Farmer / کسان</th><th>Product / جنس</th><th>Net Wt (kg)</th><th>Rate/Man</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Net Wt (kg)</th><th>Rate/Man</th><th>Total</th><th>Status</th><th></th></tr></thead>
             <tbody>
                 @foreach (var k in _kachis)
                 {
@@ -59,6 +63,7 @@
                         <td>@k.InvoiceNo</td>
                         <td>@k.Date.ToString("yyyy-MM-dd")</td>
                         <td>@k.FarmerName</td>
+                        <td>@(k.BuyerName ?? "—")</td>
                         <td>@k.ProductName</td>
                         <td>@k.NetWeightKg.ToString("N2")</td>
                         <td>@(k.RatePerUnit?.ToString("N2") ?? "—")</td>
@@ -80,7 +85,7 @@
                     @if (_expandedId == k.Id)
                     {
                         <tr>
-                            <td colspan="9" style="background:#f7f9f7;">
+                            <td colspan="10" style="background:#f7f9f7;">
                                 @if (k.DeductionLines.Count == 0)
                                 {
                                     <span style="color:#777;">No deductions on this Kachi.</span>
@@ -114,6 +119,7 @@
     private List<KachiDto>? _kachis;
     private List<SeasonDto>? _seasons;
     private List<PartyDto>? _farmers;
+    private List<PartyDto>? _buyers;
     private List<ProductDto>? _products;
     private string? _error;
     private int? _editingId;
@@ -122,6 +128,7 @@
     private DateTime _date = DateTime.Today;
     private int _seasonId;
     private int _farmerId;
+    private int? _buyerId;
     private int _productId;
     private decimal? _man;
     private decimal? _kilo;
@@ -138,6 +145,7 @@
         {
             _seasons = await Api.GetSeasonsAsync();
             _farmers = await Api.GetPartiesAsync(PartyType.Farmer);
+            _buyers = await Api.GetPartiesAsync(PartyType.Buyer);
             _products = await Api.GetProductsAsync();
             if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
             if (_farmers.Count > 0) _farmerId = _farmers[0].Id;
@@ -161,6 +169,7 @@
         _date = k.Date;
         _seasonId = k.SeasonId;
         _farmerId = k.FarmerId;
+        _buyerId = k.BuyerId;
         _productId = k.ProductId;
         _man = k.ManQty;
         _kilo = k.KiloQty;
@@ -174,6 +183,7 @@
     {
         _editingId = null;
         _date = DateTime.Today;
+        _buyerId = null;
         _man = null; _kilo = null; _gram = null; _bori = null; _rate = null; _vehicleNumber = null;
     }
 
@@ -184,12 +194,12 @@
         {
             if (_editingId is null)
             {
-                var request = new CreateKachiRequest(_date, _seasonId, _farmerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
+                var request = new CreateKachiRequest(_date, _seasonId, _farmerId, _buyerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
                 await Api.CreateKachiAsync(request);
             }
             else
             {
-                var request = new UpdateKachiRequest(_date, _seasonId, _farmerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
+                var request = new UpdateKachiRequest(_date, _seasonId, _farmerId, _buyerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
                 await Api.UpdateKachiAsync(_editingId.Value, request);
             }
             ResetForm();

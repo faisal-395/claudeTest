@@ -23,6 +23,7 @@ public class KachiConfiguration : IEntityTypeConfiguration<Kachi>
 
         builder.HasOne(k => k.Season).WithMany().HasForeignKey(k => k.SeasonId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(k => k.Farmer).WithMany(p => p.Kachis).HasForeignKey(k => k.FarmerId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(k => k.Buyer).WithMany().HasForeignKey(k => k.BuyerId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(k => k.Product).WithMany().HasForeignKey(k => k.ProductId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(k => k.ConvertedToPakki).WithOne().HasForeignKey<Kachi>(k => k.ConvertedToPakkiId).OnDelete(DeleteBehavior.Restrict);
 

@@ -17,6 +17,13 @@ public class Kachi : BaseEntity
     public int ProductId { get; set; }
     public Product Product { get; set; } = null!;
 
+    /// <summary>Set when the buyer is already known at Kachi stage (e.g. raised via Multi-Farmer
+    /// Purchase) — null for a purely provisional weighing where the buyer isn't decided yet.
+    /// Purely informational: it plays no part in the deduction calculation (see DeductionEngine),
+    /// which only ever looks at product/farmer/weight/gross.</summary>
+    public int? BuyerId { get; set; }
+    public Party? Buyer { get; set; }
+
     // Raw entered weights, as keyed in by the operator (nulls where not used).
     public decimal? ManQty { get; set; }
     public decimal? KiloQty { get; set; }

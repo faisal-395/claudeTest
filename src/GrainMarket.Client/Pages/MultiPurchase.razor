@@ -7,10 +7,12 @@
 
 <RequireAuth>
     <h1 class="page-title">Multi-Farmer Purchase <span class="rtl-urdu" style="font-size:1rem;">ایک خریدار، کئی کسان</span></h1>
-    <p style="color:#777;">One buyer purchasing several items from several farmers in one sitting — each row still
-        posts as its own Kachi + Pakki (every farmer is still paid individually against their own weight and
-        deductions), raised together and printed as one consolidated receipt. Paledari, brokerage/commission,
-        association fund (anjuman) and withholding tax below update live as you fill in each row.</p>
+    <p style="color:#777;">One buyer receiving from several farmers in one sitting — each row raises its own Kachi
+        (provisional receipt) with this buyer already attached. Rate is optional, same as any Kachi — leave it
+        blank if not settled yet. Kachi and Pakki are separate stages with their own independently configurable
+        deductions (Setup ▸ Format); this does not create a Pakki — finalizing each farmer's sale stays a
+        deliberate later step from the printed receipt. Paledari, commission, association fund and withholding
+        tax below (the Kachi-stage rates) update live as you fill in each row.</p>
 
     @if (_error is not null)
     {
@@ -37,7 +39,7 @@
                 <th style="min-width:150px;">Farmer / کسان</th>
                 <th style="min-width:130px;">Product / جنس</th>
                 <th>Man</th><th>Kilo</th><th>Gram</th><th>Bori</th>
-                <th>Rate/Man</th><th>Net Wt (kg)</th><th>Gross</th><th>Deductions</th><th>Net Payable</th><th></th>
+                <th>Rate/Man</th><th>Net Wt (kg)</th><th>Gross</th><th>Deductions</th><th>Total</th><th></th>
             </tr>
         </thead>
         <tbody>
@@ -53,11 +55,11 @@
                     <td><input type="number" step="0.01" style="width:65px;" @bind="row.KiloQty" /></td>
                     <td><input type="number" step="1" style="width:55px;" @bind="row.GramQty" /></td>
                     <td><input type="number" step="0.01" style="width:55px;" @bind="row.BoriQty" /></td>
-                    <td><input type="number" step="0.01" style="width:75px;" @bind="row.RatePerUnit" /></td>
+                    <td><input type="number" step="0.01" style="width:75px;" @bind="row.RatePerUnit" placeholder="optional" /></td>
                     <td class="ltr-inline">@(calc is not null ? calc.NetWeightKg.ToString("N2") : "—")</td>
                     <td class="ltr-inline">@(calc is not null ? calc.GrossAmount.ToString("N2") : "—")</td>
                     <td class="ltr-inline">@(calc is not null ? calc.Deductions.TotalDeductions.ToString("N2") : "—")</td>
-                    <td class="ltr-inline"><b>@(calc is not null ? calc.NetPayable.ToString("N2") : "—")</b></td>
+                    <td class="ltr-inline"><b>@(calc is not null ? calc.Total.ToString("N2") : "—")</b></td>
                     <td><button class="btn danger" @onclick="() => RemoveRow(index)">Remove</button></td>
                 </tr>
                 @if (calc is not null && calc.Deductions.Lines.Count > 0)
@@ -76,11 +78,11 @@
     <div class="form-grid" style="max-width:700px;margin-top:16px;">
         <div class="total-figure">Grand Gross: Rs @GrandGross.ToString("N2")</div>
         <div class="total-figure">Grand Deductions: Rs @GrandDeductions.ToString("N2")</div>
-        <div class="total-figure">Grand Net Payable: Rs @GrandNet.ToString("N2")</div>
+        <div class="total-figure">Grand Total: Rs @GrandTotal.ToString("N2")</div>
         <div style="grid-column: span 2;">
             @if (!CanSave)
             {
-                <div class="invalid-total">Pick a buyer, and give every row a farmer, product, weight and a rate greater than zero.</div>
+                <div class="invalid-total">Pick a buyer, and give every row a farmer, product and weight (rate is optional).</div>
             }
             <button class="btn" disabled="@(!CanSave || _saving)" @onclick="SaveAsync">@(_saving ? "Saving…" : "Save & Print Consolidated Receipt")</button>
         </div>
@@ -104,11 +106,11 @@
 
     private decimal GrandGross => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.GrossAmount);
     private decimal GrandDeductions => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.Deductions.TotalDeductions);
-    private decimal GrandNet => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.NetPayable);
+    private decimal GrandTotal => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.Total);
 
     private bool CanSave =>
         _buyerId > 0 && _rows.Count > 0 &&
-        _rows.All(r => r.FarmerId > 0 && r.ProductId > 0 && r.RatePerUnit > 0 &&
+        _rows.All(r => r.FarmerId > 0 && r.ProductId > 0 &&
                         (r.ManQty ?? 0) + (r.KiloQty ?? 0) + (r.GramQty ?? 0) + (r.BoriQty ?? 0) > 0);
 
     protected override async Task OnInitializedAsync()
@@ -151,18 +153,21 @@
     private void RemoveRow(int index) => _rows.RemoveAt(index);
 
     /// <summary>Live per-row preview — reuses the exact same DeductionEngine/UnitConversionCalculator
-    /// the server uses to post the Pakki, so this always matches what actually gets charged; not a
-    /// second, hand-written copy of the math that could drift from it. Returns null while the row
-    /// is still incomplete (no weight yet, no rate yet, no conversion factor configured, ...).</summary>
+    /// the server's KachiService uses to post the Kachi (AppliesTo.Kachi, matching the Kachi-stage
+    /// deduction rules, not Pakki's), so this always matches what actually gets charged rather than
+    /// being a second, hand-written copy of the math that could drift from it. Returns null while
+    /// the row has no weight yet or the product's conversion factor isn't configured.</summary>
     private RowCalculation? Calculate(RowModel row)
     {
-        if (_deductionRuleEntities is null || _unitConversionEntities is null || row.RatePerUnit <= 0) return null;
+        if (_deductionRuleEntities is null || _unitConversionEntities is null) return null;
 
         try
         {
             var netWeightKg = UnitConversionCalculator.ToBaseKg(row.ManQty, row.KiloQty, row.GramQty, row.BoriQty, row.ProductId, _unitConversionEntities);
-            var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit, netWeightKg, row.ProductId, _unitConversionEntities);
-            var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Pakki, row.ProductId, row.FarmerId, _deductionRuleEntities);
+            var gross = row.RatePerUnit is > 0
+                ? UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, row.ProductId, _unitConversionEntities)
+                : 0m;
+            var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Kachi, row.ProductId, row.FarmerId, _deductionRuleEntities);
             return new RowCalculation(netWeightKg, gross, deductions, deductions.NetAmount);
         }
         catch (InvalidCalculationException)
@@ -181,7 +186,7 @@
                 _rows.Select(r => new MultiPurchaseRowRequest(r.FarmerId, r.ProductId, r.ManQty, r.KiloQty, r.GramQty, r.BoriQty, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList());
 
             var result = await Api.CreateMultiPurchaseAsync(request);
-            var ids = string.Join(",", result.Rows.Select(r => r.PakkiId));
+            var ids = string.Join(",", result.Rows.Select(r => r.KachiId));
             Nav.NavigateTo($"/print/multi-purchase?ids={ids}");
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
@@ -196,10 +201,10 @@
         public decimal? KiloQty { get; set; }
         public decimal? GramQty { get; set; }
         public decimal? BoriQty { get; set; }
-        public decimal RatePerUnit { get; set; }
+        public decimal? RatePerUnit { get; set; }
         public string? VehicleNumber { get; set; }
         public string? Notes { get; set; }
     }
 
-    private record RowCalculation(decimal NetWeightKg, decimal GrossAmount, DeductionCalculationResult Deductions, decimal NetPayable);
+    private record RowCalculation(decimal NetWeightKg, decimal GrossAmount, DeductionCalculationResult Deductions, decimal Total);
 }

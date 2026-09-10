@@ -23,7 +23,7 @@ public class KachiService : IKachiService
     public async Task<List<KachiDto>> GetAllAsync(int? seasonId = null, CancellationToken ct = default)
     {
         var query = _db.Kachis
-            .Include(k => k.Season).Include(k => k.Farmer).Include(k => k.Product).Include(k => k.DeductionLines)
+            .Include(k => k.Season).Include(k => k.Farmer).Include(k => k.Buyer).Include(k => k.Product).Include(k => k.DeductionLines)
             .Where(k => !k.IsDeleted);
         if (seasonId is not null) query = query.Where(k => k.SeasonId == seasonId);
 
@@ -40,6 +40,7 @@ public class KachiService : IKachiService
     public async Task<KachiDto> CreateAsync(CreateKachiRequest request, CancellationToken ct = default)
     {
         await EnsureReferencesExistAsync(request.SeasonId, request.FarmerId, request.ProductId, ct);
+        await EnsureBuyerExistsAsync(request.BuyerId, ct);
 
         var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
         var netWeightKg = UnitConversionCalculator.ToBaseKg(request.ManQty, request.KiloQty, request.GramQty, request.BoriQty, request.ProductId, conversions);
@@ -57,6 +58,7 @@ public class KachiService : IKachiService
             Date = request.Date,
             SeasonId = request.SeasonId,
             FarmerId = request.FarmerId,
+            BuyerId = request.BuyerId,
             ProductId = request.ProductId,
             ManQty = request.ManQty,
             KiloQty = request.KiloQty,
@@ -97,6 +99,7 @@ public class KachiService : IKachiService
         }
 
         await EnsureReferencesExistAsync(request.SeasonId, request.FarmerId, request.ProductId, ct);
+        await EnsureBuyerExistsAsync(request.BuyerId, ct);
 
         var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
         var netWeightKg = UnitConversionCalculator.ToBaseKg(request.ManQty, request.KiloQty, request.GramQty, request.BoriQty, request.ProductId, conversions);
@@ -110,6 +113,7 @@ public class KachiService : IKachiService
         kachi.Date = request.Date;
         kachi.SeasonId = request.SeasonId;
         kachi.FarmerId = request.FarmerId;
+        kachi.BuyerId = request.BuyerId;
         kachi.ProductId = request.ProductId;
         kachi.ManQty = request.ManQty;
         kachi.KiloQty = request.KiloQty;
@@ -159,7 +163,7 @@ public class KachiService : IKachiService
     private async Task<Kachi> LoadAsync(int id, CancellationToken ct)
     {
         return await _db.Kachis
-            .Include(k => k.Season).Include(k => k.Farmer).Include(k => k.Product).Include(k => k.DeductionLines)
+            .Include(k => k.Season).Include(k => k.Farmer).Include(k => k.Buyer).Include(k => k.Product).Include(k => k.DeductionLines)
             .FirstOrDefaultAsync(k => k.Id == id && !k.IsDeleted, ct)
             ?? throw new NotFoundException(nameof(Kachi), id);
     }
@@ -174,8 +178,15 @@ public class KachiService : IKachiService
             throw new NotFoundException(nameof(Product), productId);
     }
 
+    private async Task EnsureBuyerExistsAsync(int? buyerId, CancellationToken ct)
+    {
+        if (buyerId is null) return;
+        if (!await _db.Parties.AnyAsync(p => p.Id == buyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+            throw new NotFoundException(nameof(Party), buyerId.Value);
+    }
+
     private static KachiDto ToDto(Kachi k) => new(
-        k.Id, k.InvoiceNo, k.Date, k.SeasonId, k.Season.Name, k.FarmerId, k.Farmer.Name,
+        k.Id, k.InvoiceNo, k.Date, k.SeasonId, k.Season.Name, k.FarmerId, k.Farmer.Name, k.BuyerId, k.Buyer?.Name,
         k.ProductId, k.Product.Name, k.ManQty, k.KiloQty, k.GramQty, k.BoriQty, k.NetWeightKg,
         k.RatePerUnit, k.GrossAmount, k.TotalDeductions, k.Total, k.Status, k.ConvertedToPakkiId, k.Notes,
         k.DeductionLines.Select(l => new KachiDeductionLineDto(l.DeductionRuleId, l.Name, l.NameUrdu, l.Amount, l.VehicleNumber)).ToList());

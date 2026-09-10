@@ -8,6 +8,7 @@ public class CreateKachiRequestValidator : AbstractValidator<CreateKachiRequest>
     {
         RuleFor(x => x.SeasonId).GreaterThan(0);
         RuleFor(x => x.FarmerId).GreaterThan(0);
+        RuleFor(x => x.BuyerId).GreaterThan(0).When(x => x.BuyerId.HasValue);
         RuleFor(x => x.ProductId).GreaterThan(0);
         RuleFor(x => x.RatePerUnit).GreaterThanOrEqualTo(0).When(x => x.RatePerUnit.HasValue);
         RuleFor(x => x)
@@ -23,6 +24,7 @@ public class UpdateKachiRequestValidator : AbstractValidator<UpdateKachiRequest>
     {
         RuleFor(x => x.SeasonId).GreaterThan(0);
         RuleFor(x => x.FarmerId).GreaterThan(0);
+        RuleFor(x => x.BuyerId).GreaterThan(0).When(x => x.BuyerId.HasValue);
         RuleFor(x => x.ProductId).GreaterThan(0);
         RuleFor(x => x.RatePerUnit).GreaterThanOrEqualTo(0).When(x => x.RatePerUnit.HasValue);
         RuleFor(x => x)

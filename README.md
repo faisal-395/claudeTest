@@ -239,24 +239,48 @@ permission, same as every other cancel action) that posts mirror-image ledger en
 supplier, income/expense account, and any cash applied — rather than deleting the row, preserving
 the audit trail the same way Kachi/Pakki/Voucher already do.
 
+## Kachi and Pakki are separate stages with separate deductions
+
+Kachi (provisional receipt — farmer's produce weighed, sale rate often not settled yet) and Pakki
+(the finalized sale, once a buyer and rate are locked in) are independent stages, each with their
+own independently configurable deductions under Setup ▸ Format (`DeductionRule.AppliesTo`: Kachi,
+Pakki, or Both). Commission, Market Fee, Association Fund and Withholding Tax are seeded as
+**separate rows for each stage** (e.g. "Commission" for Pakki, "Commission (Kachi)" for Kachi,
+crediting separate chart-of-accounts rows) — a Kachi and the Pakki it's later converted to can
+charge different amounts, or the Kachi-stage rate can be left at its seeded 0% until you actually
+want to charge something at that stage. Labour (Palledari), Bagging/Stitching and Freight remain
+`AppliesTo = Both`, since those are physical handling costs that make sense as soon as weight is
+known, independent of whether a sale price exists yet.
+
+`Kachi` now carries an optional `BuyerId` — set when the buyer is already known at Kachi stage
+(e.g. raised via Multi-Farmer Purchase below), left null for a purely provisional weighing where
+the buyer isn't decided. It plays no part in the deduction calculation, which only ever looks at
+product/farmer/weight/gross.
+
 ## Multi-Farmer Purchase
 
-One buyer commonly purchases several products from several different farmers in one sitting.
-`Pages/MultiPurchase.razor` (`/multi-purchase`) handles that: pick the buyer, season and date
-once, then add one row per farmer/product/weight/rate. Each row still becomes its own Kachi +
-Pakki on submit — every farmer is still paid individually against their own net weight and
-deductions, exactly as if entered one at a time — but all rows are raised together
-(`Application/MultiPurchase/MultiPurchaseService`, reusing `IDualInvoiceService` per row) and land
-on one consolidated print page (`Pages/Print/MultiPurchasePrint.razor`) instead of separate
-printouts.
+One buyer commonly receives from several different farmers in one sitting. `Pages/MultiPurchase.razor`
+(`/multi-purchase`, replacing the standalone Kachi menu item) handles that: pick the buyer, season
+and date once, then add one row per farmer/product/weight — rate is optional, same as any Kachi.
+Each row becomes its own Kachi with this buyer already attached (`Application/MultiPurchase/
+MultiPurchaseService`, calling `IKachiService.CreateAsync` per row) — this never touches Pakki;
+finalizing each farmer's sale (choosing/confirming the buyer, locking in the rate) stays a
+deliberate, separate step per farmer from the printed receipt (`Pages/Print/MultiPurchasePrint.razor`),
+exactly like converting any other Kachi.
 
-Every row shows its calculated breakdown (paledari/labour, commission, association fund,
-withholding tax, ...) live as you fill it in, updating on every keystroke — not just after saving.
-This isn't a second, hand-written copy of the math: the page calls
-`Application.Common.Services.DeductionEngine`/`UnitConversionCalculator` directly (the exact same
-pure, stateless calculators the server uses to post the Pakki), since the Client project already
-references `GrainMarket.Application`. There is no live-preview API endpoint and nothing to keep in
-sync — what you see while typing is what actually gets posted.
+Every row shows its calculated breakdown (paledari/labour, Kachi-stage commission, association
+fund, withholding tax, ...) live as you fill it in, updating on every keystroke — not just after
+saving. This isn't a second, hand-written copy of the math: the page calls
+`Application.Common.Services.DeductionEngine`/`UnitConversionCalculator` directly with
+`DeductionAppliesTo.Kachi` (the exact same pure, stateless calculators and the same code path
+`KachiService.CreateAsync` uses to post the Kachi), since the Client project already references
+`GrainMarket.Application`. There is no live-preview API endpoint and nothing to keep in sync — what
+you see while typing is what actually gets posted.
+
+The standalone single-row Kachi screen (`Pages/Kachi.razor`) still exists at `/kachi` for editing,
+cancelling, printing or converting an individual Kachi to a Pakki — linked from the Multi-Farmer
+Purchase print page — but is no longer in the main nav, since Multi-Farmer Purchase is now the
+primary way to raise one.
 
 ## Open items — resolved
 

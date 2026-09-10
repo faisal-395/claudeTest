@@ -6,13 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GrainMarket.Api.Controllers;
 
-/// <summary>One buyer purchasing from multiple farmers/products in a single submit — shares the
-/// Dual Invoice module permission since it's the same underlying action (raise a Kachi and
-/// immediately convert it to a Pakki) repeated per row against one shared buyer.</summary>
+/// <summary>One buyer purchasing from multiple farmers/products in a single submit — raises one
+/// Kachi per row with the shared buyer attached. Shares the Kachi module permission since that's
+/// exactly what this creates; it never touches Pakki.</summary>
 [Authorize]
 [ApiController]
 [Route("api/multi-purchase")]
-[ModulePermission(ModuleName.DualInvoice)]
+[ModulePermission(ModuleName.Kachi)]
 public class MultiPurchaseController : ControllerBase
 {
     private readonly IMultiPurchaseService _service;
@@ -22,7 +22,7 @@ public class MultiPurchaseController : ControllerBase
         _service = service;
     }
 
-    [ModulePermission(ModuleName.DualInvoice, PermissionAction.Create)]
+    [ModulePermission(ModuleName.Kachi, PermissionAction.Create)]
     [HttpPost]
     public async Task<ActionResult<MultiPurchaseResultDto>> Create(CreateMultiPurchaseRequest request, CancellationToken ct)
         => Ok(await _service.CreateAsync(request, ct));

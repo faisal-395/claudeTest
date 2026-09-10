@@ -1,27 +1,25 @@
 namespace GrainMarket.Application.MultiPurchase;
 
 /// <summary>
-/// One farmer's lot within a multi-farmer purchase — same shape as a Dual Invoice row, minus the
-/// buyer/date/season, which are shared across every row in the batch.
+/// One farmer's lot within a multi-farmer purchase.
 /// </summary>
 public record MultiPurchaseRowRequest(
     int FarmerId, int ProductId,
     decimal? ManQty, decimal? KiloQty, decimal? GramQty, decimal? BoriQty,
-    decimal RatePerUnit, string? VehicleNumber, string? Notes);
+    decimal? RatePerUnit, string? VehicleNumber, string? Notes);
 
 /// <summary>
-/// One buyer purchasing multiple products from multiple farmers in a single sitting — each row
-/// still becomes its own Kachi+Pakki (every farmer is paid individually against their own net
-/// weight and deductions, same as always), but raised together in one submit and printed together
-/// as one consolidated receipt.
+/// One buyer purchasing from multiple farmers in a single sitting. Each row becomes its own Kachi
+/// (provisional receipt) with the shared buyer already attached — Kachi and Pakki are handled as
+/// separate stages with separate, independently configurable deductions (Setup &#8250; Format,
+/// AppliesTo = Kachi vs Pakki): this does not post a Pakki or charge Pakki-stage deductions.
+/// Finalizing the sale (converting to a Pakki) stays a deliberate, separate step per farmer, same
+/// as converting any other Kachi.
 /// </summary>
 public record CreateMultiPurchaseRequest(DateTime Date, int SeasonId, int BuyerId, List<MultiPurchaseRowRequest> Rows);
 
-/// <summary>Every field the consolidated print template needs for one row — deliberately just the
-/// created Pakki's id plus its invoice number; the print page fetches the full PakkiDto (name,
-/// deduction lines, etc.) the same way the existing Pakki print page already does.</summary>
-public record MultiPurchaseRowResultDto(int PakkiId, string PakkiInvoiceNo);
+public record MultiPurchaseRowResultDto(int KachiId, string KachiInvoiceNo);
 
 public record MultiPurchaseResultDto(
     int BuyerId, string BuyerName, DateTime Date,
-    List<MultiPurchaseRowResultDto> Rows, decimal GrandGross, decimal GrandDeductions, decimal GrandNetPayable);
+    List<MultiPurchaseRowResultDto> Rows, decimal GrandGross, decimal GrandDeductions, decimal GrandTotal);
