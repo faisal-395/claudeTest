@@ -14,8 +14,15 @@ public static class MauiProgram
         // "An unhandled error has occurred" overlay, on any screen, with no application code
         // involved (this reproduces on the login page, which never runs a timer or a background
         // task of its own). Must be set before WebView2 creates its environment, so first line.
+        //
+        // --remote-debugging-port lets a real Console be attached from a plain browser
+        // (http://localhost:9223) even when this is a Release/standalone build where
+        // AddBlazorWebViewDeveloperTools()'s right-click "Inspect" isn't wired up — needed to
+        // actually see what's failing on the WebView2/JS side, since nothing on the .NET side
+        // throws for this bug. TEMPORARY: remove once the idle bug is confirmed fixed — leaving
+        // a debugging port open is not something a shipped till-PC build should do.
         Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-            "--disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling --disable-features=CalculateNativeWinOcclusion");
+            "--disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling --disable-features=CalculateNativeWinOcclusion --remote-debugging-port=9223");
 
         var builder = MauiApp.CreateBuilder();
         builder
