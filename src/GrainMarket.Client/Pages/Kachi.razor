@@ -48,8 +48,7 @@
         <thead>
             <tr>
                 <th style="width:24px;"></th>
-                <th style="min-width:150px;" class="rtl-urdu">کسان</th>
-                <th style="min-width:130px;" class="rtl-urdu">جنس</th>
+                <th style="min-width:150px;" class="rtl-urdu">کسان / جنس</th>
                 <th class="rtl-urdu">بھرتی</th><th class="rtl-urdu">کل وزن (کلو)</th>
                 <th class="rtl-urdu">ریٹ فی مَن (دَر)</th>
             </tr>
@@ -62,14 +61,18 @@
                 var calc = Calculate(row);
                 <tr class="@(_selectedIndex == index ? "selected-row" : "")">
                     <td style="text-align:center;"><input type="radio" name="rowSelect" checked="@(_selectedIndex == index)" @onchange="() => _selectedIndex = index" /></td>
-                    <td><SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Farmer…" /></td>
-                    <td><SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@row.ProductId" ValueChanged="@(v => row.ProductId = v)" Placeholder="Product…" /></td>
+                    <td>
+                        <SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Farmer…" />
+                        <div style="margin-top:4px;">
+                            <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@row.ProductId" ValueChanged="@(v => row.ProductId = v)" Placeholder="Product…" />
+                        </div>
+                    </td>
                     <td><input type="number" step="0.01" style="width:80px;" @bind="row.BhartiKgPerBag" /></td>
                     <td><input type="number" step="0.01" style="width:90px;" @bind="row.TotalWeightKg" /></td>
                     <td><input type="number" step="0.01" style="width:80px;" @bind="row.RatePerUnit" /></td>
                 </tr>
                 <tr>
-                    <td colspan="6" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
+                    <td colspan="5" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
                         @if (calc is not null)
                         {
                             <div class="rtl-urdu">
@@ -81,11 +84,9 @@
                                 }
                                 else
                                 {
-                                    <span style="color:#999;">— (configure Dhrn under Setup &gt; Unit Conversions)</span>
+                                    <span style="color:#999;">—</span>
                                 }
-                            </div>
-                            <div class="rtl-urdu">
-                                <span>صافی وزن: <b>@calc.NetWeightKg.ToString("N2")</b> کلو</span>
+                                <span>&nbsp;·&nbsp;صافی وزن: <b>@calc.NetWeightKg.ToString("N2")</b> کلو</span>
                                 @if (calc.BoriQty is not null)
                                 {
                                     <span>&nbsp;·&nbsp;بوری: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
@@ -94,11 +95,6 @@
                                 @if (calc.FarmerLines.Count > 0)
                                 {
                                     <span>&nbsp;·&nbsp;کٹوتیاں (@calc.FarmerDeductionsTotal.ToString("N2")): @string.Join("، ", calc.FarmerLines.Select(l => $"{l.NameUrdu} {l.Amount:N2}"))</span>
-                                }
-                                <span>&nbsp;·&nbsp;کل رقم (کسان): <b>@calc.Total.ToString("N2")</b></span>
-                                @if (calc.BuyerLines.Count > 0)
-                                {
-                                    <span>&nbsp;·&nbsp;خریدار چارجز (@calc.BuyerChargesTotal.ToString("N2")): @string.Join("، ", calc.BuyerLines.Select(l => $"{l.NameUrdu} {l.Amount:N2}"))</span>
                                 }
                             </div>
                         }
