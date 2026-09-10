@@ -260,11 +260,38 @@ of `AppliesTo`. Farmer-charged rules behave exactly as before, reducing `Kachi.T
 farmer receives). Buyer-charged rules are calculated and stored the same way (in
 `KachiDeductionLine`, tagged with the `ChargedTo` it had at posting time) but are summed into
 `Kachi.BuyerChargesTotal` instead — what the buyer owes on top, shown separately in Kachi Records,
-the entry grid, and both print templates, but never netted into the farmer's `Total` and not posted
-to any ledger (Kachi doesn't post to the ledger at all — only Pakki does, unchanged).
+the entry grid, and both print templates, but never netted into the farmer's `Total`.
 `DeductionEngine.Calculate`'s `TotalDeductions`/`NetAmount` stay unfiltered by `ChargedTo`, so
 Pakki (which only ever reads those two fields) is completely unaffected; only `KachiService` and
 the Kachi entry screen split `calc.Lines` by `ChargedTo` themselves.
+
+### Kachi now posts to the ledger
+
+`KachiService.CreateAsync` posts a farmer/buyer double-entry the moment a Kachi is created (same
+`ILedgerPostingService`/`LedgerSourceType.Kachi` mechanism Pakki already used) — the buyer is
+**debited** `GrossAmount + BuyerChargesTotal` (what they owe), the farmer is **credited** `Total`
+(what they're owed, net of farmer-charged deductions), and every deduction line — farmer- or
+buyer-charged alike, since both are business income, just sourced from a different party — credits
+its configured income account (falling back to the seeded "Unallocated Deductions" suspense account
+like Pakki does). The two sides always balance: buyer debit = farmer credit + sum of every line.
+`UpdateAsync` reverses the pre-edit entries before posting the new ones, and `CancelAsync` reverses
+them outright — both mirror `PakkiService`'s existing reverse-then-repost pattern (posted rows are
+never deleted or mutated, only offset).
+
+Converting a Kachi to a Pakki (via Dual Invoice, `PakkiService.CreateFromKachiAsync`) would
+otherwise double-post the same underlying transaction once as Kachi and again as Pakki —
+`IKachiService.ReverseLedgerForConversionAsync` is called first to reverse the Kachi's own entries,
+and if that Pakki is later cancelled, `RepostLedgerAfterPakkiCancellationAsync` restores them so
+the reopened Kachi isn't left with no ledger presence at all.
+
+## Farmer / Purchase Account report
+
+`Pages/PartyAccountReport.razor` (`/reports/party-account`) is a printable statement over the same
+`GetPartyLedgerAsync` data the Ledger screen uses, but scoped to Farmer/Buyer parties and framed as
+a report: pick "Farmer" or "Buyer (Purchase)", search for the party, optionally set a date range,
+and it shows opening/closing balance plus every posted row (Kachi, Pakki, payments, receipts, …)
+with a Print button — this is what actually surfaces the Kachi ledger entries described above for a
+given farmer or buyer's complete account.
 
 ## Kachi: multi-farmer entry + a separate records page
 

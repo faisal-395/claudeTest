@@ -12,13 +12,15 @@ public class PakkiService : IPakkiService
 {
     private readonly IApplicationDbContext _db;
     private readonly ILedgerPostingService _ledger;
+    private readonly Kachis.IKachiService _kachiService;
     private readonly IInvoiceNumberGenerator _numberGenerator;
     private readonly IDateTimeProvider _clock;
 
-    public PakkiService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock)
+    public PakkiService(IApplicationDbContext db, ILedgerPostingService ledger, Kachis.IKachiService kachiService, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock)
     {
         _db = db;
         _ledger = ledger;
+        _kachiService = kachiService;
         _numberGenerator = numberGenerator;
         _clock = clock;
     }
@@ -57,6 +59,11 @@ public class PakkiService : IPakkiService
         {
             throw new NotFoundException(nameof(Party), request.BuyerId);
         }
+
+        // The Kachi already posted its own farmer/buyer ledger entries when it was created; this
+        // Pakki now becomes the authoritative record for the same underlying transaction, so
+        // reverse the Kachi's postings first or both would be counted.
+        await _kachiService.ReverseLedgerForConversionAsync(kachi.Id, ct);
 
         var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
         var grossAmount = UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit, kachi.NetWeightKg, kachi.ProductId, conversions);
@@ -235,6 +242,7 @@ public class PakkiService : IPakkiService
         pakki.Status = InvoiceStatus.Cancelled;
         pakki.UpdatedAtUtc = _clock.UtcNow;
 
+        int? reopenedKachiId = null;
         if (pakki.KachiId is not null)
         {
             var kachi = await _db.Kachis.FirstOrDefaultAsync(k => k.Id == pakki.KachiId, ct);
@@ -242,11 +250,20 @@ public class PakkiService : IPakkiService
             {
                 kachi.Status = InvoiceStatus.Open;
                 kachi.ConvertedToPakkiId = null;
+                reopenedKachiId = kachi.Id;
             }
         }
 
         await ReverseLedgerAsync(pakki, $"Reversal: {pakki.InvoiceNo} cancelled", ct);
         await _db.SaveChangesAsync(ct);
+
+        // The Kachi's own ledger postings were reversed when it was converted to this Pakki
+        // (see ReverseLedgerForConversionAsync); now that it's Open again, re-post them so it isn't
+        // left with no ledger presence at all.
+        if (reopenedKachiId is not null)
+        {
+            await _kachiService.RepostLedgerAfterPakkiCancellationAsync(reopenedKachiId.Value, ct);
+        }
     }
 
     /// <summary>Posts the mirror image of a Pakki's ledger postings, so the running balance is

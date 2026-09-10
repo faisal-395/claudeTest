@@ -28,6 +28,7 @@ else
                 @if (AuthState.CanView(ModuleName.Journal)) { <NavLink href="journal">Journal</NavLink> }
                 @if (AuthState.CanView(ModuleName.Expense)) { <NavLink href="expense">Expense</NavLink> }
                 @if (AuthState.CanView(ModuleName.Ledger)) { <NavLink href="ledger">Ledger</NavLink> }
+                @if (AuthState.CanView(ModuleName.Ledger)) { <NavLink href="reports/party-account">Farmer / Purchase Account</NavLink> }
                 @if (AuthState.CanView(ModuleName.Recovery)) { <NavLink href="recovery">Recovery</NavLink> }
 
                 <div class="brand" style="margin-top:8px;">Setup</div>

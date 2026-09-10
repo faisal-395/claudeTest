@@ -1,0 +1,119 @@
+@page "/reports/party-account"
+@inject ApiClient Api
+@inject IJSRuntime JS
+
+<RequireAuth>
+    <div class="no-print" style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title">Farmer / Purchase Account</h1>
+    </div>
+    <p class="no-print" style="color:#777;">A farmer's or buyer's complete account — every Kachi, Pakki and payment/receipt posted to their ledger, with a running balance. Same data as Ledger, filtered and laid out as a printable statement.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid no-print" style="max-width:900px;">
+        <div>
+            <label>Account Type</label>
+            <select @bind="_partyType" @bind:after="OnPartyTypeChangedAsync">
+                <option value="@PartyType.Farmer">Farmer</option>
+                <option value="@PartyType.Buyer">Buyer (Purchase)</option>
+            </select>
+        </div>
+        <div>
+            <label>@(_partyType == PartyType.Farmer ? "Farmer" : "Buyer")</label>
+            <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" @bind-Value="_partyId" Placeholder="Search…" />
+        </div>
+        <div><label>From</label><input type="date" @bind="_from" /></div>
+        <div><label>To</label><input type="date" @bind="_to" /></div>
+        <div style="grid-column: span 2;">
+            <button class="btn" @onclick="LoadAsync">Show Account</button>
+            @if (_ledger is not null)
+            {
+                <button class="btn secondary" @onclick="PrintAsync">Print</button>
+            }
+        </div>
+    </div>
+
+    @if (_ledger is not null)
+    {
+        <div class="print-a4" style="background:white;padding:20px;border:1px solid #ccc;margin-top:16px;">
+            <div style="text-align:center;font-size:1.2rem;font-weight:700;">Umer Farooq &amp; Brothers</div>
+            <div style="text-align:center;color:#666;">@(_partyType == PartyType.Farmer ? "Farmer Account" : "Purchase Account (Buyer)") Statement</div>
+            <hr />
+            <table style="width:100%;margin-bottom:10px;">
+                <tr>
+                    <td><b>@_ledger.PartyName</b></td>
+                    <td style="text-align:right;">@(_from?.ToString("yyyy-MM-dd") ?? "Start") to @(_to?.ToString("yyyy-MM-dd") ?? "Today")</td>
+                </tr>
+                <tr>
+                    <td>Opening Balance: <b>@_ledger.OpeningBalance.ToString("N2")</b></td>
+                    <td style="text-align:right;">Closing Balance: <b>@_ledger.ClosingBalance.ToString("N2")</b></td>
+                </tr>
+            </table>
+            @if (_ledger.Rows.Count == 0)
+            {
+                <p style="color:#777;">No transactions in this period.</p>
+            }
+            else
+            {
+                <table class="data-grid" style="width:100%;">
+                    <thead><tr><th>Date</th><th>Description</th><th style="text-align:right;">Debit</th><th style="text-align:right;">Credit</th><th style="text-align:right;">Balance</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in _ledger.Rows)
+                        {
+                            <tr>
+                                <td>@r.Date.ToString("yyyy-MM-dd")</td>
+                                <td>@r.Description</td>
+                                <td style="text-align:right;">@(r.Debit > 0 ? r.Debit.ToString("N2") : "")</td>
+                                <td style="text-align:right;">@(r.Credit > 0 ? r.Credit.ToString("N2") : "")</td>
+                                <td style="text-align:right;">@r.RunningBalance.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    private List<PartyDto>? _parties;
+    private PartyLedgerDto? _ledger;
+    private string? _error;
+
+    private PartyType _partyType = PartyType.Farmer;
+    private int _partyId;
+    private DateTime? _from;
+    private DateTime? _to;
+
+    protected override async Task OnInitializedAsync() => await LoadPartiesAsync();
+
+    private async Task LoadPartiesAsync()
+    {
+        try
+        {
+            _parties = await Api.GetPartiesAsync(_partyType);
+            _partyId = _parties.Count > 0 ? _parties[0].Id : 0;
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task OnPartyTypeChangedAsync()
+    {
+        _ledger = null;
+        await LoadPartiesAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        _ledger = null;
+        if (_partyId == 0) { _error = $"Pick a {(_partyType == PartyType.Farmer ? "farmer" : "buyer")} first."; return; }
+        try { _ledger = await Api.GetPartyLedgerAsync(_partyId, _from, _to); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
+}

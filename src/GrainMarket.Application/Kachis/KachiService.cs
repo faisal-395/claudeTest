@@ -1,3 +1,4 @@
+using GrainMarket.Application.Common;
 using GrainMarket.Application.Common.Exceptions;
 using GrainMarket.Application.Common.Interfaces;
 using GrainMarket.Application.Common.Services;
@@ -10,12 +11,14 @@ namespace GrainMarket.Application.Kachis;
 public class KachiService : IKachiService
 {
     private readonly IApplicationDbContext _db;
+    private readonly ILedgerPostingService _ledger;
     private readonly IInvoiceNumberGenerator _numberGenerator;
     private readonly IDateTimeProvider _clock;
 
-    public KachiService(IApplicationDbContext db, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock)
+    public KachiService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock)
     {
         _db = db;
+        _ledger = ledger;
         _numberGenerator = numberGenerator;
         _clock = clock;
     }
@@ -92,6 +95,10 @@ public class KachiService : IKachiService
 
         _db.Kachis.Add(kachi);
         await _db.SaveChangesAsync(ct);
+
+        await PostLedgerAsync(kachi, calc.Lines, ct);
+        await _db.SaveChangesAsync(ct);
+
         return await GetByIdAsync(kachi.Id, ct);
     }
 
@@ -116,6 +123,10 @@ public class KachiService : IKachiService
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);
         var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).Sum(l => l.Amount);
         var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
+
+        // Reverse against the pre-update buyer/amounts before anything is mutated — mirrors
+        // PakkiService.UpdateAsync (reverse what was posted, then post fresh entries below).
+        await ReverseLedgerAsync(kachi, $"Reversal: {kachi.InvoiceNo} edited", ct);
 
         kachi.Date = request.Date;
         kachi.SeasonId = request.SeasonId;
@@ -154,6 +165,10 @@ public class KachiService : IKachiService
         }
 
         await _db.SaveChangesAsync(ct);
+
+        await PostLedgerAsync(kachi, calc.Lines, ct);
+        await _db.SaveChangesAsync(ct);
+
         return await GetByIdAsync(id, ct);
     }
 
@@ -166,6 +181,26 @@ public class KachiService : IKachiService
         }
         kachi.Status = InvoiceStatus.Cancelled;
         kachi.UpdatedAtUtc = _clock.UtcNow;
+
+        await ReverseLedgerAsync(kachi, $"Reversal: {kachi.InvoiceNo} cancelled", ct);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Reverses this Kachi's own ledger postings without cancelling it — called by
+    /// PakkiService right before it converts this Kachi to a Pakki, since the Pakki then posts the
+    /// authoritative farmer/buyer entries for the same underlying transaction and posting both
+    /// would double-count it.</summary>
+    public async Task ReverseLedgerForConversionAsync(int kachiId, CancellationToken ct = default)
+    {
+        var kachi = await LoadAsync(kachiId, ct);
+        await ReverseLedgerAsync(kachi, $"Reversal: {kachi.InvoiceNo} converted to Pakki", ct);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task RepostLedgerAfterPakkiCancellationAsync(int kachiId, CancellationToken ct = default)
+    {
+        var kachi = await LoadAsync(kachiId, ct);
+        await PostLedgerFromStoredLinesAsync(kachi, ct);
         await _db.SaveChangesAsync(ct);
     }
 
@@ -192,6 +227,74 @@ public class KachiService : IKachiService
         if (buyerId is null) return;
         if (!await _db.Parties.AnyAsync(p => p.Id == buyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
             throw new NotFoundException(nameof(Party), buyerId.Value);
+    }
+
+    /// <summary>Posts the Kachi's farmer/buyer double-entry: the buyer is debited for what they owe
+    /// (GrossAmount + BuyerChargesTotal — the price plus whatever's charged to them), the farmer is
+    /// credited for their net payable (Total = GrossAmount minus farmer-charged deductions only),
+    /// and every deduction line (farmer- or buyer-charged alike) credits its income account — both
+    /// groups are business income, just sourced from a different party. The two sides always
+    /// balance: buyer debit (Gross + BuyerCharges) == farmer credit (Gross - FarmerDeductions) +
+    /// sum(all lines) (FarmerDeductions + BuyerCharges).</summary>
+    private async Task PostLedgerAsync(Kachi kachi, IReadOnlyList<DeductionLineResult> lines, CancellationToken ct)
+    {
+        if (kachi.BuyerId is null) return; // historical rows only — Buyer is required going forward
+
+        await _ledger.PostPartyEntryAsync(kachi.BuyerId.Value, kachi.Date, kachi.GrossAmount + kachi.BuyerChargesTotal, 0, LedgerSourceType.Kachi, kachi.Id, $"Kachi {kachi.InvoiceNo}", ct);
+        await _ledger.PostPartyEntryAsync(kachi.FarmerId, kachi.Date, 0, kachi.Total, LedgerSourceType.Kachi, kachi.Id, $"Kachi {kachi.InvoiceNo}", ct);
+
+        foreach (var line in lines)
+        {
+            var accountId = await ResolveIncomeAccountIdAsync(line.IncomeAccountId, ct);
+            await _ledger.PostAccountEntryAsync(accountId, kachi.Date, 0, line.Amount, LedgerSourceType.Kachi, kachi.Id, $"Kachi {kachi.InvoiceNo}: {line.Name}", ct);
+        }
+    }
+
+    /// <summary>Same posting as PostLedgerAsync, but reading the deduction lines back from the
+    /// Kachi's own stored DeductionLines (resolving each rule's income account by lookup) instead
+    /// of a freshly computed DeductionCalculationResult — used only by
+    /// RepostLedgerAfterPakkiCancellationAsync, where there's no fresh calculation to hand it.</summary>
+    private async Task PostLedgerFromStoredLinesAsync(Kachi kachi, CancellationToken ct)
+    {
+        if (kachi.BuyerId is null) return;
+
+        await _ledger.PostPartyEntryAsync(kachi.BuyerId.Value, kachi.Date, kachi.GrossAmount + kachi.BuyerChargesTotal, 0, LedgerSourceType.Kachi, kachi.Id, $"Kachi {kachi.InvoiceNo}", ct);
+        await _ledger.PostPartyEntryAsync(kachi.FarmerId, kachi.Date, 0, kachi.Total, LedgerSourceType.Kachi, kachi.Id, $"Kachi {kachi.InvoiceNo}", ct);
+
+        foreach (var line in kachi.DeductionLines)
+        {
+            var ruleAccountId = await _db.DeductionRules.Where(r => r.Id == line.DeductionRuleId).Select(r => r.IncomeAccountId).FirstOrDefaultAsync(ct);
+            var accountId = await ResolveIncomeAccountIdAsync(ruleAccountId, ct);
+            await _ledger.PostAccountEntryAsync(accountId, kachi.Date, 0, line.Amount, LedgerSourceType.Kachi, kachi.Id, $"Kachi {kachi.InvoiceNo}: {line.Name}", ct);
+        }
+    }
+
+    /// <summary>Posts the mirror image of PostLedgerAsync, so the running balance is corrected
+    /// without ever deleting or mutating a previously posted row. Used by CancelAsync,
+    /// UpdateAsync (reverse, then post fresh entries for the new terms) and
+    /// ReverseLedgerForConversionAsync (converting to a Pakki).</summary>
+    private async Task ReverseLedgerAsync(Kachi kachi, string reason, CancellationToken ct)
+    {
+        if (kachi.BuyerId is null) return;
+
+        await _ledger.PostPartyEntryAsync(kachi.BuyerId.Value, _clock.UtcNow, 0, kachi.GrossAmount + kachi.BuyerChargesTotal, LedgerSourceType.Kachi, kachi.Id, reason, ct);
+        await _ledger.PostPartyEntryAsync(kachi.FarmerId, _clock.UtcNow, kachi.Total, 0, LedgerSourceType.Kachi, kachi.Id, reason, ct);
+
+        foreach (var line in kachi.DeductionLines)
+        {
+            var ruleAccountId = await _db.DeductionRules.Where(r => r.Id == line.DeductionRuleId).Select(r => r.IncomeAccountId).FirstOrDefaultAsync(ct);
+            var accountId = await ResolveIncomeAccountIdAsync(ruleAccountId, ct);
+            await _ledger.PostAccountEntryAsync(accountId, _clock.UtcNow, line.Amount, 0, LedgerSourceType.Kachi, kachi.Id, $"{reason} ({line.Name})", ct);
+        }
+    }
+
+    private async Task<int> ResolveIncomeAccountIdAsync(int? explicitAccountId, CancellationToken ct)
+    {
+        if (explicitAccountId.HasValue) return explicitAccountId.Value;
+
+        var suspense = await _db.ChartOfAccounts.FirstOrDefaultAsync(a => a.Code == DomainConstants.UnallocatedDeductionsAccountCode, ct)
+            ?? throw new InvalidCalculationException($"The Unallocated Deductions account (code {DomainConstants.UnallocatedDeductionsAccountCode}) is missing. Re-run seed data or set an income account on every deduction rule.");
+        return suspense.Id;
     }
 
     private static KachiDto ToDto(Kachi k) => new(
