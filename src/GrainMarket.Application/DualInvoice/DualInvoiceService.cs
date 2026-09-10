@@ -17,7 +17,7 @@ public class DualInvoiceService : IDualInvoiceService
     public async Task<DualInvoiceResultDto> CreateAsync(CreateDualInvoiceRequest request, CancellationToken ct = default)
     {
         var kachi = await _kachiService.CreateAsync(new CreateKachiRequest(
-            request.Date, request.SeasonId, request.FarmerId, request.BuyerId, request.ProductId,
+            null, request.Date, request.SeasonId, request.FarmerId, request.BuyerId, request.ProductId,
             request.ManQty, request.KiloQty, request.GramQty, request.BoriQty,
             request.RatePerUnit, request.VehicleNumber, request.Notes), ct);
 

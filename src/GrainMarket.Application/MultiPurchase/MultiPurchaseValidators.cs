@@ -20,6 +20,7 @@ public class CreateMultiPurchaseRequestValidator : AbstractValidator<CreateMulti
 {
     public CreateMultiPurchaseRequestValidator()
     {
+        RuleFor(x => x.ReceiptNumber).MaximumLength(30);
         RuleFor(x => x.SeasonId).GreaterThan(0);
         RuleFor(x => x.BuyerId).GreaterThan(0);
         RuleFor(x => x.Rows).NotEmpty().WithMessage("Add at least one farmer/item row.");

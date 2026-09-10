@@ -271,17 +271,27 @@ internally) — this never touches Pakki; finalizing each farmer's sale stays a 
 step per farmer, and there's no "Convert to Pakki" shortcut from the Kachi side anymore (Kachi and
 Pakki are kept fully separate — use the Pakki screen directly).
 
-The grid itself only takes entry fields (Farmer, Product, Man/Kilo/Gram/Bori, Rate) — no per-row
-Gross/Deductions/Total columns, since those didn't reliably fit/render there. A row is removed by
-selecting its radio button and clicking "Remove Selected Row" (next to "+ Add Row"), rather than a
-per-row button eating into the grid's width. A **Grand Gross / Grand Deductions / Grand Total**
-summary row above the buttons still reflects live totals across every row — computed by calling
-`Application.Common.Services.DeductionEngine`/`UnitConversionCalculator` directly with
-`DeductionAppliesTo.Kachi` (the exact same pure, stateless calculators and the same code path
-`KachiService.CreateAsync` uses to post the Kachi), since the Client project already references
-`GrainMarket.Application` — not a second, hand-written copy of the math that could drift from it.
-**Save** posts everything and clears the grid for the next batch; **Save & Print** posts and jumps
-straight to the consolidated print page.
+The grid itself only takes entry fields (Farmer, Product, Man/Kilo/Gram/Bori, Rate) as columns; the
+Gross/Deductions/Total for each row is instead shown as a compact info line in the row beneath it,
+so the grid columns stay narrow. A row is removed by selecting its radio button and clicking
+"Remove" (next to "Add"), rather than a per-row button eating into the grid's width. A
+**Grand Gross / Grand Deductions / Grand Total** summary row above the buttons still reflects live
+totals across every row — computed by calling `Application.Common.Services.DeductionEngine`/
+`UnitConversionCalculator` directly with `DeductionAppliesTo.Kachi` (the exact same pure, stateless
+calculators and the same code path `KachiService.CreateAsync` uses to post the Kachi), since the
+Client project already references `GrainMarket.Application` — not a second, hand-written copy of
+the math that could drift from it. **Save** posts everything and clears the grid for the next
+batch; **Save & Print** posts and jumps straight to the consolidated print page.
+
+A **Receipt Number** field (`Kachi.ReceiptNumber`, optional, distinct from the system-generated
+`InvoiceNo`) sits before Date on the entry form — it's the physical pre-printed receipt-book number
+the clerk transcribes from, applied to every row in that batch submission. It flows end-to-end
+(domain entity, `CreateKachiRequest`/`UpdateKachiRequest`/`KachiDto`, Kachi Records' edit form and
+list, and both print templates) alongside the existing system-generated `InvoiceNo`.
+
+The header also shows a read-only **Kachi Tax / Deductions** box (top-right, above the entry grid)
+listing every active deduction rule that applies at the Kachi stage with its configured value —
+so the operator can see current rates without leaving the page.
 
 **Kachi Records** (`Pages/KachiRecords.razor`, `/kachi-records`) is the separate management view —
 every Kachi ever raised, with per-row edit/cancel/print and the deduction-line detail toggle, and

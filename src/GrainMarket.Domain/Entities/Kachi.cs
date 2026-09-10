@@ -10,6 +10,11 @@ namespace GrainMarket.Domain.Entities;
 public class Kachi : BaseEntity
 {
     public string InvoiceNo { get; set; } = string.Empty;
+
+    /// <summary>Physical pre-printed receipt-book number the clerk transcribes from, as entered at
+    /// Kachi stage — distinct from InvoiceNo (the system-generated invoice number). Optional.</summary>
+    public string? ReceiptNumber { get; set; }
+
     public DateTime Date { get; set; }
     public int SeasonId { get; set; }
     public Season Season { get; set; } = null!;

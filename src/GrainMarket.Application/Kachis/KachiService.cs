@@ -55,6 +55,7 @@ public class KachiService : IKachiService
         var kachi = new Kachi
         {
             InvoiceNo = await _numberGenerator.NextAsync("K", ct),
+            ReceiptNumber = request.ReceiptNumber,
             Date = request.Date,
             SeasonId = request.SeasonId,
             FarmerId = request.FarmerId,
@@ -110,6 +111,7 @@ public class KachiService : IKachiService
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);
 
+        kachi.ReceiptNumber = request.ReceiptNumber;
         kachi.Date = request.Date;
         kachi.SeasonId = request.SeasonId;
         kachi.FarmerId = request.FarmerId;
@@ -186,7 +188,7 @@ public class KachiService : IKachiService
     }
 
     private static KachiDto ToDto(Kachi k) => new(
-        k.Id, k.InvoiceNo, k.Date, k.SeasonId, k.Season.Name, k.FarmerId, k.Farmer.Name, k.BuyerId, k.Buyer?.Name,
+        k.Id, k.InvoiceNo, k.ReceiptNumber, k.Date, k.SeasonId, k.Season.Name, k.FarmerId, k.Farmer.Name, k.BuyerId, k.Buyer?.Name,
         k.ProductId, k.Product.Name, k.ManQty, k.KiloQty, k.GramQty, k.BoriQty, k.NetWeightKg,
         k.RatePerUnit, k.GrossAmount, k.TotalDeductions, k.Total, k.Status, k.ConvertedToPakkiId, k.Notes,
         k.DeductionLines.Select(l => new KachiDeductionLineDto(l.DeductionRuleId, l.Name, l.NameUrdu, l.Amount, l.VehicleNumber)).ToList());

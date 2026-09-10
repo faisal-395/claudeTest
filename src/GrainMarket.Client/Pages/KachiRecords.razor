@@ -15,6 +15,7 @@
     @if (_editingId is not null)
     {
         <div class="form-grid" style="margin-bottom:20px;">
+            <div><label>Receipt Number / رسید نمبر</label><input @bind="_receiptNumber" /></div>
             <div><label>Date / تاریخ</label><input type="date" @bind="_date" /></div>
             <div>
                 <label>Season / سیزن</label>
@@ -58,12 +59,13 @@
     else
     {
         <table class="data-grid">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Weight (Man)</th><th>Weight (kg)</th><th>Rate/Man</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Receipt #</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Weight (Man)</th><th>Weight (kg)</th><th>Rate/Man</th><th>Total</th><th>Status</th><th></th></tr></thead>
             <tbody>
                 @foreach (var k in _kachis)
                 {
                     <tr>
                         <td>@k.InvoiceNo</td>
+                        <td>@(k.ReceiptNumber ?? "—")</td>
                         <td>@k.Date.ToString("yyyy-MM-dd")</td>
                         <td>@k.FarmerName</td>
                         <td>@(k.BuyerName ?? "—")</td>
@@ -87,7 +89,7 @@
                     @if (_expandedId == k.Id)
                     {
                         <tr>
-                            <td colspan="11" style="background:#f7f9f7;">
+                            <td colspan="12" style="background:#f7f9f7;">
                                 @if (k.DeductionLines.Count == 0)
                                 {
                                     <span style="color:#777;">No deductions on this Kachi.</span>
@@ -128,6 +130,7 @@
     private int? _editingId;
     private int? _expandedId;
 
+    private string? _receiptNumber;
     private DateTime _date = DateTime.Today;
     private int _seasonId;
     private int _farmerId;
@@ -190,6 +193,7 @@
     private void Edit(KachiDto k)
     {
         _editingId = k.Id;
+        _receiptNumber = k.ReceiptNumber;
         _date = k.Date;
         _seasonId = k.SeasonId;
         _farmerId = k.FarmerId;
@@ -206,6 +210,7 @@
     private void ResetForm()
     {
         _editingId = null;
+        _receiptNumber = null;
         _date = DateTime.Today;
         _buyerId = null;
         _man = null; _kilo = null; _gram = null; _bori = null; _rate = null; _vehicleNumber = null;
@@ -217,7 +222,7 @@
         _error = null;
         try
         {
-            var request = new UpdateKachiRequest(_date, _seasonId, _farmerId, _buyerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
+            var request = new UpdateKachiRequest(_receiptNumber, _date, _seasonId, _farmerId, _buyerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
             await Api.UpdateKachiAsync(_editingId.Value, request);
             ResetForm();
             await LoadAsync();
