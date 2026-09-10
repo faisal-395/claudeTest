@@ -7,22 +7,11 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
-        // Windows throttles a WebView2 renderer that hasn't had user input in a while (part of
-        // Chromium's background-tab power-saving, which WebView2 applies even to a window that's
-        // merely idle, not actually backgrounded) — timers and pending JS get suspended, and
-        // resuming that renderer on the next click can misfire and show the framework's default
-        // "An unhandled error has occurred" overlay, on any screen, with no application code
-        // involved (this reproduces on the login page, which never runs a timer or a background
-        // task of its own). Must be set before WebView2 creates its environment, so first line.
-        //
-        // --remote-debugging-port lets a real Console be attached from a plain browser
-        // (http://localhost:9223) even when this is a Release/standalone build where
-        // AddBlazorWebViewDeveloperTools()'s right-click "Inspect" isn't wired up — needed to
-        // actually see what's failing on the WebView2/JS side, since nothing on the .NET side
-        // throws for this bug. TEMPORARY: remove once the idle bug is confirmed fixed — leaving
-        // a debugging port open is not something a shipped till-PC build should do.
+        // Mitigates a separate, minor WebView2 quirk (Chromium sometimes misjudges a fully
+        // visible, focused window as occluded and throttles its timers) — harmless to leave on.
+        // Must be set before WebView2 creates its environment, so first line.
         Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-            "--disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling --disable-features=CalculateNativeWinOcclusion --remote-debugging-port=9223");
+            "--disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling --disable-features=CalculateNativeWinOcclusion");
 
         var builder = MauiApp.CreateBuilder();
         builder
@@ -43,7 +32,19 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<AppSettings>();
         builder.Services.AddSingleton<AuthState>();
-        builder.Services.AddSingleton<TokenAuthHandler>();
+
+        // Must be Transient, not Singleton: IHttpClientFactory rebuilds ApiClient's handler
+        // pipeline every 2 minutes by default (HandlerLifetime, to pick up DNS changes), and each
+        // rebuild resolves TokenAuthHandler from DI again. A singleton hands back the same
+        // instance every time — but that instance's InnerHandler is already set from the
+        // previous build, and HttpMessageHandlerBuilder refuses to reuse a handler whose
+        // InnerHandler isn't null, throwing "The 'InnerHandler' property must be null." on the
+        // very next request after ~2 minutes idle, on ANY page (this is what was actually behind
+        // the "unhandled error after being idle" reports, including on the login screen before
+        // any auth logic ever ran). Transient gives the factory a fresh instance on every
+        // rebuild, which is fine — TokenAuthHandler holds no state that needs to outlive one
+        // pipeline (AuthState, the thing it actually cares about, is already its own singleton).
+        builder.Services.AddTransient<TokenAuthHandler>();
 
         // Base URL points at localhost today (API runs as a Windows service on the same till PC)
         // and gets repointed at the LAN server's address later purely via appsettings — see
