@@ -1,4 +1,5 @@
 @page "/kachi"
+@using GrainMarket.Application.Common
 @using GrainMarket.Application.Common.Exceptions
 @using GrainMarket.Application.Common.Services
 @using GrainMarket.Application.MultiPurchase
@@ -49,7 +50,7 @@
                 <th style="width:24px;"></th>
                 <th style="min-width:150px;">Farmer / کسان</th>
                 <th style="min-width:130px;">Product / جنس</th>
-                <th>Bharti (kg/bag)</th><th>Total Weight (kg)</th><th>Dhrn (kg)</th>
+                <th>Bharti (kg/bag)</th><th>Total Weight (kg)</th><th>Dhrn (kg, default 5)</th>
                 <th>Rate/Man</th>
             </tr>
         </thead>
@@ -155,7 +156,7 @@
     private bool CanSave =>
         _buyerId > 0 && _rows.Count > 0 &&
         _rows.All(r => r.FarmerId > 0 && r.ProductId > 0 && (r.RatePerUnit ?? 0) > 0 &&
-                        (r.BhartiKgPerBag ?? 0) > 0 && (r.TotalWeightKg ?? 0) > (r.DhrnKg ?? 0));
+                        (r.BhartiKgPerBag ?? 0) > 0 && (r.TotalWeightKg ?? 0) > (r.DhrnKg ?? DomainConstants.DefaultDhrnKg));
 
     protected override async Task OnInitializedAsync()
     {
@@ -191,7 +192,8 @@
     private void AddRow() => _rows.Add(new RowModel
     {
         FarmerId = _farmers?.FirstOrDefault()?.Id ?? 0,
-        ProductId = _products?.FirstOrDefault()?.Id ?? 0
+        ProductId = _products?.FirstOrDefault()?.Id ?? 0,
+        DhrnKg = DomainConstants.DefaultDhrnKg
     });
 
     private void RemoveSelectedRow()
@@ -214,7 +216,7 @@
 
         try
         {
-            var netWeightKg = row.TotalWeightKg.Value - (row.DhrnKg ?? 0m);
+            var netWeightKg = row.TotalWeightKg.Value - (row.DhrnKg ?? DomainConstants.DefaultDhrnKg);
             if (netWeightKg <= 0) return null;
 
             var boriFactor = UnitConversionCalculator.FactorFor(WeightUnit.Bori, row.ProductId, _unitConversionEntities);

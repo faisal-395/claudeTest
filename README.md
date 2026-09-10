@@ -334,9 +334,13 @@ operator enters three things: **Rate** (per Man, unchanged), **Bharti** (`Bharti
 weight per bag for this crop, which varies by product (e.g. ~60kg for one crop, ~65kg for
 another) — and **Total Weight** (`TotalWeightKg`), the gross scale reading. From those,
 `KachiService.CalculateWeights` derives:
-- **Dhrn** (`DhrnKg`) — a tare/wastage weight subtracted from Total Weight. There's no standard
-  formula for this yet, so it's entered manually (optional, defaults to 0) rather than guessed at;
-  automate it once a formula is confirmed.
+- **Dhrn** (`DhrnKg`) — a tare/wastage weight subtracted from Total Weight. Defaults to
+  `DomainConstants.DefaultDhrnKg` (5kg, the market's current standard) whenever it's left blank —
+  an explicit 0 (or any other value) always overrides the default. The resolved value (5kg or
+  whatever was entered) is what actually gets stored on the Kachi, not a blank. The Kachi entry
+  grid pre-fills new rows with 5 so the operator sees it and can change it per row; the
+  cross-field "Dhrn must be less than Total Weight" validation accounts for the default too, not
+  just what was literally typed.
 - **Safi Wazan** (net weight, still stored in `NetWeightKg`) = Total Weight − Dhrn. This is what
   feeds `GrossAmountFromRatePerMan`, the deduction engine, and the ledger post — exactly the role
   the old Man/Kilo/Gram/Bori sum used to play.
@@ -346,9 +350,9 @@ another) — and **Total Weight** (`TotalWeightKg`), the gross scale reading. Fr
 `CreateKachiRequest`/`UpdateKachiRequest`/`MultiPurchaseRowRequest` carry `BhartiKgPerBag`,
 `TotalWeightKg`, `DhrnKg` in place of the old four weight fields; `KachiDto` adds the same plus the
 calculated `BoriQty`. Bharti and Total Weight are both required (`NotNull().GreaterThan(0)`); Dhrn
-must be less than Total Weight if provided. The Kachi Records edit form, and both print templates,
-were updated to match — the single-Kachi print shows بھرتی / کل وزن / دھرن / بوری / صافی وزن in
-place of the old مَن/کلو/گرام/بوری rows.
+(or its 5kg default) must be less than Total Weight. The Kachi Records edit form, and both print
+templates, were updated to match — the single-Kachi print shows بھرتی / کل وزن / دھرن / بوری /
+صافی وزن in place of the old مَن/کلو/گرام/بوری rows.
 
 The grid itself only takes entry fields (Farmer, Product, Bharti, Total Weight, Dhrn, Rate) as
 columns; the Gross/Deductions/Total for each row is instead shown as a compact info line in the row

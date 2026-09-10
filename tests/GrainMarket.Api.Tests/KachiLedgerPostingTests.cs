@@ -56,6 +56,29 @@ public class KachiLedgerPostingTests : IClassFixture<CustomWebApplicationFactory
     }
 
     [Fact]
+    public async Task CreateKachi_NoDhrnEntered_DefaultsToFiveKg()
+    {
+        var admin = await TestAuthHelper.AsAdminAsync(_factory);
+
+        var farmer = await CreatePartyAsync(admin, PartyType.Farmer, "Ledger Default Dhrn Farmer");
+        var buyer = await CreatePartyAsync(admin, PartyType.Buyer, "Ledger Default Dhrn Buyer");
+        var season = (await admin.GetFromJsonAsync<List<SeasonDto>>("/api/seasons"))!.First();
+        var product = (await admin.GetFromJsonAsync<List<ProductDto>>("/api/products"))!.First();
+
+        var request = new CreateKachiRequest(
+            DateTime.Today, season.Id, farmer.Id, buyer.Id, product.Id,
+            BhartiKgPerBag: 60m, TotalWeightKg: 1000m, DhrnKg: null,
+            RatePerUnit: 2000m, VehicleNumber: null, Notes: null);
+
+        var createResponse = await admin.PostAsJsonAsync("/api/kachis", request);
+        createResponse.EnsureSuccessStatusCode();
+        var kachi = await createResponse.Content.ReadFromJsonAsync<KachiDto>();
+
+        Assert.Equal(5m, kachi!.DhrnKg);
+        Assert.Equal(995m, kachi.NetWeightKg); // Safi Wazan = 1000 - 5
+    }
+
+    [Fact]
     public async Task CancelKachi_ReversesLedgerEntries()
     {
         var admin = await TestAuthHelper.AsAdminAsync(_factory);

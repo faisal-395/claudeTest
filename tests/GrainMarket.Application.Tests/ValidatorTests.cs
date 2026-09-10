@@ -66,6 +66,24 @@ public class CreateKachiRequestValidatorTests
     }
 
     [Fact]
+    public void Validate_NoDhrnEntered_UsesDefaultFiveKgForCrossCheck()
+    {
+        // DhrnKg omitted, but the default (5kg) would still leave a positive net weight for 3000kg.
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 1, 60m, 3000m, null, 5000m, null, null);
+        Assert.True(_validator.Validate(request).IsValid);
+    }
+
+    [Fact]
+    public void Validate_NoDhrnEntered_DefaultFiveKgWouldExceedTotalWeight_Fails()
+    {
+        // DhrnKg omitted; the default (5kg) is >= a 3kg total weight, so this must fail just like
+        // an explicit Dhrn >= Total Weight would — the cross-check has to account for the default,
+        // not just what was literally entered.
+        var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 1, 60m, 3m, null, 5000m, null, null);
+        Assert.False(_validator.Validate(request).IsValid);
+    }
+
+    [Fact]
     public void Validate_NegativeRate_Fails()
     {
         var request = new CreateKachiRequest(DateTime.Today, 1, 1, 1, 1, 60m, 3000m, null, -10m, null, null);
