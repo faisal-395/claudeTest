@@ -7,6 +7,16 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
+        // Windows throttles a WebView2 renderer that hasn't had user input in a while (part of
+        // Chromium's background-tab power-saving, which WebView2 applies even to a window that's
+        // merely idle, not actually backgrounded) — timers and pending JS get suspended, and
+        // resuming that renderer on the next click can misfire and show the framework's default
+        // "An unhandled error has occurred" overlay, on any screen, with no application code
+        // involved (this reproduces on the login page, which never runs a timer or a background
+        // task of its own). Must be set before WebView2 creates its environment, so first line.
+        Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+            "--disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling --disable-features=CalculateNativeWinOcclusion");
+
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
