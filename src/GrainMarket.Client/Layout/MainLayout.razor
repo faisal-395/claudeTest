@@ -16,7 +16,8 @@ else
             </div>
             <nav>
                 <NavLink href="" Match="NavLinkMatch.All">Dashboard</NavLink>
-                @if (AuthState.CanView(ModuleName.Kachi)) { <NavLink href="multi-purchase">Multi-Farmer Purchase</NavLink> }
+                @if (AuthState.CanView(ModuleName.Kachi)) { <NavLink href="kachi">Kachi</NavLink> }
+                @if (AuthState.CanView(ModuleName.Kachi)) { <NavLink href="kachi-records">Kachi Records</NavLink> }
                 @if (AuthState.CanView(ModuleName.Pakki)) { <NavLink href="pakki">Pakki</NavLink> }
                 @if (AuthState.CanView(ModuleName.DualInvoice)) { <NavLink href="dual-invoice">Dual Invoice</NavLink> }
                 @if (AuthState.CanView(ModuleName.Trading)) { <NavLink href="trading">Trading</NavLink> }

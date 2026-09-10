@@ -1,0 +1,201 @@
+@page "/kachi-records"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Kachi Records <span class="rtl-urdu" style="font-size:1rem;">کچی ریکارڈ</span></h1>
+    <p style="color:#777;">Every Kachi raised from the Kachi entry screen — edit, cancel, print, or convert one to a Pakki here.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    @if (_editingId is not null)
+    {
+        <div class="form-grid" style="margin-bottom:20px;">
+            <div><label>Date / تاریخ</label><input type="date" @bind="_date" /></div>
+            <div>
+                <label>Season / سیزن</label>
+                <select @bind="_seasonId">
+                    @if (_seasons is not null) { @foreach (var s in _seasons) { <option value="@s.Id">@s.Name</option> } }
+                </select>
+            </div>
+            <div>
+                <label>Farmer / کسان</label>
+                <SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" @bind-Value="_farmerId" Placeholder="Search farmer…" />
+            </div>
+            <div>
+                <label>Product / جنس</label>
+                <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Search product…" />
+            </div>
+            <div>
+                <label>Buyer / خریدار (optional at Kachi stage)</label>
+                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" Value="@(_buyerId ?? 0)" ValueChanged="@(v => _buyerId = v == 0 ? null : v)" Placeholder="Search buyer…" />
+            </div>
+            <div><label>Man (maund) / مَن</label><input type="number" step="0.01" @bind="_man" /></div>
+            <div><label>Kilo / کلو</label><input type="number" step="0.01" @bind="_kilo" /></div>
+            <div><label>Gram / گرام</label><input type="number" step="1" @bind="_gram" /></div>
+            <div><label>Bori (bags) / بوری</label><input type="number" step="0.01" @bind="_bori" /></div>
+            <div><label>Rate per Man / ریٹ فی مَن (optional at Kachi stage)</label><input type="number" step="0.01" @bind="_rate" /></div>
+            <div><label>Vehicle Number / گاڑی نمبر (for freight)</label><input @bind="_vehicleNumber" /></div>
+            <div style="grid-column: span 2;">
+                @if (!HasWeight)
+                {
+                    <div class="invalid-total">Enter at least one weight (Man/Kilo/Gram/Bori) before saving.</div>
+                }
+                <button class="btn" disabled="@(!HasWeight)" @onclick="SaveAsync">Update Kachi</button>
+                <button class="btn secondary" @onclick="ResetForm">Cancel Edit</button>
+            </div>
+        </div>
+    }
+
+    @if (_kachis is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>Invoice</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Net Wt (kg)</th><th>Rate/Man</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var k in _kachis)
+                {
+                    <tr>
+                        <td>@k.InvoiceNo</td>
+                        <td>@k.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@k.FarmerName</td>
+                        <td>@(k.BuyerName ?? "—")</td>
+                        <td>@k.ProductName</td>
+                        <td>@k.NetWeightKg.ToString("N2")</td>
+                        <td>@(k.RatePerUnit?.ToString("N2") ?? "—")</td>
+                        <td>@k.Total.ToString("N2")</td>
+                        <td>@k.Status</td>
+                        <td>
+                            <a href="#" @onclick="() => ToggleDetails(k.Id)" @onclick:preventDefault="true">@(_expandedId == k.Id ? "Hide" : "Details")</a>
+                            <text> | </text>
+                            @if (k.Status == InvoiceStatus.Open)
+                            {
+                                <a href="#" @onclick="() => Edit(k)" @onclick:preventDefault="true">Edit</a>
+                                <text> | </text>
+                                <a href="pakki?fromKachi=@k.Id">Convert to Pakki</a>
+                                <text> | </text>
+                            }
+                            <a href="print/kachi/@k.Id">Print</a>
+                        </td>
+                    </tr>
+                    @if (_expandedId == k.Id)
+                    {
+                        <tr>
+                            <td colspan="10" style="background:#f7f9f7;">
+                                @if (k.DeductionLines.Count == 0)
+                                {
+                                    <span style="color:#777;">No deductions on this Kachi.</span>
+                                }
+                                else
+                                {
+                                    <table style="width:auto;min-width:280px;">
+                                        <thead><tr><th style="text-align:left;padding:2px 12px 2px 0;">Deduction</th><th style="text-align:left;padding:2px 12px;">اردو</th><th style="text-align:right;padding:2px 0;">Amount</th></tr></thead>
+                                        <tbody>
+                                            @foreach (var line in k.DeductionLines)
+                                            {
+                                                <tr>
+                                                    <td style="padding:2px 12px 2px 0;">@line.Name</td>
+                                                    <td class="rtl-urdu" style="padding:2px 12px;font-size:1rem;">@line.NameUrdu</td>
+                                                    <td style="text-align:right;padding:2px 0;">@line.Amount.ToString("N2")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<KachiDto>? _kachis;
+    private List<SeasonDto>? _seasons;
+    private List<PartyDto>? _farmers;
+    private List<PartyDto>? _buyers;
+    private List<ProductDto>? _products;
+    private string? _error;
+    private int? _editingId;
+    private int? _expandedId;
+
+    private DateTime _date = DateTime.Today;
+    private int _seasonId;
+    private int _farmerId;
+    private int? _buyerId;
+    private int _productId;
+    private decimal? _man;
+    private decimal? _kilo;
+    private decimal? _gram;
+    private decimal? _bori;
+    private decimal? _rate;
+    private string? _vehicleNumber;
+
+    private bool HasWeight => (_man ?? 0) + (_kilo ?? 0) + (_gram ?? 0) + (_bori ?? 0) > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _seasons = await Api.GetSeasonsAsync();
+            _farmers = await Api.GetPartiesAsync(PartyType.Farmer);
+            _buyers = await Api.GetPartiesAsync(PartyType.Buyer);
+            _products = await Api.GetProductsAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; return; }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _kachis = await Api.GetKachisAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private void ToggleDetails(int id) => _expandedId = _expandedId == id ? null : id;
+
+    private void Edit(KachiDto k)
+    {
+        _editingId = k.Id;
+        _date = k.Date;
+        _seasonId = k.SeasonId;
+        _farmerId = k.FarmerId;
+        _buyerId = k.BuyerId;
+        _productId = k.ProductId;
+        _man = k.ManQty;
+        _kilo = k.KiloQty;
+        _gram = k.GramQty;
+        _bori = k.BoriQty;
+        _rate = k.RatePerUnit;
+        _vehicleNumber = k.DeductionLines.FirstOrDefault(l => l.VehicleNumber is not null)?.VehicleNumber;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _date = DateTime.Today;
+        _buyerId = null;
+        _man = null; _kilo = null; _gram = null; _bori = null; _rate = null; _vehicleNumber = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_editingId is null) return;
+        _error = null;
+        try
+        {
+            var request = new UpdateKachiRequest(_date, _seasonId, _farmerId, _buyerId, _productId, _man, _kilo, _gram, _bori, _rate, _vehicleNumber, null);
+            await Api.UpdateKachiAsync(_editingId.Value, request);
+            ResetForm();
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}
