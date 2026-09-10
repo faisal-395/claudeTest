@@ -5,7 +5,7 @@
 
 <RequireAuth>
     <h1 class="page-title">Kachi Records <span class="rtl-urdu" style="font-size:1rem;">کچی ریکارڈ</span></h1>
-    <p style="color:#777;">Every Kachi raised from the Kachi entry screen — edit, cancel or print here.</p>
+    <p style="color:#777;">Every Kachi raised from the Kachi entry screen — edit or view/print details here.</p>
 
     @if (_error is not null)
     {
@@ -56,8 +56,8 @@
     }
     else
     {
-        <table class="data-grid">
-            <thead><tr><th>Invoice</th><th>Receipt #</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Weight (Man)</th><th>Weight (kg)</th><th>Rate/Man</th><th>Total</th><th>Buyer Charges</th><th>Status</th><th></th></tr></thead>
+        <table class="data-grid kachi-records-grid">
+            <thead><tr><th>Invoice</th><th>Receipt #</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Weight</th><th>Rate/Man</th><th>Total</th><th>Buyer Charges</th><th></th></tr></thead>
             <tbody>
                 @foreach (var k in _kachis)
                 {
@@ -68,81 +68,19 @@
                         <td>@k.FarmerName</td>
                         <td>@(k.BuyerName ?? "—")</td>
                         <td>@k.ProductName</td>
-                        <td>@(ManEquivalent(k)?.ToString("N2") ?? "—")</td>
-                        <td>@k.NetWeightKg.ToString("N2")</td>
+                        <td>@(ManEquivalent(k)?.ToString("N2") ?? "—") Man (@k.NetWeightKg.ToString("N2") kg)</td>
                         <td>@(k.RatePerUnit?.ToString("N2") ?? "—")</td>
                         <td>@k.Total.ToString("N2")</td>
                         <td>@(k.BuyerChargesTotal > 0 ? k.BuyerChargesTotal.ToString("N2") : "—")</td>
-                        <td>@k.Status</td>
                         <td>
-                            <a href="#" @onclick="() => ToggleDetails(k.Id)" @onclick:preventDefault="true">@(_expandedId == k.Id ? "Hide" : "Details")</a>
-                            <text> | </text>
+                            <a href="print/kachi/@k.Id">Details</a>
                             @if (k.Status == InvoiceStatus.Open)
                             {
-                                <a href="#" @onclick="() => Edit(k)" @onclick:preventDefault="true">Edit</a>
                                 <text> | </text>
+                                <a href="#" @onclick="() => Edit(k)" @onclick:preventDefault="true">Edit</a>
                             }
-                            <a href="print/kachi/@k.Id">Print</a>
                         </td>
                     </tr>
-                    @if (_expandedId == k.Id)
-                    {
-                        <tr>
-                            <td colspan="13" style="background:#f7f9f7;">
-                                @if (k.DeductionLines.Count == 0)
-                                {
-                                    <span style="color:#777;">No deductions on this Kachi.</span>
-                                }
-                                else
-                                {
-                                    <div style="display:flex;gap:24px;flex-wrap:wrap;">
-                                        <div>
-                                            <div style="font-weight:600;margin-bottom:2px;">From Farmer</div>
-                                            @if (k.DeductionLines.Any(l => l.ChargedTo == DeductionChargedTo.Farmer))
-                                            {
-                                                <table style="width:auto;min-width:280px;">
-                                                    <thead><tr><th style="text-align:left;padding:2px 12px 2px 0;">Deduction</th><th style="text-align:left;padding:2px 12px;">اردو</th><th style="text-align:right;padding:2px 0;">Amount</th></tr></thead>
-                                                    <tbody>
-                                                        @foreach (var line in k.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer))
-                                                        {
-                                                            <tr>
-                                                                <td style="padding:2px 12px 2px 0;">@line.Name</td>
-                                                                <td class="rtl-urdu" style="padding:2px 12px;font-size:1rem;">@line.NameUrdu</td>
-                                                                <td style="text-align:right;padding:2px 0;">@line.Amount.ToString("N2")</td>
-                                                            </tr>
-                                                        }
-                                                    </tbody>
-                                                </table>
-                                            }
-                                            else
-                                            {
-                                                <span style="color:#777;">None.</span>
-                                            }
-                                        </div>
-                                        @if (k.DeductionLines.Any(l => l.ChargedTo == DeductionChargedTo.Buyer))
-                                        {
-                                            <div>
-                                                <div style="font-weight:600;margin-bottom:2px;">From Buyer</div>
-                                                <table style="width:auto;min-width:280px;">
-                                                    <thead><tr><th style="text-align:left;padding:2px 12px 2px 0;">Charge</th><th style="text-align:left;padding:2px 12px;">اردو</th><th style="text-align:right;padding:2px 0;">Amount</th></tr></thead>
-                                                    <tbody>
-                                                        @foreach (var line in k.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer))
-                                                        {
-                                                            <tr>
-                                                                <td style="padding:2px 12px 2px 0;">@line.Name</td>
-                                                                <td class="rtl-urdu" style="padding:2px 12px;font-size:1rem;">@line.NameUrdu</td>
-                                                                <td style="text-align:right;padding:2px 0;">@line.Amount.ToString("N2")</td>
-                                                            </tr>
-                                                        }
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            </td>
-                        </tr>
-                    }
                 }
             </tbody>
         </table>
@@ -158,7 +96,6 @@
     private List<UnitConversion>? _unitConversionEntities;
     private string? _error;
     private int? _editingId;
-    private int? _expandedId;
 
     private string? _receiptNumber;
     private DateTime _date = DateTime.Today;
@@ -217,8 +154,6 @@
         try { _kachis = await Api.GetKachisAsync(); }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
-
-    private void ToggleDetails(int id) => _expandedId = _expandedId == id ? null : id;
 
     private void Edit(KachiDto k)
     {

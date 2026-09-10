@@ -123,6 +123,14 @@ table.data-grid tbody tr:hover {
     font-size: 0.85rem;
 }
 
+/* Kachi Records — same tightening as the entry grid above, so ten-plus columns (invoice, receipt
+   #, date, farmer, buyer, product, weight, rate, total, buyer charges, actions) fit comfortably. */
+.kachi-records-grid th, .kachi-records-grid td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
 table.data-grid tbody tr.selected-row,
 table.data-grid tbody tr.selected-row:hover {
     background: #eaf7ee;
