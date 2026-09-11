@@ -161,12 +161,9 @@ table.data-grid tbody tr.selected-row:hover {
     box-sizing: border-box;
 }
 
-/* Pakki entry panel — 9 input columns beside a 3-column deduction-rate panel (9:3 ratio via flex
-   grow, matching a 12-col layout) so the whole row of fields fits in one compact strip instead of
-   several stacked boxes. */
+/* Pakki entry panel — the nine input fields, on their own (the deduction-rate panel used to sit
+   beside them here; it now shares a row with the Add button below instead). */
 .pakki-entry-panel {
-    display: flex;
-    gap: 16px;
     background: white;
     padding: 12px 16px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -174,7 +171,6 @@ table.data-grid tbody tr.selected-row:hover {
 }
 
 .pakki-entry-inputs {
-    flex: 9 1 0;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -210,29 +206,62 @@ table.data-grid tbody tr.selected-row:hover {
     box-sizing: border-box;
 }
 
-.pakki-entry-deductions {
-    flex: 3 1 0;
+/* Pakki staging calculation preview — its own full-width row, so the preview text always has the
+   whole row to wrap into. */
+.pakki-staging-calc {
+    background: #f7f9f7;
+    border: 1px solid #e2e2e2;
+    border-radius: 4px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    color: #444;
+    margin-bottom: 6px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Add button (2 cols) beside the deduction-rate panel (10 cols) — one row instead of the button
+   sitting alone below, which wasted a whole row for one small control. */
+.pakki-add-deductions-row {
+    display: grid;
+    grid-template-columns: 2fr 10fr;
+    gap: 16px;
+    align-items: center;
+    background: white;
+    padding: 10px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-bottom: 10px;
+}
+
+.pakki-add-col {
+    display: flex;
+}
+
+.pakki-deductions-col {
     border-left: 1px solid #e5e5e5;
     padding-left: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
 }
 
 .pakki-entry-deductions-title {
     font-size: 0.72rem;
     font-weight: 600;
     color: #1B4332;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
+}
+
+.pakki-deductions-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 20px;
 }
 
 .pakki-entry-deduction-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     gap: 6px;
     font-size: 0.75rem;
     color: #444;
+    white-space: nowrap;
 }
 
 .pakki-entry-deduction-row input {
@@ -241,24 +270,6 @@ table.data-grid tbody tr.selected-row:hover {
     font-size: 0.75rem;
     border: 1px solid #ccc;
     border-radius: 3px;
-}
-
-/* Pakki staging calculation preview — its own full-width row above the Add button, instead of
-   sharing a line with it, so the preview text always has the whole row to wrap into. */
-.pakki-staging-calc {
-    background: #f7f9f7;
-    border: 1px solid #e2e2e2;
-    border-radius: 4px;
-    padding: 8px 14px;
-    font-size: 0.85rem;
-    color: #444;
-    margin-bottom: 8px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.pakki-staging-add {
-    margin-bottom: 16px;
 }
 
 /* Pakki results grid — adds an itemized deduction breakdown column and right-aligned numeric

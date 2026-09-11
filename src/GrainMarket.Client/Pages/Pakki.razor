@@ -73,20 +73,6 @@
                     <div><label>ریٹ فی مَن</label><input type="number" step="0.01" @bind="_stagingRate" /></div>
                 </div>
             </div>
-
-            @if (PakkiRules.Count > 0)
-            {
-                <div class="pakki-entry-deductions">
-                    <div class="pakki-entry-deductions-title">Deductions</div>
-                    @foreach (var r in PakkiRules)
-                    {
-                        <div class="pakki-entry-deduction-row" title="@r.ChargedTo">
-                            <span>@r.Name</span>
-                            <span class="ltr-inline">@RatePrefix(r)<input type="number" step="0.01" value="@GetEffectiveRate(r)" @onchange="@(e => SetRateOverride(r.Id, e.Value))" />@RateSuffix(r)</span>
-                        </div>
-                    }
-                </div>
-            }
         </div>
 
         <div class="pakki-staging-calc rtl-urdu">
@@ -106,8 +92,26 @@
                 <span style="color:#999;">Enter weight and a rate to see the calculation</span>
             }
         </div>
-        <div class="pakki-staging-add">
-            <button class="btn secondary" disabled="@(!CanAddRow)" @onclick="AddStagedRow">Add</button>
+
+        <div class="pakki-add-deductions-row">
+            <div class="pakki-add-col">
+                <button class="btn secondary" disabled="@(!CanAddRow)" @onclick="AddStagedRow">Add</button>
+            </div>
+            @if (PakkiRules.Count > 0)
+            {
+                <div class="pakki-deductions-col">
+                    <div class="pakki-entry-deductions-title">Deductions</div>
+                    <div class="pakki-deductions-list">
+                        @foreach (var r in PakkiRules)
+                        {
+                            <div class="pakki-entry-deduction-row" title="@r.ChargedTo">
+                                <span>@r.Name</span>
+                                <span class="ltr-inline">@RatePrefix(r)<input type="number" step="0.01" value="@GetEffectiveRate(r)" @onchange="@(e => SetRateOverride(r.Id, e.Value))" />@RateSuffix(r)</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
         </div>
 
         <table class="data-grid multi-purchase-grid pakki-results-grid">
