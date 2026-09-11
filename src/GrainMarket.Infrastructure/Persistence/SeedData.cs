@@ -203,19 +203,34 @@ public static class SeedData
         // Defaults only — the legacy app hardcoded these per screen; here they are editable under
         // Setup > Unit Conversions, and may be overridden per product. 1 Man (maund) = 40 kg is the
         // common Punjab grain-market convention; adjust to match local practice.
-        db.UnitConversions.AddRange(
+        var conversions = new[]
+        {
             new UnitConversion { Unit = WeightUnit.Kilo, FactorToKg = 1m },
             new UnitConversion { Unit = WeightUnit.Gram, FactorToKg = 0.001m },
             new UnitConversion { Unit = WeightUnit.Man, FactorToKg = 40m },
             new UnitConversion { Unit = WeightUnit.Bori, FactorToKg = 100m },
             new UnitConversion { Unit = WeightUnit.Dhrn, FactorToKg = 5m }
-        );
+        };
+
+        // A reconciliation migration (e.g. DhrnAsDisplayBreakdown, which inserts the Dhrn row
+        // directly) may already have inserted one of these — same overlap as ChartOfAccounts/
+        // DeductionRules above, keyed the same way: (Unit, ProductId).
+        var existingKeys = (await db.UnitConversions.Select(c => new { c.Unit, c.ProductId }).ToListAsync(ct))
+            .Select(c => (c.Unit, c.ProductId))
+            .ToHashSet();
+        var newConversions = conversions.Where(c => !existingKeys.Contains((c.Unit, c.ProductId))).ToArray();
+        db.UnitConversions.AddRange(newConversions);
         await db.SaveChangesAsync(ct);
     }
 
     private static async Task SeedSeasonAsync(AppDbContext db, CancellationToken ct)
     {
-        db.Seasons.Add(new Season { Name = "2026-27", StartDate = new DateTime(2026, 7, 1), IsActive = true });
+        // A reconciliation migration (ExpandDeductionRulesToBothStagesAndSeedSeason) may already
+        // have inserted this season directly — same overlap as ChartOfAccounts/DeductionRules above.
+        const string name = "2026-27";
+        if (await db.Seasons.AnyAsync(s => s.Name == name, ct)) return;
+
+        db.Seasons.Add(new Season { Name = name, StartDate = new DateTime(2026, 7, 1), IsActive = true });
         await db.SaveChangesAsync(ct);
     }
 
@@ -224,7 +239,8 @@ public static class SeedData
     /// Products afterwards.</summary>
     private static async Task SeedSampleProductsAsync(AppDbContext db, CancellationToken ct)
     {
-        db.Products.AddRange(
+        var products = new[]
+        {
             new Product { Name = "Wheat", NameUrdu = "گندم", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
             new Product { Name = "Rice", NameUrdu = "چاول", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
             new Product { Name = "Maize", NameUrdu = "مکئی", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
@@ -235,7 +251,14 @@ public static class SeedData
             new Product { Name = "Mustard", NameUrdu = "سرسوں", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
             new Product { Name = "Moong", NameUrdu = "مونگ", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
             new Product { Name = "Masoor", NameUrdu = "مسور", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m }
-        );
+        };
+
+        // A reconciliation migration (SeedAdditionalGrainProducts) may already have inserted seven of
+        // these directly — same overlap as ChartOfAccounts/DeductionRules above, keyed by Name (the
+        // same key that migration's own NOT EXISTS check uses).
+        var existingNames = (await db.Products.Select(p => p.Name).ToListAsync(ct)).ToHashSet();
+        var newProducts = products.Where(p => !existingNames.Contains(p.Name)).ToArray();
+        db.Products.AddRange(newProducts);
         await db.SaveChangesAsync(ct);
     }
 }
