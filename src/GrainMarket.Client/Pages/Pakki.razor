@@ -164,14 +164,16 @@
             </tbody>
         </table>
 
-        <div class="pakki-grand-totals total-figure rtl-urdu">
-            <span>مجموعی رقم (کل): Rs @GrandGross.ToString("N2")</span>
-            <span>مجموعی کٹوتی (کل): Rs @GrandDeductions.ToString("N2")</span>
-            <span>مجموعی کل رقم (کسان): Rs @GrandTotal.ToString("N2")</span>
-        </div>
-        <div style="margin-top:8px;">
-            <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: false)">@(_saving ? "Saving…" : "Save")</button>
-            <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: true)">@(_saving ? "Saving…" : "Save & Print")</button>
+        <div class="pakki-save-totals-row">
+            <div class="pakki-save-col">
+                <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: false)">@(_saving ? "Saving…" : "Save")</button>
+                <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: true)">@(_saving ? "Saving…" : "Save & Print")</button>
+            </div>
+            <div class="pakki-grand-totals total-figure rtl-urdu">
+                <span>مجموعی رقم (کل): Rs @GrandGross.ToString("N2")</span>
+                <span>مجموعی کٹوتی (کل): Rs @GrandDeductions.ToString("N2")</span>
+                <span>مجموعی کل رقم (کسان): Rs @GrandTotal.ToString("N2")</span>
+            </div>
         </div>
     }
 </RequireAuth>

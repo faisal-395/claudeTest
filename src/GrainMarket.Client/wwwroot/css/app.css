@@ -273,15 +273,31 @@ table.data-grid tbody tr.selected-row:hover {
     box-sizing: border-box;
 }
 
-/* Grand totals under the grid get the same boxed treatment as the calculation preview above, for
-   visual consistency, while keeping the bolder .total-figure typography. */
+/* Save/Save & Print (2 cols) beside the grand totals (10 cols) — mirrors the Add/calculation-
+   preview row above the grid. */
+.pakki-save-totals-row {
+    display: grid;
+    grid-template-columns: 2fr 10fr;
+    gap: 16px;
+    align-items: stretch;
+    margin-top: 12px;
+}
+
+.pakki-save-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Grand totals get the same boxed treatment as the calculation preview above, for visual
+   consistency, while keeping the bolder .total-figure typography. */
 .pakki-grand-totals {
     background: #f7f9f7;
     border: 1px solid #e2e2e2;
     border-radius: 4px;
     padding: 10px 16px;
-    margin-top: 12px;
     display: flex;
+    align-items: center;
     gap: 28px;
     flex-wrap: wrap;
 }
