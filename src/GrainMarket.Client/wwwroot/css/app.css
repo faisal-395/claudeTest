@@ -194,16 +194,18 @@ table.data-grid tbody tr.selected-row:hover {
 
 .pakki-entry-inputs label {
     display: block;
-    font-size: 0.72rem;
-    color: #666;
-    margin-bottom: 2px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 3px;
     white-space: nowrap;
 }
 
 .pakki-entry-inputs input, .pakki-entry-inputs select {
     width: 100%;
-    padding: 4px 6px;
-    font-size: 0.85rem;
+    padding: 5px 7px;
+    font-size: 0.92rem;
+    color: #1a1a1a;
     border: 1px solid #ccc;
     border-radius: 3px;
     box-sizing: border-box;
@@ -219,10 +221,10 @@ table.data-grid tbody tr.selected-row:hover {
 }
 
 .pakki-entry-deductions-title {
-    font-size: 0.72rem;
-    font-weight: 600;
+    font-size: 0.8rem;
+    font-weight: 700;
     color: #1B4332;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
 }
 
 .pakki-entry-deduction-row {
@@ -230,14 +232,16 @@ table.data-grid tbody tr.selected-row:hover {
     justify-content: space-between;
     align-items: center;
     gap: 6px;
-    font-size: 0.75rem;
-    color: #444;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #333;
 }
 
 .pakki-entry-deduction-row input {
-    width: 44px;
-    padding: 2px 4px;
-    font-size: 0.75rem;
+    width: 48px;
+    padding: 3px 5px;
+    font-size: 0.82rem;
+    color: #1a1a1a;
     border: 1px solid #ccc;
     border-radius: 3px;
 }
