@@ -281,6 +281,7 @@ table.data-grid tbody tr.selected-row:hover {
 .batch-entry-row > div {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 /* Bill #, Date, Season stay narrow; Buyer/Product need more room for long picked names. */
@@ -319,6 +320,16 @@ table.data-grid tbody tr.selected-row:hover {
     color: #1a1a1a;
     border: 1px solid #ccc;
     border-radius: 3px;
+    box-sizing: border-box;
+}
+
+/* SearchSelect/DatePicker are components, not bare <input>s — their root .search-select/
+   .date-picker wrapper div has no width of its own, so on a wide grid column (Buyer/Product get
+   3fr) it was rendering at its narrow intrinsic content width instead of filling the column,
+   leaving the rest of that column as dead space before the next field. Force it to fill the cell. */
+.batch-entry-inputs .search-select,
+.batch-entry-inputs .date-picker {
+    width: 100%;
     box-sizing: border-box;
 }
 
