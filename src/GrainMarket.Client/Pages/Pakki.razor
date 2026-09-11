@@ -276,7 +276,7 @@
         {
             _seasons = await Api.GetSeasonsAsync();
             _vendors = await Api.GetPartiesAsync(PartyType.Vendor);
-            _products = await Api.GetProductsAsync();
+            _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryGrain);
             if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
             if (_vendors.Count > 0) { _buyerId = _vendors[0].Id; _convertBuyerId = _vendors[0].Id; }
             if (_products.Count > 0) _productId = _products[0].Id;

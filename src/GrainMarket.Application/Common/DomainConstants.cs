@@ -11,4 +11,10 @@ public static class DomainConstants
     public const string BankAccountCode = "1010";
     public const string SalesIncomeAccountCode = "4000";
     public const string PurchaseExpenseAccountCode = "5000";
+
+    /// <summary>Product.Category values. Grain products feed Kachi/Pakki and UnitConversions; Input
+    /// products (pesticides, seeds, fertilizer) feed Purchase (bought from a Supplier) and Sale
+    /// Invoice (sold to a Farmer) — the two catalogs are never shown in each other's pickers.</summary>
+    public const string ProductCategoryGrain = "Grain";
+    public const string ProductCategoryInput = "Input";
 }

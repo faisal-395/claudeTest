@@ -1,8 +1,10 @@
 @page "/purchase"
+@using GrainMarket.Application.Common
 @inject ApiClient Api
 
 <RequireAuth>
     <h1 class="page-title">Purchase</h1>
+    <p style="color:#777;">Buy pesticides, seeds, fertilizer and other farm inputs from a supplier.</p>
 
     @if (_error is not null)
     {
@@ -98,8 +100,8 @@
     {
         try
         {
-            _suppliers = await Api.GetPartiesAsync();
-            _products = await Api.GetProductsAsync();
+            _suppliers = await Api.GetPartiesAsync(PartyType.Supplier);
+            _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryInput);
             if (_suppliers.Count > 0) _supplierId = _suppliers[0].Id;
         }
         catch (Models.ApiException ex) { _error = ex.Message; return; }

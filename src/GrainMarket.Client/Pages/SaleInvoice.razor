@@ -1,8 +1,10 @@
 @page "/sale-invoice"
+@using GrainMarket.Application.Common
 @inject ApiClient Api
 
 <RequireAuth>
-    <h1 class="page-title">New Sale (General)</h1>
+    <h1 class="page-title">Sale Invoice</h1>
+    <p style="color:#777;">Sell pesticides, seeds, fertilizer and other farm inputs to a farmer.</p>
 
     @if (_error is not null)
     {
@@ -13,8 +15,8 @@
         <div><label>Bill No</label><input @bind="_billNo" /></div>
         <div><label>Date</label><input type="date" @bind="_date" /></div>
         <div>
-            <label>Customer</label>
-            <SearchSelect TItem="PartyDto" Items="_customers" IdSelector="@(c => c.Id)" TextSelector="@DisplayText.Party" @bind-Value="_customerId" Placeholder="Search customer…" />
+            <label>Customer (Farmer)</label>
+            <SearchSelect TItem="PartyDto" Items="_customers" IdSelector="@(c => c.Id)" TextSelector="@DisplayText.Party" @bind-Value="_customerId" Placeholder="Search farmer…" />
         </div>
         <div>
             <label>Print Format</label>
@@ -114,8 +116,8 @@
     {
         try
         {
-            _customers = await Api.GetPartiesAsync();
-            _products = await Api.GetProductsAsync();
+            _customers = await Api.GetPartiesAsync(PartyType.Farmer);
+            _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryInput);
             if (_customers.Count > 0) _customerId = _customers[0].Id;
         }
         catch (Models.ApiException ex) { _error = ex.Message; return; }

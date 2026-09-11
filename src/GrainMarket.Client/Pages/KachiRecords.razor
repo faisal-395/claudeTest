@@ -1,4 +1,5 @@
 @page "/kachi-records"
+@using GrainMarket.Application.Common
 @using GrainMarket.Application.Common.Services
 @inject ApiClient Api
 
@@ -143,7 +144,7 @@
             _seasons = await Api.GetSeasonsAsync();
             _farmers = await Api.GetPartiesAsync(PartyType.Farmer);
             _buyers = await Api.GetPartiesAsync(PartyType.Vendor);
-            _products = await Api.GetProductsAsync();
+            _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryGrain);
 
             var conversions = await Api.GetUnitConversionsAsync();
             _unitConversionEntities = conversions.Select(c => new UnitConversion

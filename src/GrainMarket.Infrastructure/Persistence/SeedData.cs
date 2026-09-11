@@ -254,22 +254,28 @@ public static class SeedData
     }
 
     /// <summary>The ten crops most commonly traded through a Punjab grain market (mandi) — capped
-    /// at 10 deliberately, not an exhaustive product catalog. More can always be added from Setup >
-    /// Products afterwards.</summary>
+    /// at 10 deliberately, not an exhaustive product catalog — plus a handful of starter farm-input
+    /// products (Category = Input) for Purchase/Sale Invoice, which never show the grain catalog
+    /// above and vice versa. More of either can always be added from Setup > Products afterwards.</summary>
     private static async Task SeedSampleProductsAsync(AppDbContext db, CancellationToken ct)
     {
         var products = new[]
         {
-            new Product { Name = "Wheat", NameUrdu = "گندم", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Rice", NameUrdu = "چاول", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Maize", NameUrdu = "مکئی", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Gram", NameUrdu = "چنا", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Barley", NameUrdu = "جو", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Millet", NameUrdu = "باجرہ", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Sorghum", NameUrdu = "جوار", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Mustard", NameUrdu = "سرسوں", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Moong", NameUrdu = "مونگ", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Masoor", NameUrdu = "مسور", Category = "Grain", BaseUnit = "kg", DefaultRate = 0m }
+            new Product { Name = "Wheat", NameUrdu = "گندم", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Rice", NameUrdu = "چاول", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Maize", NameUrdu = "مکئی", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Gram", NameUrdu = "چنا", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Barley", NameUrdu = "جو", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Millet", NameUrdu = "باجرہ", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Sorghum", NameUrdu = "جوار", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Mustard", NameUrdu = "سرسوں", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Moong", NameUrdu = "مونگ", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Masoor", NameUrdu = "مسور", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
+
+            new Product { Name = "Pesticide", NameUrdu = "کیڑے مار دوا", Category = DomainConstants.ProductCategoryInput, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Seed", NameUrdu = "بیج", Category = DomainConstants.ProductCategoryInput, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Fertilizer (Urea)", NameUrdu = "کھاد (یوریا)", Category = DomainConstants.ProductCategoryInput, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Fertilizer (DAP)", NameUrdu = "کھاد (ڈی اے پی)", Category = DomainConstants.ProductCategoryInput, BaseUnit = "kg", DefaultRate = 0m }
         };
 
         // A reconciliation migration (SeedAdditionalGrainProducts) may already have inserted seven of

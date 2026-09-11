@@ -5,7 +5,11 @@ public enum PartyType
 {
     Farmer = 1,
     Vendor = 2,
-    Other = 4
+    Other = 4,
+
+    /// <summary>Supplies agricultural inputs (pesticides, seeds, fertilizer, etc.) that the market
+    /// buys via Purchase — distinct from Vendor, which means the buyer a farmer sells grain to.</summary>
+    Supplier = 8
 }
 
 public enum BalanceSide

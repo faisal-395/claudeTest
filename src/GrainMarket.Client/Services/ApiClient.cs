@@ -63,7 +63,8 @@ public class ApiClient
     public Task<PartyDto> UpdatePartyAsync(int id, UpsertPartyRequest request) => PutAsync<UpsertPartyRequest, PartyDto>($"api/parties/{id}", request);
     public Task DeletePartyAsync(int id) => DeleteAsync($"api/parties/{id}");
 
-    public Task<List<ProductDto>> GetProductsAsync(bool includeInactive = false) => GetAsync<List<ProductDto>>($"api/products?includeInactive={includeInactive}");
+    public Task<List<ProductDto>> GetProductsAsync(bool includeInactive = false, string? category = null) =>
+        GetAsync<List<ProductDto>>($"api/products?includeInactive={includeInactive}{(category is not null ? $"&category={Uri.EscapeDataString(category)}" : "")}");
     public Task<ProductDto> CreateProductAsync(UpsertProductRequest request) => PostAsync<UpsertProductRequest, ProductDto>("api/products", request);
     public Task<ProductDto> UpdateProductAsync(int id, UpsertProductRequest request) => PutAsync<UpsertProductRequest, ProductDto>($"api/products/{id}", request);
     public Task DeleteProductAsync(int id) => DeleteAsync($"api/products/{id}");

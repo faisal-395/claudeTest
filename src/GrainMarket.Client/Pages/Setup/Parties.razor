@@ -2,7 +2,7 @@
 @inject ApiClient Api
 
 <RequireAuth>
-    <h1 class="page-title">Party (Farmers / Vendors / Other)</h1>
+    <h1 class="page-title">Party (Farmers / Vendors / Suppliers / Other)</h1>
 
     @if (_error is not null)
     {
@@ -23,9 +23,10 @@
             <div style="display:flex;gap:16px;">
                 <label><input type="checkbox" @bind="_isFarmer" /> Farmer</label>
                 <label><input type="checkbox" @bind="_isVendor" /> Vendor</label>
+                <label><input type="checkbox" @bind="_isSupplier" /> Supplier</label>
                 <label><input type="checkbox" @bind="_isOther" /> Other</label>
             </div>
-            @if (!_isFarmer && !_isVendor && !_isOther)
+            @if (!_isFarmer && !_isVendor && !_isSupplier && !_isOther)
             {
                 <div class="invalid-total">Select at least one role.</div>
             }
@@ -54,7 +55,7 @@
             </select>
         </div>
         <div style="grid-column: span 2;">
-            <button class="btn" disabled="@(!_isFarmer && !_isVendor && !_isOther)" @onclick="SaveAsync">@(_editingId is null ? "Add Party" : "Update Party")</button>
+            <button class="btn" disabled="@(!_isFarmer && !_isVendor && !_isSupplier && !_isOther)" @onclick="SaveAsync">@(_editingId is null ? "Add Party" : "Update Party")</button>
             @if (_editingId is not null)
             {
                 <button class="btn secondary" @onclick="ResetForm">Cancel</button>
@@ -112,6 +113,7 @@
     private string? _nameUrdu;
     private bool _isFarmer = true;
     private bool _isVendor;
+    private bool _isSupplier;
     private bool _isOther;
     private string? _phone;
     private string? _cnic;
@@ -138,6 +140,7 @@
         _nameUrdu = p.NameUrdu;
         _isFarmer = p.PartyType.HasFlag(PartyType.Farmer);
         _isVendor = p.PartyType.HasFlag(PartyType.Vendor);
+        _isSupplier = p.PartyType.HasFlag(PartyType.Supplier);
         _isOther = p.PartyType.HasFlag(PartyType.Other);
         _phone = p.Phone;
         _cnic = p.Cnic;
@@ -149,12 +152,13 @@
     private void ResetForm()
     {
         _editingId = null;
-        _name = ""; _nameUrdu = null; _isFarmer = true; _isVendor = false; _isOther = false;
+        _name = ""; _nameUrdu = null; _isFarmer = true; _isVendor = false; _isSupplier = false; _isOther = false;
         _phone = null; _cnic = null; _address = null; _openingBalance = 0; _openingSide = BalanceSide.Debit;
     }
 
     private PartyType ComposePartyType() =>
-        (_isFarmer ? PartyType.Farmer : 0) | (_isVendor ? PartyType.Vendor : 0) | (_isOther ? PartyType.Other : 0);
+        (_isFarmer ? PartyType.Farmer : 0) | (_isVendor ? PartyType.Vendor : 0) |
+        (_isSupplier ? PartyType.Supplier : 0) | (_isOther ? PartyType.Other : 0);
 
     private async Task SaveAsync()
     {
