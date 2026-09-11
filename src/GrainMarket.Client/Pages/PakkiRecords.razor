@@ -15,8 +15,8 @@
         <div class="form-grid" style="margin-bottom:20px;">
             <div style="grid-column: span 2;"><b>Editing @_editingInvoiceNo</b> — vendor, rate, vehicle and notes only; weight is fixed once posted.</div>
             <div>
-                <label>Vendor / بیوپاری</label>
-                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search vendor…" />
+                <label>Buyer / خریدار</label>
+                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
             </div>
             <div><label>Rate per Man / ریٹ فی مَن</label><input type="number" step="0.01" @bind="_rate" /></div>
             <div><label>Vehicle Number / گاڑی نمبر</label><input @bind="_vehicleNumber" /></div>
@@ -38,7 +38,7 @@
     else
     {
         <table class="data-grid">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Vendor / بیوپاری</th><th>Farmer / کسان</th><th>Product / جنس</th><th>Gross</th><th>Deductions</th><th>Net to Farmer</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Date</th><th>Buyer / خریدار</th><th>Vendor / فروخت کنندہ (بیچنے والا)</th><th>Product / جنس</th><th>Gross</th><th>Deductions</th><th>Net to Farmer</th><th>Status</th><th></th></tr></thead>
             <tbody>
                 @foreach (var p in _pakkis)
                 {

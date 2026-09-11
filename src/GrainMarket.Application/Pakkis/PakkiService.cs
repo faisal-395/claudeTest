@@ -79,6 +79,8 @@ public class PakkiService : IPakkiService
             BuyerId = request.BuyerId,
             FarmerId = kachi.FarmerId,
             ProductId = kachi.ProductId,
+            BhartiKgPerBag = kachi.BhartiKgPerBag,
+            TotalWeightKg = kachi.TotalWeightKg,
             BoriQty = kachi.BoriQty,
             NetWeightKg = kachi.NetWeightKg,
             RatePerUnit = request.RatePerUnit,
@@ -127,7 +129,7 @@ public class PakkiService : IPakkiService
             throw new NotFoundException(nameof(Product), request.ProductId);
 
         var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
-        var netWeightKg = UnitConversionCalculator.ToBaseKg(request.ManQty, request.KiloQty, request.GramQty, request.BoriQty, request.ProductId, conversions);
+        var (netWeightKg, boriQty) = CalculateWeights(request.TotalWeightKg, request.ProductId, conversions);
         var grossAmount = UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit, netWeightKg, request.ProductId, conversions);
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
@@ -136,16 +138,16 @@ public class PakkiService : IPakkiService
         var pakki = new Pakki
         {
             InvoiceNo = await _numberGenerator.NextAsync("P", ct),
+            BillNumber = request.BillNumber,
             Date = request.Date,
             SeasonId = request.SeasonId,
             KachiId = null,
             BuyerId = request.BuyerId,
             FarmerId = request.FarmerId,
             ProductId = request.ProductId,
-            ManQty = request.ManQty,
-            KiloQty = request.KiloQty,
-            GramQty = request.GramQty,
-            BoriQty = request.BoriQty,
+            BhartiKgPerBag = request.BhartiKgPerBag,
+            TotalWeightKg = request.TotalWeightKg,
+            BoriQty = boriQty,
             NetWeightKg = netWeightKg,
             RatePerUnit = request.RatePerUnit,
             GrossAmount = grossAmount,
@@ -289,6 +291,21 @@ public class PakkiService : IPakkiService
         }
     }
 
+    /// <summary>Net weight ("Safi Wazan") is simply TotalWeightKg — mirrors
+    /// KachiService.CalculateWeights exactly. Bori is the same net weight re-expressed in the
+    /// market's Bori unit, purely for display — computed, never entered.</summary>
+    private static (decimal NetWeightKg, decimal? BoriQty) CalculateWeights(
+        decimal? totalWeightKg, int? productId, IReadOnlyCollection<UnitConversion> conversions)
+    {
+        if (totalWeightKg is not > 0) return (0m, null);
+
+        var netWeightKg = totalWeightKg.Value;
+        var boriFactor = UnitConversionCalculator.FactorFor(WeightUnit.Bori, productId, conversions);
+        var boriQty = netWeightKg / boriFactor;
+
+        return (netWeightKg, boriQty);
+    }
+
     private async Task<int> ResolveIncomeAccountIdAsync(int? explicitAccountId, CancellationToken ct)
     {
         if (explicitAccountId.HasValue) return explicitAccountId.Value;
@@ -308,9 +325,9 @@ public class PakkiService : IPakkiService
     }
 
     private static PakkiDto ToDto(Pakki p) => new(
-        p.Id, p.InvoiceNo, p.Date, p.SeasonId, p.Season.Name, p.KachiId, p.Kachi?.InvoiceNo,
+        p.Id, p.InvoiceNo, p.BillNumber, p.Date, p.SeasonId, p.Season.Name, p.KachiId, p.Kachi?.InvoiceNo,
         p.BuyerId, p.Buyer.Name, p.FarmerId, p.Farmer.Name, p.ProductId, p.Product.Name,
-        p.ManQty, p.KiloQty, p.GramQty, p.BoriQty, p.NetWeightKg, p.RatePerUnit, p.GrossAmount,
+        p.BhartiKgPerBag, p.TotalWeightKg, p.BoriQty, p.NetWeightKg, p.RatePerUnit, p.GrossAmount,
         p.TotalDeductions, p.NetPayableToFarmer, p.VehicleNumber, p.Status, p.Notes,
         p.DeductionLines.Select(l => new PakkiDeductionLineDto(l.DeductionRuleId, l.Name, l.NameUrdu, l.Amount, l.VehicleNumber)).ToList());
 }

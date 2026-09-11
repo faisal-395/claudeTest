@@ -1,21 +1,22 @@
 namespace GrainMarket.Application.MultiSale;
 
 /// <summary>
-/// One farmer's lot within a multi-farmer sale. Weight fields are Man/Kilo/Gram/Bori — Pakki's own
-/// weighing model — not Kachi's Bharti model.
+/// One farmer's lot within a multi-farmer sale. Weight fields are Bharti/TotalWeight — Pakki's
+/// weighing model, matching Kachi's own MultiPurchaseRowRequest shape exactly (Bori is computed,
+/// never entered).
 /// </summary>
 public record MultiSaleRowRequest(
     int FarmerId, int ProductId,
-    decimal? ManQty, decimal? KiloQty, decimal? GramQty, decimal? BoriQty,
+    decimal? BhartiKgPerBag, decimal? TotalWeightKg,
     decimal? RatePerUnit, string? VehicleNumber, string? Notes);
 
 /// <summary>
-/// One vendor/buyer settling with multiple farmers in a single sitting. Each row becomes its own
-/// standalone Pakki (final sale invoice) with the shared vendor already attached — mirrors
+/// One buyer settling with multiple farmers/vendors in a single sitting. Each row becomes its own
+/// standalone Pakki (final sale invoice) with the shared buyer already attached — mirrors
 /// MultiPurchaseService/CreateMultiPurchaseRequest for Kachi, but raises Pakkis via
 /// IPakkiService.CreateStandaloneAsync per row instead.
 /// </summary>
-public record CreateMultiSaleRequest(DateTime Date, int SeasonId, int BuyerId, List<MultiSaleRowRequest> Rows);
+public record CreateMultiSaleRequest(DateTime Date, int SeasonId, int BuyerId, List<MultiSaleRowRequest> Rows, string? BillNumber = null);
 
 public record MultiSaleRowResultDto(int PakkiId, string PakkiInvoiceNo);
 

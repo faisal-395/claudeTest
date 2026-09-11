@@ -32,7 +32,7 @@ public class MultiSaleService : IMultiSaleService
         {
             var pakki = await _pakkiService.CreateStandaloneAsync(new CreateStandalonePakkiRequest(
                 request.Date, request.SeasonId, request.BuyerId, row.FarmerId, row.ProductId,
-                row.ManQty, row.KiloQty, row.GramQty, row.BoriQty, row.RatePerUnit!.Value, row.VehicleNumber, row.Notes), ct);
+                row.BhartiKgPerBag, row.TotalWeightKg, row.RatePerUnit!.Value, row.VehicleNumber, row.Notes, request.BillNumber), ct);
 
             rows.Add(new MultiSaleRowResultDto(pakki.Id, pakki.InvoiceNo));
 

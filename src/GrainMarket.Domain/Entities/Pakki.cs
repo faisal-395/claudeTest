@@ -7,6 +7,7 @@ namespace GrainMarket.Domain.Entities;
 public class Pakki : BaseEntity
 {
     public string InvoiceNo { get; set; } = string.Empty;
+    public string? BillNumber { get; set; }
     public DateTime Date { get; set; }
     public int SeasonId { get; set; }
     public Season Season { get; set; } = null!;
@@ -26,9 +27,8 @@ public class Pakki : BaseEntity
     public int ProductId { get; set; }
     public Product Product { get; set; } = null!;
 
-    public decimal? ManQty { get; set; }
-    public decimal? KiloQty { get; set; }
-    public decimal? GramQty { get; set; }
+    public decimal? BhartiKgPerBag { get; set; }
+    public decimal? TotalWeightKg { get; set; }
     public decimal? BoriQty { get; set; }
     public decimal NetWeightKg { get; set; }
 

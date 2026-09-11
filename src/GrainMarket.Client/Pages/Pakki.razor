@@ -29,8 +29,8 @@
             <div><label>Product / جنس</label><input value="@_sourceKachi.ProductName" disabled /></div>
             <div><label>Net Weight (kg)</label><input value="@_sourceKachi.NetWeightKg.ToString("N2")" disabled /></div>
             <div>
-                <label>Vendor / بیوپاری</label>
-                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_convertBuyerId" Placeholder="Search vendor…" />
+                <label>Buyer / خریدار</label>
+                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_convertBuyerId" Placeholder="Search buyer…" />
             </div>
             <div><label>Rate per Man / ریٹ فی مَن</label><input type="number" step="0.01" @bind="_convertRate" /></div>
             <div><label>Vehicle Number / گاڑی نمبر</label><input @bind="_convertVehicleNumber" /></div>
@@ -45,15 +45,18 @@
     }
     else
     {
-        <div class="form-grid" style="max-width:1100px;margin-bottom:12px;">
+        <div class="form-grid" style="max-width:1100px;margin-bottom:12px;grid-template-columns:140px 1fr 1fr;">
+            <div><label>Bill Number / بل نمبر</label><input @bind="_billNumber" placeholder="Bill #" /></div>
             <div><label>Date / تاریخ</label><DatePicker @bind-Value="_date" /></div>
             <div>
                 <label>Season / سیزن</label>
                 <SearchSelect TItem="SeasonDto" Items="_seasons" IdSelector="@(s => s.Id)" TextSelector="@(s => s.Name)" @bind-Value="_seasonId" Placeholder="Search season…" />
             </div>
+        </div>
+        <div class="form-grid" style="max-width:1100px;margin-bottom:12px;">
             <div>
-                <label>Vendor / بیوپاری</label>
-                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search vendor…" />
+                <label>Buyer / خریدار</label>
+                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
             </div>
             <div>
                 <label>Product / جنس</label>
@@ -76,9 +79,9 @@
             <thead>
                 <tr>
                     <th style="width:24px;"></th>
-                    <th style="min-width:150px;" class="rtl-urdu">کسان</th>
-                    <th class="rtl-urdu">مَن</th><th class="rtl-urdu">کلو</th><th class="rtl-urdu">گرام</th><th class="rtl-urdu">بوری</th>
-                    <th class="rtl-urdu">ریٹ فی مَن</th>
+                    <th style="min-width:150px;" class="rtl-urdu">فروخت کنندہ (بیچنے والا)</th>
+                    <th class="rtl-urdu">بھرتی</th><th class="rtl-urdu">کل وزن (کلو)</th>
+                    <th class="rtl-urdu">ریٹ فی مَن (دَر)</th>
                 </tr>
             </thead>
             <tbody>
@@ -89,15 +92,13 @@
                     var calc = Calculate(row);
                     <tr class="@(_selectedIndex == index ? "selected-row" : "")">
                         <td style="text-align:center;"><input type="radio" name="rowSelect" checked="@(_selectedIndex == index)" @onchange="() => _selectedIndex = index" /></td>
-                        <td><SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Farmer…" /></td>
-                        <td><input type="number" step="0.01" style="width:70px;" @bind="row.ManQty" /></td>
-                        <td><input type="number" step="0.01" style="width:70px;" @bind="row.KiloQty" /></td>
-                        <td><input type="number" step="1" style="width:70px;" @bind="row.GramQty" /></td>
-                        <td><input type="number" step="0.01" style="width:70px;" @bind="row.BoriQty" /></td>
+                        <td><SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Vendor…" /></td>
+                        <td><input type="number" step="0.01" style="width:80px;" @bind="row.BhartiKgPerBag" /></td>
+                        <td><input type="number" step="0.01" style="width:90px;" @bind="row.TotalWeightKg" /></td>
                         <td><input type="number" step="0.01" style="width:80px;" @bind="row.RatePerUnit" /></td>
                     </tr>
                     <tr>
-                        <td colspan="7" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
+                        <td colspan="5" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
                             @if (calc is not null)
                             {
                                 <div class="rtl-urdu">
@@ -153,6 +154,7 @@
     private string? _successMessage;
     private bool _saving;
 
+    private string? _billNumber;
     private DateTime _date = DateTime.Today;
     private int _seasonId;
     private int _buyerId;
@@ -187,7 +189,7 @@
     private bool CanSave =>
         _buyerId > 0 && _productId > 0 && _rows.Count > 0 &&
         _rows.All(r => r.FarmerId > 0 && (r.RatePerUnit ?? 0) > 0 &&
-                        (r.ManQty ?? 0) + (r.KiloQty ?? 0) + (r.GramQty ?? 0) + (r.BoriQty ?? 0) > 0);
+                        (r.BhartiKgPerBag ?? 0) > 0 && (r.TotalWeightKg ?? 0) > 0);
 
     protected override async Task OnInitializedAsync()
     {
@@ -249,16 +251,19 @@
     private RowCalculation? Calculate(RowModel row)
     {
         if (_deductionRuleEntities is null || _unitConversionEntities is null || row.RatePerUnit is not > 0
-            || (row.ManQty ?? 0) + (row.KiloQty ?? 0) + (row.GramQty ?? 0) + (row.BoriQty ?? 0) <= 0) return null;
+            || row.TotalWeightKg is not > 0) return null;
 
         try
         {
-            var netWeightKg = UnitConversionCalculator.ToBaseKg(row.ManQty, row.KiloQty, row.GramQty, row.BoriQty, _productId, _unitConversionEntities);
+            var netWeightKg = row.TotalWeightKg.Value;
+            var boriFactor = UnitConversionCalculator.FactorFor(WeightUnit.Bori, _productId, _unitConversionEntities);
+            var boriQty = netWeightKg / boriFactor;
+
             var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, _productId, _unitConversionEntities);
             var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Pakki, _productId, row.FarmerId, _deductionRuleEntities);
             var farmerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).ToList();
             var buyerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).ToList();
-            return new RowCalculation(netWeightKg, row.BoriQty, gross, farmerLines, buyerLines, deductions.TotalDeductions, deductions.NetAmount);
+            return new RowCalculation(netWeightKg, boriQty, gross, farmerLines, buyerLines, deductions.TotalDeductions, deductions.NetAmount);
         }
         catch (InvalidCalculationException)
         {
@@ -274,7 +279,8 @@
         try
         {
             var request = new CreateMultiSaleRequest(_date, _seasonId, _buyerId,
-                _rows.Select(r => new MultiSaleRowRequest(r.FarmerId, _productId, r.ManQty, r.KiloQty, r.GramQty, r.BoriQty, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList());
+                _rows.Select(r => new MultiSaleRowRequest(r.FarmerId, _productId, r.BhartiKgPerBag, r.TotalWeightKg, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList(),
+                _billNumber);
 
             var result = await Api.CreateMultiSaleAsync(request);
 
@@ -286,6 +292,7 @@
             }
 
             _successMessage = $"Saved {result.Rows.Count} Pakki record(s) for {result.BuyerName}.";
+            _billNumber = null;
             _rows.Clear();
             _selectedIndex = null;
             AddRow();
@@ -308,10 +315,8 @@
     private class RowModel
     {
         public int FarmerId { get; set; }
-        public decimal? ManQty { get; set; }
-        public decimal? KiloQty { get; set; }
-        public decimal? GramQty { get; set; }
-        public decimal? BoriQty { get; set; }
+        public decimal? BhartiKgPerBag { get; set; }
+        public decimal? TotalWeightKg { get; set; }
         public decimal? RatePerUnit { get; set; }
         public string? VehicleNumber { get; set; }
         public string? Notes { get; set; }
