@@ -98,6 +98,20 @@ html, body {
     color: white;
 }
 
+.nav-section-label {
+    margin-top: 8px;
+}
+
+.sidebar nav ul.nav-group {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.sidebar nav ul.nav-group li {
+    margin: 0;
+}
+
 .nav-icon {
     width: 18px;
     height: 18px;

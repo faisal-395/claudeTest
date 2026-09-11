@@ -19,30 +19,62 @@ else
             </div>
             <nav>
                 <NavLink href="" Match="NavLinkMatch.All" title="Dashboard">@Icon("dashboard")<span class="nav-text">Dashboard</span></NavLink>
-                @if (AuthState.CanView(ModuleName.Kachi)) { <NavLink href="kachi" title="Kachi">@Icon("kachi")<span class="nav-text">Kachi</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Kachi)) { <NavLink href="kachi-records" title="Kachi Records">@Icon("records")<span class="nav-text">Kachi Records</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Pakki)) { <NavLink href="pakki" title="Pakki">@Icon("pakki")<span class="nav-text">Pakki</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Pakki)) { <NavLink href="pakki-records" title="Pakki Records">@Icon("records")<span class="nav-text">Pakki Records</span></NavLink> }
+
+                @if (AuthState.CanView(ModuleName.Kachi) || AuthState.CanView(ModuleName.Pakki))
+                {
+                    <div class="brand nav-section-label"><span class="brand-full">Receipts</span></div>
+                    <ul class="nav-group">
+                        @if (AuthState.CanView(ModuleName.Kachi))
+                        {
+                            <li><NavLink href="kachi" title="Kachi">@Icon("kachi")<span class="nav-text">Kachi</span></NavLink></li>
+                            <li><NavLink href="kachi-records" title="Kachi Records">@Icon("records")<span class="nav-text">Kachi Records</span></NavLink></li>
+                        }
+                        @if (AuthState.CanView(ModuleName.Pakki))
+                        {
+                            <li><NavLink href="pakki" title="Pakki">@Icon("pakki")<span class="nav-text">Pakki</span></NavLink></li>
+                            <li><NavLink href="pakki-records" title="Pakki Records">@Icon("records")<span class="nav-text">Pakki Records</span></NavLink></li>
+                        }
+                    </ul>
+                }
+
+                @* Trading — hidden for now; re-enable by restoring this NavLink.
                 @if (AuthState.CanView(ModuleName.Trading)) { <NavLink href="trading" title="Trading">@Icon("trading")<span class="nav-text">Trading</span></NavLink> }
+                *@
                 @if (AuthState.CanView(ModuleName.SaleInvoice)) { <NavLink href="sale-invoice" title="Sale Invoice">@Icon("sale-invoice")<span class="nav-text">Sale Invoice</span></NavLink> }
                 @if (AuthState.CanView(ModuleName.Purchase)) { <NavLink href="purchase" title="Purchase">@Icon("purchase")<span class="nav-text">Purchase</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Payment)) { <NavLink href="payment" title="Payment">@Icon("payment")<span class="nav-text">Payment</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Receipt)) { <NavLink href="receipt" title="Receipt">@Icon("receipt")<span class="nav-text">Receipt</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Journal)) { <NavLink href="journal" title="Journal">@Icon("journal")<span class="nav-text">Journal</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Expense)) { <NavLink href="expense" title="Expense">@Icon("expense")<span class="nav-text">Expense</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Ledger)) { <NavLink href="ledger" title="Ledger">@Icon("ledger")<span class="nav-text">Ledger</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Ledger)) { <NavLink href="reports/party-account" title="Farmer / Purchase Account">@Icon("user")<span class="nav-text">Farmer / Purchase Account</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Recovery)) { <NavLink href="recovery" title="Recovery">@Icon("recovery")<span class="nav-text">Recovery</span></NavLink> }
 
-                <div class="brand nav-section-label" style="margin-top:8px;"><span class="brand-full">Setup</span></div>
-                @if (AuthState.CanView(ModuleName.SetupParty)) { <NavLink href="setup/parties" title="Party">@Icon("party")<span class="nav-text">Party</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupProducts)) { <NavLink href="setup/products" title="Products">@Icon("products")<span class="nav-text">Products</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupChartOfAccounts)) { <NavLink href="setup/chart-of-accounts" title="Chart of Accounts">@Icon("chart-of-accounts")<span class="nav-text">Chart of Accounts</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupDeductionRules)) { <NavLink href="setup/deduction-rules" title="Format (Deductions)">@Icon("format")<span class="nav-text">Format (Deductions)</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupUnitConversions)) { <NavLink href="setup/unit-conversions" title="Unit Conversions">@Icon("unit-conversions")<span class="nav-text">Unit Conversions</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupSeasons)) { <NavLink href="setup/seasons" title="Seasons">@Icon("seasons")<span class="nav-text">Seasons</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupUsersRoles)) { <NavLink href="setup/users" title="User Account">@Icon("user-account")<span class="nav-text">User Account</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Backup)) { <NavLink href="backup" title="Backup">@Icon("backup")<span class="nav-text">Backup</span></NavLink> }
+                @if (AuthState.CanView(ModuleName.Payment) || AuthState.CanView(ModuleName.Receipt) || AuthState.CanView(ModuleName.Journal) || AuthState.CanView(ModuleName.Expense))
+                {
+                    <div class="brand nav-section-label"><span class="brand-full">Vouchers</span></div>
+                    <ul class="nav-group">
+                        @if (AuthState.CanView(ModuleName.Payment)) { <li><NavLink href="payment" title="Payment">@Icon("payment")<span class="nav-text">Payment</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Receipt)) { <li><NavLink href="receipt" title="Receipt">@Icon("receipt")<span class="nav-text">Receipt</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Journal)) { <li><NavLink href="journal" title="Journal">@Icon("journal")<span class="nav-text">Journal</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Expense)) { <li><NavLink href="expense" title="Expense">@Icon("expense")<span class="nav-text">Expense</span></NavLink></li> }
+                    </ul>
+                }
+
+                @if (AuthState.CanView(ModuleName.Ledger) || AuthState.CanView(ModuleName.Recovery))
+                {
+                    <div class="brand nav-section-label"><span class="brand-full">Accounts</span></div>
+                    <ul class="nav-group">
+                        @if (AuthState.CanView(ModuleName.Ledger)) { <li><NavLink href="ledger" title="Ledger">@Icon("ledger")<span class="nav-text">Ledger</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Ledger)) { <li><NavLink href="reports/party-account" title="Farmer / Purchase Account">@Icon("user")<span class="nav-text">Farmer / Purchase Account</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Recovery)) { <li><NavLink href="recovery" title="Recovery">@Icon("recovery")<span class="nav-text">Recovery</span></NavLink></li> }
+                    </ul>
+                }
+
+                <div class="brand nav-section-label"><span class="brand-full">Setup</span></div>
+                <ul class="nav-group">
+                    @if (AuthState.CanView(ModuleName.SetupParty)) { <li><NavLink href="setup/parties" title="Party">@Icon("party")<span class="nav-text">Party</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupProducts)) { <li><NavLink href="setup/products" title="Products">@Icon("products")<span class="nav-text">Products</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupChartOfAccounts)) { <li><NavLink href="setup/chart-of-accounts" title="Chart of Accounts">@Icon("chart-of-accounts")<span class="nav-text">Chart of Accounts</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupDeductionRules)) { <li><NavLink href="setup/deduction-rules" title="Format (Deductions)">@Icon("format")<span class="nav-text">Format (Deductions)</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupUnitConversions)) { <li><NavLink href="setup/unit-conversions" title="Unit Conversions">@Icon("unit-conversions")<span class="nav-text">Unit Conversions</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupSeasons)) { <li><NavLink href="setup/seasons" title="Seasons">@Icon("seasons")<span class="nav-text">Seasons</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupUsersRoles)) { <li><NavLink href="setup/users" title="User Account">@Icon("user-account")<span class="nav-text">User Account</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.Backup)) { <li><NavLink href="backup" title="Backup">@Icon("backup")<span class="nav-text">Backup</span></NavLink></li> }
+                </ul>
 
                 <a href="#" @onclick="Logout" @onclick:preventDefault="true" class="nav-logout" title="Quit / Logout">@Icon("logout")<span class="nav-text">Quit / Logout</span></a>
             </nav>
