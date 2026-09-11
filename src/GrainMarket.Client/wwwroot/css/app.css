@@ -243,6 +243,55 @@ table.data-grid tbody tr.selected-row:hover {
     border-radius: 3px;
 }
 
+/* Pakki staging calculation preview — its own full-width row above the Add button, instead of
+   sharing a line with it, so the preview text always has the whole row to wrap into. */
+.pakki-staging-calc {
+    background: #f7f9f7;
+    border: 1px solid #e2e2e2;
+    border-radius: 4px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    color: #444;
+    margin-bottom: 8px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pakki-staging-add {
+    margin-bottom: 16px;
+}
+
+/* Pakki results grid — adds an itemized deduction breakdown column and right-aligned numeric
+   columns on top of the shared .multi-purchase-grid look (also used by Kachi), scoped so Kachi's
+   grid is untouched. */
+.pakki-results-grid th, .pakki-results-grid td {
+    padding: 8px 10px;
+    font-size: 0.82rem;
+    vertical-align: top;
+}
+
+.pakki-results-grid tbody tr:nth-child(even) {
+    background: #fafcfa;
+}
+
+.pakki-grid-deductions {
+    min-width: 150px;
+    font-size: 0.72rem;
+    color: #555;
+}
+
+.pakki-grid-deduction-line {
+    display: flex;
+    direction: rtl;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 1px 0;
+}
+
+.pakki-grid-deduction-line + .pakki-grid-deduction-line {
+    border-top: 1px dashed #eee;
+}
+
 /* SearchSelect — replaces native <select> for long pickers (farmer/buyer/product/account) so the
    options render in normal page flow instead of the WebView2 native popup, which can appear
    detached from the control after a resize or DPI change. */

@@ -89,7 +89,7 @@
             }
         </div>
 
-        <div class="rtl-urdu" style="font-size:0.8rem;color:#444;margin-bottom:14px;display:flex;align-items:center;flex-wrap:wrap;">
+        <div class="pakki-staging-calc rtl-urdu">
             @if (StagingCalc is not null)
             {
                 <span>صافی وزن: <b>@StagingCalc.NetWeightKg.ToString("N2")</b> کلو</span>
@@ -105,17 +105,24 @@
             {
                 <span style="color:#999;">Enter weight and a rate to see the calculation</span>
             }
-            <button class="btn secondary" style="margin-left:16px;padding:4px 16px;" disabled="@(!CanAddRow)" @onclick="AddStagedRow">Add</button>
+        </div>
+        <div class="pakki-staging-add">
+            <button class="btn secondary" disabled="@(!CanAddRow)" @onclick="AddStagedRow">Add</button>
         </div>
 
-        <table class="data-grid multi-purchase-grid">
+        <table class="data-grid multi-purchase-grid pakki-results-grid">
             <thead>
                 <tr>
-                    <th style="min-width:150px;" class="rtl-urdu">فروخت کنندہ (بیچنے والا)</th>
-                    <th class="rtl-urdu">بھرتی</th><th class="rtl-urdu">کل وزن (کلو)</th>
-                    <th class="rtl-urdu">ریٹ فی مَن (دَر)</th>
-                    <th class="rtl-urdu">صافی وزن</th><th class="rtl-urdu">مجموعی رقم</th>
-                    <th class="rtl-urdu">کٹوتی</th><th class="rtl-urdu">ادائیگی</th>
+                    <th class="rtl-urdu" style="min-width:140px;">فروخت کنندہ</th>
+                    <th class="rtl-urdu">بھرتی</th>
+                    <th class="rtl-urdu">کل وزن</th>
+                    <th class="rtl-urdu">ریٹ</th>
+                    <th class="rtl-urdu">صافی وزن</th>
+                    <th class="rtl-urdu">بوری</th>
+                    <th class="rtl-urdu">مجموعی رقم</th>
+                    <th class="rtl-urdu" style="min-width:170px;">کٹوتی کی تفصیل</th>
+                    <th class="rtl-urdu">کل کٹوتی</th>
+                    <th class="rtl-urdu">ادائیگی</th>
                     <th></th>
                 </tr>
             </thead>
@@ -125,13 +132,30 @@
                     var calc = Calculate(row);
                     <tr>
                         <td>@DisplayText.Party(_vendors?.FirstOrDefault(v => v.Id == row.FarmerId))</td>
-                        <td>@row.BhartiKgPerBag?.ToString("N2")</td>
-                        <td>@row.TotalWeightKg?.ToString("N2")</td>
-                        <td>@row.RatePerUnit?.ToString("N2")</td>
-                        <td>@(calc?.NetWeightKg.ToString("N2") ?? "—")</td>
-                        <td>@(calc?.GrossAmount.ToString("N2") ?? "—")</td>
-                        <td>@(calc?.TotalDeductions.ToString("N2") ?? "—")</td>
-                        <td>@(calc?.NetPayableToFarmer.ToString("N2") ?? "—")</td>
+                        <td style="text-align:right;">@row.BhartiKgPerBag?.ToString("N2")</td>
+                        <td style="text-align:right;">@row.TotalWeightKg?.ToString("N2")</td>
+                        <td style="text-align:right;">@row.RatePerUnit?.ToString("N2")</td>
+                        <td style="text-align:right;">@(calc?.NetWeightKg.ToString("N2") ?? "—")</td>
+                        <td style="text-align:right;">@(calc?.BoriQty?.ToString("N2") ?? "—")</td>
+                        <td style="text-align:right;">@(calc?.GrossAmount.ToString("N2") ?? "—")</td>
+                        <td class="pakki-grid-deductions">
+                            @if (calc is not null && (calc.FarmerLines.Count > 0 || calc.BuyerLines.Count > 0))
+                            {
+                                @foreach (var line in calc.FarmerLines.Concat(calc.BuyerLines))
+                                {
+                                    <div class="pakki-grid-deduction-line">
+                                        <span>@line.NameUrdu</span>
+                                        <span>@line.Amount.ToString("N2")</span>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <span>—</span>
+                            }
+                        </td>
+                        <td style="text-align:right;"><b>@(calc?.TotalDeductions.ToString("N2") ?? "—")</b></td>
+                        <td style="text-align:right;"><b>@(calc?.NetPayableToFarmer.ToString("N2") ?? "—")</b></td>
                         <td><a href="#" @onclick="() => RemoveRow(row)" @onclick:preventDefault="true">Remove</a></td>
                     </tr>
                 }
