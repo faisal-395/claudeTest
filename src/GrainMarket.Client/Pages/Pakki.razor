@@ -73,45 +73,43 @@
                     <div><label>ریٹ فی مَن</label><input type="number" step="0.01" @bind="_stagingRate" /></div>
                 </div>
             </div>
-        </div>
 
-        <div class="pakki-staging-calc rtl-urdu">
-            @if (StagingCalc is not null)
+            @if (PakkiRules.Count > 0)
             {
-                <span>صافی وزن: <b>@StagingCalc.NetWeightKg.ToString("N2")</b> کلو</span>
-                @if (StagingCalc.BoriQty is not null)
-                {
-                    <span>&nbsp;·&nbsp;بوری: <b>@StagingCalc.BoriQty.Value.ToString("N2")</b></span>
-                }
-                <span>&nbsp;·&nbsp;مجموعی رقم: <b>@StagingCalc.GrossAmount.ToString("N2")</b></span>
-                <span>&nbsp;·&nbsp;کٹوتی: <b>@StagingCalc.TotalDeductions.ToString("N2")</b></span>
-                <span>&nbsp;·&nbsp;کسان کو ادائیگی: <b>@StagingCalc.NetPayableToFarmer.ToString("N2")</b></span>
-            }
-            else
-            {
-                <span style="color:#999;">Enter weight and a rate to see the calculation</span>
+                <div class="pakki-entry-deductions">
+                    <div class="pakki-entry-deductions-title">Deductions</div>
+                    @foreach (var r in PakkiRules)
+                    {
+                        <div class="pakki-entry-deduction-row" title="@r.ChargedTo">
+                            <span>@r.Name</span>
+                            <span class="ltr-inline">@RatePrefix(r)<input type="number" step="0.01" value="@GetEffectiveRate(r)" @onchange="@(e => SetRateOverride(r.Id, e.Value))" />@RateSuffix(r)</span>
+                        </div>
+                    }
+                </div>
             }
         </div>
 
-        <div class="pakki-add-deductions-row">
+        <div class="pakki-add-calc-row">
             <div class="pakki-add-col">
                 <button class="btn secondary" disabled="@(!CanAddRow)" @onclick="AddStagedRow">Add</button>
             </div>
-            @if (PakkiRules.Count > 0)
-            {
-                <div class="pakki-deductions-col">
-                    <div class="pakki-entry-deductions-title">Deductions</div>
-                    <div class="pakki-deductions-list">
-                        @foreach (var r in PakkiRules)
-                        {
-                            <div class="pakki-entry-deduction-row" title="@r.ChargedTo">
-                                <span>@r.Name</span>
-                                <span class="ltr-inline">@RatePrefix(r)<input type="number" step="0.01" value="@GetEffectiveRate(r)" @onchange="@(e => SetRateOverride(r.Id, e.Value))" />@RateSuffix(r)</span>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
+            <div class="pakki-staging-calc rtl-urdu">
+                @if (StagingCalc is not null)
+                {
+                    <span>صافی وزن: <b>@StagingCalc.NetWeightKg.ToString("N2")</b> کلو</span>
+                    @if (StagingCalc.BoriQty is not null)
+                    {
+                        <span>&nbsp;·&nbsp;بوری: <b>@StagingCalc.BoriQty.Value.ToString("N2")</b></span>
+                    }
+                    <span>&nbsp;·&nbsp;مجموعی رقم: <b>@StagingCalc.GrossAmount.ToString("N2")</b></span>
+                    <span>&nbsp;·&nbsp;کٹوتی: <b>@StagingCalc.TotalDeductions.ToString("N2")</b></span>
+                    <span>&nbsp;·&nbsp;کسان کو ادائیگی: <b>@StagingCalc.NetPayableToFarmer.ToString("N2")</b></span>
+                }
+                else
+                {
+                    <span style="color:#999;">Enter weight and a rate to see the calculation</span>
+                }
+            </div>
         </div>
 
         <table class="data-grid multi-purchase-grid pakki-results-grid">
@@ -166,7 +164,7 @@
             </tbody>
         </table>
 
-        <div class="total-figure rtl-urdu" style="margin-top:12px;display:flex;gap:28px;flex-wrap:wrap;">
+        <div class="pakki-grand-totals total-figure rtl-urdu">
             <span>مجموعی رقم (کل): Rs @GrandGross.ToString("N2")</span>
             <span>مجموعی کٹوتی (کل): Rs @GrandDeductions.ToString("N2")</span>
             <span>مجموعی کل رقم (کسان): Rs @GrandTotal.ToString("N2")</span>
