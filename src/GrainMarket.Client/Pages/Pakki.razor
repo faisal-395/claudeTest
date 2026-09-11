@@ -77,51 +77,64 @@
             </div>
         }
 
+        <div class="form-grid" style="max-width:1100px;margin-bottom:6px;">
+            <div>
+                <label>فروخت کنندہ (بیچنے والا)</label>
+                <SearchSelect TItem="PartyDto" Items="@SellerChoices" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" @bind-Value="_stagingFarmerId" Placeholder="Vendor…" />
+            </div>
+            <div><label>بھرتی</label><input type="number" step="0.01" @bind="_stagingBharti" /></div>
+            <div><label>کل وزن (کلو)</label><input type="number" step="0.01" @bind="_stagingTotalWeight" /></div>
+            <div><label>ریٹ فی مَن (دَر)</label><input type="number" step="0.01" @bind="_stagingRate" /></div>
+        </div>
+        <div class="rtl-urdu" style="font-size:0.8rem;color:#444;margin-bottom:8px;">
+            @if (StagingCalc is not null)
+            {
+                <span>صافی وزن: <b>@StagingCalc.NetWeightKg.ToString("N2")</b> کلو</span>
+                @if (StagingCalc.BoriQty is not null)
+                {
+                    <span>&nbsp;·&nbsp;بوری: <b>@StagingCalc.BoriQty.Value.ToString("N2")</b></span>
+                }
+                <span>&nbsp;·&nbsp;مجموعی رقم: <b>@StagingCalc.GrossAmount.ToString("N2")</b></span>
+                @if (StagingCalc.FarmerLines.Count > 0 || StagingCalc.BuyerLines.Count > 0)
+                {
+                    <span>&nbsp;·&nbsp;@string.Join("، ", StagingCalc.FarmerLines.Concat(StagingCalc.BuyerLines).Select(l => $"{l.NameUrdu} {l.Amount:N2}"))</span>
+                }
+                <span>&nbsp;·&nbsp;کسان کو ادائیگی: <b>@StagingCalc.NetPayableToFarmer.ToString("N2")</b></span>
+            }
+            else
+            {
+                <span style="color:#999;">Enter weight and a rate to see the calculation</span>
+            }
+        </div>
+        <div style="margin-bottom:16px;">
+            <button class="btn secondary" disabled="@(!CanAddRow)" @onclick="AddStagedRow">Add</button>
+        </div>
+
         <table class="data-grid multi-purchase-grid">
             <thead>
                 <tr>
-                    <th style="width:24px;"></th>
                     <th style="min-width:150px;" class="rtl-urdu">فروخت کنندہ (بیچنے والا)</th>
                     <th class="rtl-urdu">بھرتی</th><th class="rtl-urdu">کل وزن (کلو)</th>
                     <th class="rtl-urdu">ریٹ فی مَن (دَر)</th>
+                    <th class="rtl-urdu">صافی وزن</th><th class="rtl-urdu">مجموعی رقم</th>
+                    <th class="rtl-urdu">کٹوتی</th><th class="rtl-urdu">ادائیگی</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
-                @for (var i = 0; i < _rows.Count; i++)
+                @foreach (var row in _rows)
                 {
-                    var index = i;
-                    var row = _rows[index];
                     var calc = Calculate(row);
-                    <tr class="@(_selectedIndex == index ? "selected-row" : "")">
-                        <td style="text-align:center;"><input type="radio" name="rowSelect" checked="@(_selectedIndex == index)" @onchange="() => _selectedIndex = index" /></td>
-                        <td><SearchSelect TItem="PartyDto" Items="@SellerChoices" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Vendor…" /></td>
-                        <td><input type="number" step="0.01" style="width:80px;" @bind="row.BhartiKgPerBag" /></td>
-                        <td><input type="number" step="0.01" style="width:90px;" @bind="row.TotalWeightKg" /></td>
-                        <td><input type="number" step="0.01" style="width:80px;" @bind="row.RatePerUnit" /></td>
-                    </tr>
                     <tr>
-                        <td colspan="5" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
-                            @if (calc is not null)
-                            {
-                                <div class="rtl-urdu">
-                                    <span>صافی وزن: <b>@calc.NetWeightKg.ToString("N2")</b> کلو</span>
-                                    @if (calc.BoriQty is not null)
-                                    {
-                                        <span>&nbsp;·&nbsp;بوری: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
-                                    }
-                                    <span>&nbsp;·&nbsp;مجموعی رقم: <b>@calc.GrossAmount.ToString("N2")</b></span>
-                                    @if (calc.FarmerLines.Count > 0 || calc.BuyerLines.Count > 0)
-                                    {
-                                        <span>&nbsp;·&nbsp;@string.Join("، ", calc.FarmerLines.Concat(calc.BuyerLines).Select(l => $"{l.NameUrdu} {l.Amount:N2}"))</span>
-                                    }
-                                    <span>&nbsp;·&nbsp;کسان کو ادائیگی: <b>@calc.NetPayableToFarmer.ToString("N2")</b></span>
-                                </div>
-                            }
-                            else
-                            {
-                                <span style="color:#999;">Enter weight and a rate to see the calculation</span>
-                            }
-                        </td>
+                        <td>@DisplayText.Party(_vendors?.FirstOrDefault(v => v.Id == row.FarmerId))</td>
+                        <td>@row.BhartiKgPerBag?.ToString("N2")</td>
+                        <td>@row.TotalWeightKg?.ToString("N2")</td>
+                        <td>@row.RatePerUnit?.ToString("N2")</td>
+                        <td>@(calc?.NetWeightKg.ToString("N2") ?? "—")</td>
+                        <td>@(calc?.GrossAmount.ToString("N2") ?? "—")</td>
+                        <td>@(calc?.TotalDeductions.ToString("N2") ?? "—")</td>
+                        <td>@(calc?.NetPayableToFarmer.ToString("N2") ?? "—")</td>
+                        <td><a href="#" @onclick="() => RemoveRow(row)" @onclick:preventDefault="true">Remove</a></td>
                     </tr>
                 }
             </tbody>
@@ -133,8 +146,6 @@
             <span>مجموعی کل رقم (کسان): Rs @GrandTotal.ToString("N2")</span>
         </div>
         <div style="margin-top:8px;">
-            <button class="btn secondary" @onclick="AddRow">Add</button>
-            <button class="btn danger" disabled="@(_selectedIndex is null)" @onclick="RemoveSelectedRow">Remove</button>
             <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: false)">@(_saving ? "Saving…" : "Save")</button>
             <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: true)">@(_saving ? "Saving…" : "Save & Print")</button>
         </div>
@@ -160,8 +171,13 @@
     private int _seasonId;
     private int _buyerId;
     private int _productId;
-    private int? _selectedIndex;
     private readonly List<RowModel> _rows = new();
+
+    // Staging inputs above the grid — filled in, then "Add" copies them into a read-only row.
+    private int _stagingFarmerId;
+    private decimal? _stagingBharti;
+    private decimal? _stagingTotalWeight;
+    private decimal? _stagingRate;
 
     // From-Kachi conversion mode fields (single row, unrelated to the batch grid above).
     private int _convertBuyerId;
@@ -204,6 +220,18 @@
         _rows.All(r => r.FarmerId > 0 && (r.RatePerUnit ?? 0) > 0 &&
                         (r.BhartiKgPerBag ?? 0) > 0 && (r.TotalWeightKg ?? 0) > 0);
 
+    private bool CanAddRow =>
+        _stagingFarmerId > 0 && (_stagingBharti ?? 0) > 0 &&
+        (_stagingTotalWeight ?? 0) > 0 && (_stagingRate ?? 0) > 0;
+
+    private RowCalculation? StagingCalc => Calculate(new RowModel
+    {
+        FarmerId = _stagingFarmerId,
+        BhartiKgPerBag = _stagingBharti,
+        TotalWeightKg = _stagingTotalWeight,
+        RatePerUnit = _stagingRate
+    });
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -239,21 +267,27 @@
         }
         else
         {
-            AddRow();
+            _stagingFarmerId = SellerChoices.FirstOrDefault()?.Id ?? 0;
         }
     }
 
-    private void AddRow() => _rows.Add(new RowModel
+    private void AddStagedRow()
     {
-        FarmerId = SellerChoices.FirstOrDefault()?.Id ?? 0
-    });
+        _rows.Add(new RowModel
+        {
+            FarmerId = _stagingFarmerId,
+            BhartiKgPerBag = _stagingBharti,
+            TotalWeightKg = _stagingTotalWeight,
+            RatePerUnit = _stagingRate
+        });
 
-    private void RemoveSelectedRow()
-    {
-        if (_selectedIndex is null || _selectedIndex >= _rows.Count) return;
-        _rows.RemoveAt(_selectedIndex.Value);
-        _selectedIndex = null;
+        _stagingFarmerId = SellerChoices.FirstOrDefault()?.Id ?? 0;
+        _stagingBharti = null;
+        _stagingTotalWeight = null;
+        _stagingRate = null;
     }
+
+    private void RemoveRow(RowModel row) => _rows.Remove(row);
 
     /// <summary>Lets the operator charge less (or more) than the standard Setup > Format rate for
     /// one deduction rule, for this whole batch — e.g. less Commission this time.</summary>
@@ -318,8 +352,10 @@
             _billNumber = null;
             _rateOverrides.Clear();
             _rows.Clear();
-            _selectedIndex = null;
-            AddRow();
+            _stagingFarmerId = SellerChoices.FirstOrDefault()?.Id ?? 0;
+            _stagingBharti = null;
+            _stagingTotalWeight = null;
+            _stagingRate = null;
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
         finally { _saving = false; }
