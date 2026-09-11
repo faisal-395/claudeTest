@@ -175,9 +175,22 @@ table.data-grid tbody tr.selected-row:hover {
 
 .pakki-entry-inputs {
     flex: 9 1 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pakki-entry-row {
     display: grid;
-    grid-template-columns: repeat(9, minmax(80px, 1fr));
     gap: 6px 8px;
+}
+
+.pakki-entry-row-5 {
+    grid-template-columns: repeat(5, minmax(80px, 1fr));
+}
+
+.pakki-entry-row-4 {
+    grid-template-columns: repeat(4, minmax(80px, 1fr));
 }
 
 .pakki-entry-inputs label {

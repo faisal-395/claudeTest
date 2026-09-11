@@ -47,27 +47,31 @@
     {
         <div class="pakki-entry-panel">
             <div class="pakki-entry-inputs">
-                <div><label>Bill # / بل نمبر</label><input @bind="_billNumber" placeholder="Bill #" /></div>
-                <div><label>Date / تاریخ</label><DatePicker @bind-Value="_date" /></div>
-                <div>
-                    <label>Season / سیزن</label>
-                    <SearchSelect TItem="SeasonDto" Items="_seasons" IdSelector="@(s => s.Id)" TextSelector="@(s => s.Name)" @bind-Value="_seasonId" Placeholder="Season…" />
+                <div class="pakki-entry-row pakki-entry-row-5">
+                    <div><label>Bill # / بل نمبر</label><input @bind="_billNumber" placeholder="Bill #" /></div>
+                    <div><label>Date / تاریخ</label><DatePicker @bind-Value="_date" /></div>
+                    <div>
+                        <label>Season / سیزن</label>
+                        <SearchSelect TItem="SeasonDto" Items="_seasons" IdSelector="@(s => s.Id)" TextSelector="@(s => s.Name)" @bind-Value="_seasonId" Placeholder="Season…" />
+                    </div>
+                    <div>
+                        <label>Buyer / خریدار</label>
+                        <SearchSelect TItem="PartyDto" Items="_vendors" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Buyer…" />
+                    </div>
+                    <div>
+                        <label>Product / جنس</label>
+                        <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Product…" />
+                    </div>
                 </div>
-                <div>
-                    <label>Buyer / خریدار</label>
-                    <SearchSelect TItem="PartyDto" Items="_vendors" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Buyer…" />
+                <div class="pakki-entry-row pakki-entry-row-4">
+                    <div>
+                        <label>فروخت کنندہ</label>
+                        <SearchSelect TItem="PartyDto" Items="@SellerChoices" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" @bind-Value="_stagingFarmerId" Placeholder="Vendor…" />
+                    </div>
+                    <div><label>بھرتی</label><input type="number" step="0.01" @bind="_stagingBharti" /></div>
+                    <div><label>کل وزن (کلو)</label><input type="number" step="0.01" @bind="_stagingTotalWeight" /></div>
+                    <div><label>ریٹ فی مَن</label><input type="number" step="0.01" @bind="_stagingRate" /></div>
                 </div>
-                <div>
-                    <label>Product / جنس</label>
-                    <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Product…" />
-                </div>
-                <div>
-                    <label>فروخت کنندہ</label>
-                    <SearchSelect TItem="PartyDto" Items="@SellerChoices" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" @bind-Value="_stagingFarmerId" Placeholder="Vendor…" />
-                </div>
-                <div><label>بھرتی</label><input type="number" step="0.01" @bind="_stagingBharti" /></div>
-                <div><label>کل وزن (کلو)</label><input type="number" step="0.01" @bind="_stagingTotalWeight" /></div>
-                <div><label>ریٹ فی مَن</label><input type="number" step="0.01" @bind="_stagingRate" /></div>
             </div>
 
             @if (PakkiRules.Count > 0)
