@@ -31,12 +31,10 @@ else
                         @if (AuthState.CanView(ModuleName.Kachi))
                         {
                             <li><NavLink href="kachi" title="Kachi">@Icon("kachi")<span class="nav-text">Kachi</span></NavLink></li>
-                            <li><NavLink href="kachi-records" title="Kachi Records">@Icon("records")<span class="nav-text">Kachi Records</span></NavLink></li>
                         }
                         @if (AuthState.CanView(ModuleName.Pakki))
                         {
                             <li><NavLink href="pakki" title="Pakki">@Icon("pakki")<span class="nav-text">Pakki</span></NavLink></li>
-                            <li><NavLink href="pakki-records" title="Pakki Records">@Icon("records")<span class="nav-text">Pakki Records</span></NavLink></li>
                         }
                         @if (AuthState.CanView(ModuleName.Reports))
                         {

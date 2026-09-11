@@ -10,7 +10,7 @@
         <div class="error-banner">@_error</div>
     }
 
-    <div class="form-grid" style="max-width:320px;margin-bottom:16px;">
+    <div class="form-grid" style="max-width:900px;margin-bottom:16px;">
         <div>
             <label>Type / قسم</label>
             <select @bind="_typeFilter">
@@ -19,6 +19,12 @@
                 <option value="Pakki">Pakki only</option>
             </select>
         </div>
+        <div>
+            <label>Farmer / Vendor</label>
+            <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" @bind-Value="_partyId" Placeholder="All parties…" />
+        </div>
+        <div><label>From</label><input type="date" @bind="_from" /></div>
+        <div><label>To</label><input type="date" @bind="_to" /></div>
     </div>
 
     @if (_rows is null)
@@ -63,32 +69,40 @@
 
 @code {
     private record CombinedRow(
-        string Type, int Id, string InvoiceNo, DateTime Date, string PartyName, string? BuyerName,
+        string Type, int Id, string InvoiceNo, DateTime Date, int PartyId, string PartyName, string? BuyerName,
         string ProductName, decimal NetWeightKg, decimal GrossAmount, decimal TotalDeductions,
         decimal NetAmount, InvoiceStatus Status);
 
     private List<CombinedRow>? _rows;
+    private List<PartyDto>? _parties;
     private string _typeFilter = "All";
+    private int _partyId;
+    private DateTime? _from;
+    private DateTime? _to;
     private string? _error;
 
     private List<CombinedRow> FilteredRows =>
         (_rows ?? new())
             .Where(r => _typeFilter == "All" || r.Type == _typeFilter)
+            .Where(r => _partyId == 0 || r.PartyId == _partyId)
+            .Where(r => _from is null || r.Date.Date >= _from.Value.Date)
+            .Where(r => _to is null || r.Date.Date <= _to.Value.Date)
             .ToList();
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
+            _parties = await Api.GetPartiesAsync();
             var kachis = await Api.GetKachisAsync();
             var pakkis = await Api.GetPakkisAsync();
 
             var kachiRows = kachis.Select(k => new CombinedRow(
-                "Kachi", k.Id, k.InvoiceNo, k.Date, k.FarmerName, k.BuyerName, k.ProductName,
+                "Kachi", k.Id, k.InvoiceNo, k.Date, k.FarmerId, k.FarmerName, k.BuyerName, k.ProductName,
                 k.NetWeightKg, k.GrossAmount, k.TotalDeductions, k.Total, k.Status));
 
             var pakkiRows = pakkis.Select(p => new CombinedRow(
-                "Pakki", p.Id, p.InvoiceNo, p.Date, p.FarmerName, p.BuyerName, p.ProductName,
+                "Pakki", p.Id, p.InvoiceNo, p.Date, p.FarmerId, p.FarmerName, p.BuyerName, p.ProductName,
                 p.NetWeightKg, p.GrossAmount, p.TotalDeductions, p.NetPayableToFarmer, p.Status));
 
             _rows = kachiRows.Concat(pakkiRows).OrderByDescending(r => r.Date).ThenByDescending(r => r.Id).ToList();
