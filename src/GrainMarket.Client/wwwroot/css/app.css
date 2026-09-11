@@ -191,12 +191,16 @@ table.data-grid tbody tr.selected-row:hover {
     gap: 6px 8px;
 }
 
+/* Bill #, Date, Season stay narrow; Buyer/Product need more room for long picked names. */
 .batch-entry-row-5 {
-    grid-template-columns: repeat(5, minmax(80px, 1fr));
+    grid-template-columns:
+        minmax(70px, 1fr) minmax(70px, 1fr) minmax(70px, 1fr)
+        minmax(140px, 3fr) minmax(140px, 3fr);
 }
 
+/* Seller/Farmer needs the most room for long picked names; Bharti/Weight/Rate are short numbers. */
 .batch-entry-row-4 {
-    grid-template-columns: repeat(4, minmax(80px, 1fr));
+    grid-template-columns: minmax(220px, 6fr) minmax(70px, 1fr) minmax(70px, 1fr) minmax(70px, 1fr);
 }
 
 .batch-entry-inputs label {
