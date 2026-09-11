@@ -133,10 +133,16 @@ public static class SeedData
             new ChartOfAccount { Code = "5100", Name = "General Expenses", NameUrdu = "عمومی اخراجات", AccountType = AccountType.Expense }
         };
 
-        db.ChartOfAccounts.AddRange(accounts);
+        // A reconciliation migration (e.g. ReconcileKachiOnlyDeductionSeed,
+        // SeedPakkiVendorDeductionRules) may already have inserted some of these codes via raw SQL
+        // before this runs — migrations always apply before SeedAsync, even on a brand-new database.
+        // Skip codes that already exist instead of assuming the table is empty.
+        var existingAccounts = await db.ChartOfAccounts.ToDictionaryAsync(a => a.Code, ct);
+        var newAccounts = accounts.Where(a => !existingAccounts.ContainsKey(a.Code)).ToArray();
+        db.ChartOfAccounts.AddRange(newAccounts);
         await db.SaveChangesAsync(ct);
 
-        var accountsByCode = accounts.ToDictionary(a => a.Code);
+        var accountsByCode = accounts.ToDictionary(a => a.Code, a => existingAccounts.TryGetValue(a.Code, out var existing) ? existing : a);
 
         // Demonstrates the protected-account feature: Owner/Admin can always see protected
         // accounts; Accountant is additionally allowed to see the tax-liability account. Every
@@ -180,7 +186,15 @@ public static class SeedData
             new DeductionRule { Name = "Bardana", NameUrdu = "بردانہ", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 12, IsActive = false, IncomeAccountId = accounts["4660"].Id }
         };
 
-        db.DeductionRules.AddRange(rules);
+        // Same reconciliation-migration overlap as SeedChartOfAccountsAsync above: skip any rule a
+        // migration already inserted, keyed the same way those migrations key their own NOT EXISTS
+        // checks — (Name, AppliesTo). The global soft-delete query filter already excludes
+        // IsDeleted rows, matching the migrations' "AND IsDeleted = FALSE" condition.
+        var existingRuleKeys = (await db.DeductionRules.Select(r => new { r.Name, r.AppliesTo }).ToListAsync(ct))
+            .Select(r => (r.Name, r.AppliesTo))
+            .ToHashSet();
+        var newRules = rules.Where(r => !existingRuleKeys.Contains((r.Name, r.AppliesTo))).ToArray();
+        db.DeductionRules.AddRange(newRules);
         await db.SaveChangesAsync(ct);
     }
 
