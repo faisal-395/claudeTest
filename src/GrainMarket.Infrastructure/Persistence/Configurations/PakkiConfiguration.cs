@@ -21,6 +21,7 @@ public class PakkiConfiguration : IEntityTypeConfiguration<Pakki>
         builder.Property(p => p.RatePerUnit).HasPrecision(18, 4);
         builder.Property(p => p.GrossAmount).HasPrecision(18, 2);
         builder.Property(p => p.TotalDeductions).HasPrecision(18, 2);
+        builder.Property(p => p.BuyerChargesTotal).HasPrecision(18, 2);
         builder.Property(p => p.NetPayableToFarmer).HasPrecision(18, 2);
 
         builder.HasOne(p => p.Season).WithMany().HasForeignKey(p => p.SeasonId).OnDelete(DeleteBehavior.Restrict);

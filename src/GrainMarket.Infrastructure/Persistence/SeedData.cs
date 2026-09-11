@@ -159,21 +159,32 @@ public static class SeedData
 
     private static async Task SeedDeductionRulesAsync(AppDbContext db, Dictionary<string, ChartOfAccount> accounts, CancellationToken ct)
     {
-        // All six rules apply to both Kachi and Pakki (AppliesTo = Both) — the same rate is charged
-        // whichever stage a transaction is recorded at, so it only needs configuring once. Only the
-        // first three have a real rate; the rest are seeded inactive at 0 until the market's actual
-        // rate is entered under Setup > Format. IsActive is what the Kachi/Pakki tax summary filters
-        // on (see KachiRules in Kachi.razor and its Pakki equivalent) and what DeductionEngine
-        // actually charges, so an inactive placeholder is safe to leave seeded — it shows nowhere
-        // and charges nothing until switched on.
+        // Labour/Brokerage/Withholding Tax/Association Fund/Arhat are Kachi-only here (charged to
+        // the Seller/farmer) with a separate Pakki-only twin below charged to the Buyer instead — in
+        // Pakki, every tax is paid by the Buyer, unlike Kachi where the farmer bears these. Commission
+        // is the one rule that's already Buyer-charged for both stages, so it stays AppliesTo = Both
+        // with no twin needed. Only Labour/Brokerage/Commission have a real rate; the rest are seeded
+        // inactive at 0 until the market's actual rate is entered under Setup > Format. IsActive is
+        // what the Kachi/Pakki tax summary filters on (see KachiRules in Kachi.razor and its Pakki
+        // equivalent) and what DeductionEngine actually charges, so an inactive placeholder is safe
+        // to leave seeded — it shows nowhere and charges nothing until switched on.
         var rules = new[]
         {
-            new DeductionRule { Name = "Labour (Palledari)", NameUrdu = "پلیداری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.75m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Seller, SortOrder = 1, IsActive = true, IncomeAccountId = accounts["4600"].Id },
-            new DeductionRule { Name = "Brokerage", NameUrdu = "بروکری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.15m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Seller, SortOrder = 2, IsActive = true, IncomeAccountId = accounts["4110"].Id },
+            new DeductionRule { Name = "Labour (Palledari)", NameUrdu = "پلیداری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.75m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Seller, SortOrder = 1, IsActive = true, IncomeAccountId = accounts["4600"].Id },
+            new DeductionRule { Name = "Brokerage", NameUrdu = "بروکری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.15m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Seller, SortOrder = 2, IsActive = true, IncomeAccountId = accounts["4110"].Id },
             new DeductionRule { Name = "Commission", NameUrdu = "کمیشن", CalculationType = DeductionCalculationType.PercentOfGross, Value = 1.60m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 3, IsActive = true, IncomeAccountId = accounts["4100"].Id },
-            new DeductionRule { Name = "Withholding Tax", NameUrdu = "ویدہولڈنگ ٹیکس", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Seller, SortOrder = 4, IsActive = false, IncomeAccountId = accounts["4500"].Id },
-            new DeductionRule { Name = "Association Fund", NameUrdu = "انجمن فنڈ", CalculationType = DeductionCalculationType.FixedAmount, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Seller, SortOrder = 5, IsActive = false, IncomeAccountId = accounts["4300"].Id },
-            new DeductionRule { Name = "Arhat", NameUrdu = "آڑت", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Seller, SortOrder = 6, IsActive = false, IncomeAccountId = accounts["4120"].Id },
+            new DeductionRule { Name = "Withholding Tax", NameUrdu = "ویدہولڈنگ ٹیکس", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Seller, SortOrder = 4, IsActive = false, IncomeAccountId = accounts["4500"].Id },
+            new DeductionRule { Name = "Association Fund", NameUrdu = "انجمن فنڈ", CalculationType = DeductionCalculationType.FixedAmount, Value = 0m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Seller, SortOrder = 5, IsActive = false, IncomeAccountId = accounts["4300"].Id },
+            new DeductionRule { Name = "Arhat", NameUrdu = "آڑت", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Seller, SortOrder = 6, IsActive = false, IncomeAccountId = accounts["4120"].Id },
+
+            // Pakki-only twins of the five Kachi rules above — same rate/account, Buyer-charged
+            // instead of Seller-charged, kept as separate rules (not a shared ChargedTo) since the
+            // two stages now genuinely differ on who pays, and rates may also diverge later.
+            new DeductionRule { Name = "Labour (Palledari) (Pakki)", NameUrdu = "پلیداری (پکی)", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.75m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 15, IsActive = true, IncomeAccountId = accounts["4600"].Id },
+            new DeductionRule { Name = "Brokerage (Pakki)", NameUrdu = "بروکری (پکی)", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.15m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 16, IsActive = true, IncomeAccountId = accounts["4110"].Id },
+            new DeductionRule { Name = "Withholding Tax (Pakki)", NameUrdu = "ویدہولڈنگ ٹیکس (پکی)", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 17, IsActive = false, IncomeAccountId = accounts["4500"].Id },
+            new DeductionRule { Name = "Association Fund (Pakki)", NameUrdu = "انجمن فنڈ (پکی)", CalculationType = DeductionCalculationType.FixedAmount, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 18, IsActive = false, IncomeAccountId = accounts["4300"].Id },
+            new DeductionRule { Name = "Arhat (Pakki)", NameUrdu = "آڑت (پکی)", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 19, IsActive = false, IncomeAccountId = accounts["4120"].Id },
 
             // Pakki-only bag-handling charges (bharai, silvai, dhaga lagai, dumra karai, sotli,
             // bardana) — charged to the Vendor/Buyer, same percent-of-gross shape as Labour/

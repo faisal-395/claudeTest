@@ -4,6 +4,7 @@
 
 <RequireAuth>
     <div class="no-print" style="margin-bottom:12px;">
+        <button class="btn secondary" @onclick="GoBackAsync">← Back</button>
         <button class="btn" @onclick="PrintAsync">Print</button>
     </div>
 
@@ -43,13 +44,25 @@
             </table>
             <hr />
             <table style="width:100%;">
-                @foreach (var line in _pakki.DeductionLines)
+                @foreach (var line in _pakki.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Seller))
                 {
                     <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
                 }
                 <tr><td><b>مجموعی کٹوتی</b></td><td class="ltr-inline"><b>@_pakki.TotalDeductions.ToString("N2")</b></td></tr>
                 <tr><td><b>کسان کو ادائیگی</b></td><td class="ltr-inline"><b>@_pakki.NetPayableToFarmer.ToString("N2")</b></td></tr>
             </table>
+            @if (_pakki.DeductionLines.Any(l => l.ChargedTo == DeductionChargedTo.Buyer))
+            {
+                <hr />
+                <table style="width:100%;">
+                    <tr><td colspan="2"><b>خریدار کے ذمہ</b></td></tr>
+                    @foreach (var line in _pakki.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer))
+                    {
+                        <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
+                    }
+                    <tr><td><b>کل (خریدار)</b></td><td class="ltr-inline"><b>@_pakki.BuyerChargesTotal.ToString("N2")</b></td></tr>
+                </table>
+            }
         </div>
     }
 </RequireAuth>
@@ -66,4 +79,9 @@
     }
 
     private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
+
+    // Uses real browser history instead of a hardcoded route — this page is reachable from Pakki
+    // Records and from the combined Records Report, and "Back" should return to whichever one the
+    // operator actually came from.
+    private Task GoBackAsync() => JS.InvokeVoidAsync("history.back").AsTask();
 }
