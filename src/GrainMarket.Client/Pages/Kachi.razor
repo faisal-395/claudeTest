@@ -5,6 +5,8 @@
 @using GrainMarket.Application.MultiPurchase
 @inject ApiClient Api
 @inject NavigationManager Nav
+@inject UiState UiState
+@implements IDisposable
 
 <RequireAuth>
     <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
@@ -21,111 +23,160 @@
         <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
     }
 
-    <div class="form-grid" style="max-width:1100px;margin-bottom:12px;grid-template-columns:140px 1fr 1fr;">
-        <div><label>Bill Number / بل نمبر</label><input @bind="_billNumber" placeholder="Bill #" /></div>
-        <div><label>Date / تاریخ</label><DatePicker @bind-Value="_date" /></div>
-        <div>
-            <label>Season / سیزن</label>
-            <SearchSelect TItem="SeasonDto" Items="_seasons" IdSelector="@(s => s.Id)" TextSelector="@(s => s.Name)" @bind-Value="_seasonId" Placeholder="Search season…" />
+    <div class="batch-entry-panel">
+        <div class="batch-entry-inputs">
+            <div class="batch-entry-row batch-entry-row-5">
+                <div><label>Bill # / بل نمبر</label><input @bind="_billNumber" placeholder="Bill #" /></div>
+                <div><label>Date / تاریخ</label><DatePicker @bind-Value="_date" /></div>
+                <div>
+                    <label>Season / سیزن</label>
+                    <SearchSelect TItem="SeasonDto" Items="_seasons" IdSelector="@(s => s.Id)" TextSelector="@(s => s.Name)" @bind-Value="_seasonId" Placeholder="Season…" />
+                </div>
+                <div>
+                    <label>Buyer / خریدار</label>
+                    <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Buyer…" />
+                </div>
+                <div>
+                    <label>Product / جنس</label>
+                    <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Product…" />
+                </div>
+            </div>
+            <div class="batch-entry-row batch-entry-row-4">
+                <div>
+                    <label>کسان</label>
+                    <SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" @bind-Value="_stagingFarmerId" Placeholder="Farmer…" />
+                </div>
+                <div><label>بھرتی</label><input type="number" step="0.01" @bind="_stagingBharti" /></div>
+                <div><label>کل وزن (کلو)</label><input type="number" step="0.01" @bind="_stagingTotalWeight" /></div>
+                <div><label>ریٹ فی مَن</label><input type="number" step="0.01" @bind="_stagingRate" /></div>
+            </div>
         </div>
-    </div>
-    <div class="form-grid" style="max-width:1100px;margin-bottom:12px;">
-        <div>
-            <label>Buyer / خریدار</label>
-            <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
-        </div>
-        <div>
-            <label>Product / جنس</label>
-            <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Search product…" />
-        </div>
-    </div>
 
-    @if (KachiRules.Count > 0)
-    {
-        <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:0.85rem;color:#444;background:#f7f9f7;border:1px solid #e2e2e2;border-radius:4px;padding:6px 12px;margin-bottom:10px;">
-            <span style="font-weight:600;">Kachi Tax / Deductions:</span>
-            @foreach (var r in KachiRules)
-            {
-                <span>
-                    @r.Name (@r.ChargedTo): @RatePrefix(r)<input type="number" step="0.01" style="width:60px;" value="@GetEffectiveRate(r)" @onchange="@(e => SetRateOverride(r.Id, e.Value))" />@RateSuffix(r)
-                </span>
-            }
-        </div>
-    }
-
-    <table class="data-grid multi-purchase-grid">
-        <thead>
-            <tr>
-                <th style="width:24px;"></th>
-                <th style="min-width:150px;" class="rtl-urdu">کسان</th>
-                <th class="rtl-urdu">بھرتی</th><th class="rtl-urdu">کل وزن (کلو)</th>
-                <th class="rtl-urdu">ریٹ فی مَن (دَر)</th>
-            </tr>
-        </thead>
-        <tbody>
-            @for (var i = 0; i < _rows.Count; i++)
-            {
-                var index = i;
-                var row = _rows[index];
-                var calc = Calculate(row);
-                <tr class="@(_selectedIndex == index ? "selected-row" : "")">
-                    <td style="text-align:center;"><input type="radio" name="rowSelect" checked="@(_selectedIndex == index)" @onchange="() => _selectedIndex = index" /></td>
-                    <td><SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Farmer…" /></td>
-                    <td><input type="number" step="0.01" style="width:80px;" @bind="row.BhartiKgPerBag" /></td>
-                    <td><input type="number" step="0.01" style="width:90px;" @bind="row.TotalWeightKg" /></td>
-                    <td><input type="number" step="0.01" style="width:80px;" @bind="row.RatePerUnit" /></td>
-                </tr>
-                <tr>
-                    <td colspan="5" style="background:#f7f9f7;padding:3px 10px;font-size:0.8rem;color:#444;">
-                        @if (calc is not null)
-                        {
-                            <div class="rtl-urdu">
-                                @if (calc.Breakdown is not null)
-                                {
-                                    <span>من: <b>@calc.Breakdown.Value.ManCount</b></span>
-                                    <span>&nbsp;&nbsp;دھرن: <b>@calc.Breakdown.Value.DhrnCount</b></span>
-                                    <span>&nbsp;&nbsp;کلو: <b>@calc.Breakdown.Value.KgRemainder.ToString("N2")</b></span>
-                                }
-                                else
-                                {
-                                    <span style="color:#999;">—</span>
-                                }
-                                <span>&nbsp;·&nbsp;صافی وزن: <b>@calc.NetWeightKg.ToString("N2")</b> کلو</span>
-                                @if (calc.BoriQty is not null)
-                                {
-                                    <span>&nbsp;·&nbsp;بوری: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
-                                }
-                                <span>&nbsp;·&nbsp;مجموعی رقم: <b>@calc.GrossAmount.ToString("N2")</b></span>
-                                @if (calc.FarmerLines.Count > 0 || calc.BuyerLines.Count > 0)
-                                {
-                                    <span>&nbsp;·&nbsp;@string.Join("، ", calc.FarmerLines.Concat(calc.BuyerLines).Select(l => $"{l.NameUrdu} {l.Amount:N2}"))</span>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <span style="color:#999;">Enter Bharti, Total Weight and a rate to see the calculation</span>
-                        }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-
-    <div class="total-figure rtl-urdu" style="margin-top:12px;display:flex;gap:28px;flex-wrap:wrap;">
-        <span>مجموعی رقم (کل): Rs @GrandGross.ToString("N2")</span>
-        <span>مجموعی کٹوتی (کل): Rs @GrandDeductions.ToString("N2")</span>
-        <span>مجموعی کل رقم (کسان): Rs @GrandTotal.ToString("N2")</span>
-        @if (GrandBuyerCharges > 0)
+        @if (KachiRules.Count > 0)
         {
-            <span>مجموعی خریدار چارجز: Rs @GrandBuyerCharges.ToString("N2")</span>
+            <div class="batch-entry-deductions">
+                <div class="batch-entry-deductions-title">Deductions</div>
+                @foreach (var r in KachiRules)
+                {
+                    <div class="batch-entry-deduction-row" title="@r.ChargedTo">
+                        <span>@r.Name</span>
+                        <span class="ltr-inline">@RatePrefix(r)<input type="number" step="0.01" value="@GetEffectiveRate(r)" @onchange="@(e => SetRateOverride(r.Id, e.Value))" />@RateSuffix(r)</span>
+                    </div>
+                }
+            </div>
         }
     </div>
-    <div style="margin-top:8px;">
-        <button class="btn secondary" @onclick="AddRow">Add</button>
-        <button class="btn danger" disabled="@(_selectedIndex is null)" @onclick="RemoveSelectedRow">Remove</button>
-        <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: false)">@(_saving ? "Saving…" : "Save")</button>
-        <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: true)">@(_saving ? "Saving…" : "Save & Print")</button>
+
+    <div class="batch-add-calc-row">
+        <div class="batch-add-col">
+            <button class="btn secondary" disabled="@(!CanAddRow)" @onclick="AddStagedRow">Add</button>
+        </div>
+        <div class="batch-staging-calc rtl-urdu">
+            @if (StagingCalc is not null)
+            {
+                @if (StagingCalc.Breakdown is not null)
+                {
+                    <span>من: <b>@StagingCalc.Breakdown.Value.ManCount</b></span>
+                    <span>&nbsp;&nbsp;دھرن: <b>@StagingCalc.Breakdown.Value.DhrnCount</b></span>
+                    <span>&nbsp;&nbsp;کلو: <b>@StagingCalc.Breakdown.Value.KgRemainder.ToString("N2")</b></span>
+                }
+                else
+                {
+                    <span style="color:#999;">—</span>
+                }
+                <span>&nbsp;·&nbsp;صافی وزن: <b>@StagingCalc.NetWeightKg.ToString("N2")</b> کلو</span>
+                @if (StagingCalc.BoriQty is not null)
+                {
+                    <span>&nbsp;·&nbsp;بوری: <b>@StagingCalc.BoriQty.Value.ToString("N2")</b></span>
+                }
+                <span>&nbsp;·&nbsp;مجموعی رقم: <b>@StagingCalc.GrossAmount.ToString("N2")</b></span>
+                <span>&nbsp;·&nbsp;کٹوتی: <b>@StagingCalc.FarmerDeductionsTotal.ToString("N2")</b></span>
+                @if (StagingCalc.BuyerChargesTotal > 0)
+                {
+                    <span>&nbsp;·&nbsp;خریدار چارجز: <b>@StagingCalc.BuyerChargesTotal.ToString("N2")</b></span>
+                }
+                <span>&nbsp;·&nbsp;کسان کو ادائیگی: <b>@StagingCalc.Total.ToString("N2")</b></span>
+            }
+            else
+            {
+                <span style="color:#999;">Enter Bharti, Total Weight and a rate to see the calculation</span>
+            }
+        </div>
+    </div>
+
+    <div class="batch-results-grid-wrapper">
+        <table class="data-grid multi-purchase-grid batch-results-grid">
+            <thead>
+                <tr>
+                    <th class="rtl-urdu" style="min-width:140px;">کسان</th>
+                    <th class="rtl-urdu">بھرتی</th>
+                    <th class="rtl-urdu">کل وزن</th>
+                    <th class="rtl-urdu">ریٹ</th>
+                    <th class="rtl-urdu">من/دھرن/کلو</th>
+                    <th class="rtl-urdu">صافی وزن</th>
+                    <th class="rtl-urdu">بوری</th>
+                    <th class="rtl-urdu">مجموعی رقم</th>
+                    <th class="rtl-urdu">کٹوتی کی تفصیل</th>
+                    <th class="rtl-urdu">کسان کٹوتی</th>
+                    <th class="rtl-urdu">خریدار چارجز</th>
+                    <th class="rtl-urdu">ادائیگی</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _rows)
+                {
+                    var calc = Calculate(row);
+                    var deductionLines = calc?.FarmerLines.Concat(calc.BuyerLines).Where(l => l.Amount != 0).ToList();
+                    <tr>
+                        <td>@DisplayText.Party(_farmers?.FirstOrDefault(f => f.Id == row.FarmerId))</td>
+                        <td style="text-align:right;">@row.BhartiKgPerBag?.ToString("N2")</td>
+                        <td style="text-align:right;">@row.TotalWeightKg?.ToString("N2")</td>
+                        <td style="text-align:right;">@row.RatePerUnit?.ToString("N2")</td>
+                        <td style="text-align:right;">@(calc?.Breakdown is { } b ? $"{b.ManCount}/{b.DhrnCount}/{b.KgRemainder:N2}" : "—")</td>
+                        <td style="text-align:right;">@(calc?.NetWeightKg.ToString("N2") ?? "—")</td>
+                        <td style="text-align:right;">@(calc?.BoriQty?.ToString("N2") ?? "—")</td>
+                        <td style="text-align:right;">@(calc?.GrossAmount.ToString("N2") ?? "—")</td>
+                        <td class="batch-grid-deductions">
+                            @if (deductionLines is { Count: > 0 })
+                            {
+                                @foreach (var line in deductionLines)
+                                {
+                                    <div class="batch-grid-deduction-line">
+                                        <span>@line.NameUrdu</span>
+                                        <span>@line.Amount.ToString("N2")</span>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <span>—</span>
+                            }
+                        </td>
+                        <td style="text-align:right;"><b>@(calc?.FarmerDeductionsTotal.ToString("N2") ?? "—")</b></td>
+                        <td style="text-align:right;">@(calc?.BuyerChargesTotal.ToString("N2") ?? "—")</td>
+                        <td style="text-align:right;"><b>@(calc?.Total.ToString("N2") ?? "—")</b></td>
+                        <td><a href="#" @onclick="() => RemoveRow(row)" @onclick:preventDefault="true">Remove</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="batch-save-totals-row">
+        <div class="batch-save-col">
+            <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: false)">@(_saving ? "Saving…" : "Save")</button>
+            <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: true)">@(_saving ? "Saving…" : "Save & Print")</button>
+        </div>
+        <div class="batch-grand-totals total-figure rtl-urdu">
+            <span>مجموعی رقم (کل): Rs @GrandGross.ToString("N2")</span>
+            <span>مجموعی کٹوتی (کل): Rs @GrandDeductions.ToString("N2")</span>
+            <span>مجموعی کل رقم (کسان): Rs @GrandTotal.ToString("N2")</span>
+            @if (GrandBuyerCharges > 0)
+            {
+                <span>مجموعی خریدار چارجز: Rs @GrandBuyerCharges.ToString("N2")</span>
+            }
+        </div>
     </div>
 </RequireAuth>
 
@@ -145,8 +196,13 @@
     private int _seasonId;
     private int _buyerId;
     private int _productId;
-    private int? _selectedIndex;
     private readonly List<RowModel> _rows = new();
+
+    // Staging inputs above the grid — filled in, then "Add" copies them into a read-only row.
+    private int _stagingFarmerId;
+    private decimal? _stagingBharti;
+    private decimal? _stagingTotalWeight;
+    private decimal? _stagingRate;
 
     /// <summary>Operator-entered rate overrides for this batch only (e.g. less Commission than the
     /// standard Setup > Format rate) — keyed by DeductionRuleId, applied identically to every row
@@ -181,6 +237,18 @@
         _rows.All(r => r.FarmerId > 0 && (r.RatePerUnit ?? 0) > 0 &&
                         (r.BhartiKgPerBag ?? 0) > 0 && (r.TotalWeightKg ?? 0) > 0);
 
+    private bool CanAddRow =>
+        _stagingFarmerId > 0 && (_stagingBharti ?? 0) > 0 &&
+        (_stagingTotalWeight ?? 0) > 0 && (_stagingRate ?? 0) > 0;
+
+    private RowCalculation? StagingCalc => Calculate(new RowModel
+    {
+        FarmerId = _stagingFarmerId,
+        BhartiKgPerBag = _stagingBharti,
+        TotalWeightKg = _stagingTotalWeight,
+        RatePerUnit = _stagingRate
+    });
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -192,6 +260,7 @@
             if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
             if (_buyers.Count > 0) _buyerId = _buyers[0].Id;
             if (_products.Count > 0) _productId = _products[0].Id;
+            if (_farmers.Count > 0) _stagingFarmerId = _farmers[0].Id;
 
             var rules = await Api.GetDeductionRulesAsync();
             _deductionRuleEntities = rules.Select(r => new DeductionRule
@@ -207,23 +276,33 @@
             {
                 Id = c.Id, Unit = c.Unit, FactorToKg = c.FactorToKg, ProductId = c.ProductId, IsActive = c.IsActive
             }).ToList();
-
-            AddRow();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private void AddRow() => _rows.Add(new RowModel
+    private void AddStagedRow()
     {
-        FarmerId = _farmers?.FirstOrDefault()?.Id ?? 0
-    });
+        _rows.Add(new RowModel
+        {
+            FarmerId = _stagingFarmerId,
+            BhartiKgPerBag = _stagingBharti,
+            TotalWeightKg = _stagingTotalWeight,
+            RatePerUnit = _stagingRate
+        });
 
-    private void RemoveSelectedRow()
-    {
-        if (_selectedIndex is null || _selectedIndex >= _rows.Count) return;
-        _rows.RemoveAt(_selectedIndex.Value);
-        _selectedIndex = null;
+        _stagingFarmerId = _farmers?.FirstOrDefault()?.Id ?? 0;
+        _stagingBharti = null;
+        _stagingTotalWeight = null;
+        _stagingRate = null;
+
+        // Reclaim the sidebar's width for the grid while rows are being added; restored on save
+        // (or, as a safety net, if the operator navigates away without saving — see Dispose).
+        UiState.CollapseSidebar();
     }
+
+    public void Dispose() => UiState.ExpandSidebar();
+
+    private void RemoveRow(RowModel row) => _rows.Remove(row);
 
     /// <summary>Lets the operator charge less (or more) than the standard Setup > Format rate for
     /// one deduction rule, for this whole batch — e.g. less Commission this time.</summary>
@@ -290,6 +369,7 @@
                 _billNumber);
 
             var result = await Api.CreateMultiPurchaseAsync(request);
+            UiState.ExpandSidebar();
 
             if (andPrint)
             {
@@ -302,8 +382,10 @@
             _billNumber = null;
             _rateOverrides.Clear();
             _rows.Clear();
-            _selectedIndex = null;
-            AddRow();
+            _stagingFarmerId = _farmers?.FirstOrDefault()?.Id ?? 0;
+            _stagingBharti = null;
+            _stagingTotalWeight = null;
+            _stagingRate = null;
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
         finally { _saving = false; }

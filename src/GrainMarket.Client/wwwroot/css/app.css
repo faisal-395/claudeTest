@@ -58,7 +58,7 @@ html, body {
     transition: width 0.2s ease;
 }
 
-/* Squeezed by wide batch-entry screens (e.g. Pakki's grid, via UiState) to reclaim horizontal
+/* Squeezed by wide batch-entry screens (Kachi/Pakki's grids, via UiState) to reclaim horizontal
    space while rows are being added, then restored on save. */
 .sidebar.collapsed {
     width: 0;
@@ -122,11 +122,8 @@ table.data-grid tbody tr:hover {
     background: #f4faf4;
 }
 
-/* A wide grid of narrow input/picker columns (Multi-Farmer Purchase). Deliberately NOT wrapped in
-   an overflow-x:auto container — that clips the SearchSelect dropdown menu below it (setting one
-   overflow axis makes the other default to auto too, so the dropdown's popup gets cut off instead
-   of overlaying the rest of the page). Tighter padding keeps it closer to fitting without a
-   scrollbar at all; if it still doesn't fit, the page scrolls as a whole, which doesn't clip anything. */
+/* Tighter padding for Kachi/Pakki's read-only results grid (batch-results-grid layers its own
+   sizing on top via higher specificity — see below). */
 .multi-purchase-grid th, .multi-purchase-grid td {
     padding: 6px 6px;
     font-size: 0.85rem;
@@ -170,9 +167,10 @@ table.data-grid tbody tr.selected-row:hover {
     box-sizing: border-box;
 }
 
-/* Pakki entry panel — 9 input columns beside a 3-column deduction-rate panel (9:3 ratio via flex
-   grow) so the whole row of fields fits in one compact strip instead of several stacked boxes. */
-.pakki-entry-panel {
+/* Batch entry panel (Kachi/Pakki) — 9 input columns beside a 3-column deduction-rate panel (9:3
+   ratio via flex grow) so the whole row of fields fits in one compact strip instead of several
+   stacked boxes. */
+.batch-entry-panel {
     display: flex;
     gap: 16px;
     background: white;
@@ -181,27 +179,27 @@ table.data-grid tbody tr.selected-row:hover {
     margin-bottom: 6px;
 }
 
-.pakki-entry-inputs {
+.batch-entry-inputs {
     flex: 9 1 0;
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-.pakki-entry-row {
+.batch-entry-row {
     display: grid;
     gap: 6px 8px;
 }
 
-.pakki-entry-row-5 {
+.batch-entry-row-5 {
     grid-template-columns: repeat(5, minmax(80px, 1fr));
 }
 
-.pakki-entry-row-4 {
+.batch-entry-row-4 {
     grid-template-columns: repeat(4, minmax(80px, 1fr));
 }
 
-.pakki-entry-inputs label {
+.batch-entry-inputs label {
     display: block;
     font-size: 0.8rem;
     font-weight: 600;
@@ -210,7 +208,7 @@ table.data-grid tbody tr.selected-row:hover {
     white-space: nowrap;
 }
 
-.pakki-entry-inputs input, .pakki-entry-inputs select {
+.batch-entry-inputs input, .batch-entry-inputs select {
     width: 100%;
     padding: 5px 7px;
     font-size: 0.92rem;
@@ -220,7 +218,7 @@ table.data-grid tbody tr.selected-row:hover {
     box-sizing: border-box;
 }
 
-.pakki-entry-deductions {
+.batch-entry-deductions {
     flex: 3 1 0;
     border-left: 1px solid #e5e5e5;
     padding-left: 14px;
@@ -229,14 +227,14 @@ table.data-grid tbody tr.selected-row:hover {
     gap: 3px;
 }
 
-.pakki-entry-deductions-title {
+.batch-entry-deductions-title {
     font-size: 0.8rem;
     font-weight: 700;
     color: #1B4332;
     margin-bottom: 3px;
 }
 
-.pakki-entry-deduction-row {
+.batch-entry-deduction-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -246,7 +244,7 @@ table.data-grid tbody tr.selected-row:hover {
     color: #333;
 }
 
-.pakki-entry-deduction-row input {
+.batch-entry-deduction-row input {
     width: 48px;
     padding: 3px 5px;
     font-size: 0.82rem;
@@ -257,7 +255,7 @@ table.data-grid tbody tr.selected-row:hover {
 
 /* Add button (2 cols) beside the calculation preview (10 cols) — one row instead of the button
    sitting alone below the preview, which wasted a whole row for one small control. */
-.pakki-add-calc-row {
+.batch-add-calc-row {
     display: grid;
     grid-template-columns: 2fr 10fr;
     gap: 16px;
@@ -265,15 +263,15 @@ table.data-grid tbody tr.selected-row:hover {
     margin-bottom: 10px;
 }
 
-.pakki-add-col {
+.batch-add-col {
     display: flex;
 }
 
-.pakki-add-col .btn {
+.batch-add-col .btn {
     width: 100%;
 }
 
-.pakki-staging-calc {
+.batch-staging-calc {
     background: #f7f9f7;
     border: 1px solid #e2e2e2;
     border-radius: 4px;
@@ -288,7 +286,7 @@ table.data-grid tbody tr.selected-row:hover {
 
 /* Save/Save & Print (2 cols) beside the grand totals (10 cols) — mirrors the Add/calculation-
    preview row above the grid. */
-.pakki-save-totals-row {
+.batch-save-totals-row {
     display: grid;
     grid-template-columns: 2fr 10fr;
     gap: 16px;
@@ -296,7 +294,7 @@ table.data-grid tbody tr.selected-row:hover {
     margin-top: 12px;
 }
 
-.pakki-save-col {
+.batch-save-col {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -304,7 +302,7 @@ table.data-grid tbody tr.selected-row:hover {
 
 /* Grand totals get the same boxed treatment as the calculation preview above, for visual
    consistency, while keeping the bolder .total-figure typography. */
-.pakki-grand-totals {
+.batch-grand-totals {
     background: #f7f9f7;
     border: 1px solid #e2e2e2;
     border-radius: 4px;
@@ -318,28 +316,28 @@ table.data-grid tbody tr.selected-row:hover {
 /* This grid (unlike the entry area above it, which has SearchSelect dropdowns that would get
    clipped by overflow) is read-only — safe to scroll horizontally on its own so a wide deduction
    breakdown never pushes the whole page sideways. */
-.pakki-results-grid-wrapper {
+.batch-results-grid-wrapper {
     overflow-x: auto;
     margin-bottom: 6px;
 }
 
-/* Pakki results grid — adds an itemized deduction breakdown column and right-aligned numeric
-   columns on top of the shared .multi-purchase-grid look (also used by Kachi), scoped so Kachi's
-   grid is untouched. The "table." prefix raises specificity above the base table.data-grid rule
-   so these sizes actually win instead of being silently overridden by it. */
-table.pakki-results-grid th, table.pakki-results-grid td {
+/* Batch results grid (Kachi/Pakki) — adds an itemized deduction breakdown column and
+   right-aligned numeric columns on top of the shared .multi-purchase-grid look. The "table."
+   prefix raises specificity above the base table.data-grid rule so these sizes actually win
+   instead of being silently overridden by it. */
+table.batch-results-grid th, table.batch-results-grid td {
     padding: 6px 8px;
     font-size: 0.72rem;
     vertical-align: top;
 }
 
-.pakki-results-grid tbody tr:nth-child(even) {
+.batch-results-grid tbody tr:nth-child(even) {
     background: #fafcfa;
 }
 
 /* No wrapping — the deduction breakdown always renders on one line and the column grows to fit
    it, rather than wrapping onto several lines and inflating the row height. */
-.pakki-grid-deductions {
+.batch-grid-deductions {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
@@ -349,14 +347,14 @@ table.pakki-results-grid th, table.pakki-results-grid td {
     white-space: nowrap;
 }
 
-.pakki-grid-deduction-line {
+.batch-grid-deduction-line {
     display: flex;
     direction: rtl;
     gap: 4px;
     white-space: nowrap;
 }
 
-.pakki-grid-deduction-line + .pakki-grid-deduction-line {
+.batch-grid-deduction-line + .batch-grid-deduction-line {
     border-left: 1px dashed #ddd;
     padding-left: 10px;
 }

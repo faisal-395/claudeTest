@@ -47,9 +47,9 @@
     }
     else
     {
-        <div class="pakki-entry-panel">
-            <div class="pakki-entry-inputs">
-                <div class="pakki-entry-row pakki-entry-row-5">
+        <div class="batch-entry-panel">
+            <div class="batch-entry-inputs">
+                <div class="batch-entry-row batch-entry-row-5">
                     <div><label>Bill # / بل نمبر</label><input @bind="_billNumber" placeholder="Bill #" /></div>
                     <div><label>Date / تاریخ</label><DatePicker @bind-Value="_date" /></div>
                     <div>
@@ -65,7 +65,7 @@
                         <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Product…" />
                     </div>
                 </div>
-                <div class="pakki-entry-row pakki-entry-row-4">
+                <div class="batch-entry-row batch-entry-row-4">
                     <div>
                         <label>فروخت کنندہ</label>
                         <SearchSelect TItem="PartyDto" Items="@SellerChoices" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" @bind-Value="_stagingFarmerId" Placeholder="Vendor…" />
@@ -78,11 +78,11 @@
 
             @if (PakkiRules.Count > 0)
             {
-                <div class="pakki-entry-deductions">
-                    <div class="pakki-entry-deductions-title">Deductions</div>
+                <div class="batch-entry-deductions">
+                    <div class="batch-entry-deductions-title">Deductions</div>
                     @foreach (var r in PakkiRules)
                     {
-                        <div class="pakki-entry-deduction-row" title="@r.ChargedTo">
+                        <div class="batch-entry-deduction-row" title="@r.ChargedTo">
                             <span>@r.Name</span>
                             <span class="ltr-inline">@RatePrefix(r)<input type="number" step="0.01" value="@GetEffectiveRate(r)" @onchange="@(e => SetRateOverride(r.Id, e.Value))" />@RateSuffix(r)</span>
                         </div>
@@ -91,11 +91,11 @@
             }
         </div>
 
-        <div class="pakki-add-calc-row">
-            <div class="pakki-add-col">
+        <div class="batch-add-calc-row">
+            <div class="batch-add-col">
                 <button class="btn secondary" disabled="@(!CanAddRow)" @onclick="AddStagedRow">Add</button>
             </div>
-            <div class="pakki-staging-calc rtl-urdu">
+            <div class="batch-staging-calc rtl-urdu">
                 @if (StagingCalc is not null)
                 {
                     <span>صافی وزن: <b>@StagingCalc.NetWeightKg.ToString("N2")</b> کلو</span>
@@ -114,8 +114,8 @@
             </div>
         </div>
 
-        <div class="pakki-results-grid-wrapper">
-            <table class="data-grid multi-purchase-grid pakki-results-grid">
+        <div class="batch-results-grid-wrapper">
+            <table class="data-grid multi-purchase-grid batch-results-grid">
                 <thead>
                     <tr>
                         <th class="rtl-urdu" style="min-width:140px;">فروخت کنندہ</th>
@@ -144,12 +144,12 @@
                             <td style="text-align:right;">@(calc?.NetWeightKg.ToString("N2") ?? "—")</td>
                             <td style="text-align:right;">@(calc?.BoriQty?.ToString("N2") ?? "—")</td>
                             <td style="text-align:right;">@(calc?.GrossAmount.ToString("N2") ?? "—")</td>
-                            <td class="pakki-grid-deductions">
+                            <td class="batch-grid-deductions">
                                 @if (deductionLines is { Count: > 0 })
                                 {
                                     @foreach (var line in deductionLines)
                                     {
-                                        <div class="pakki-grid-deduction-line">
+                                        <div class="batch-grid-deduction-line">
                                             <span>@line.NameUrdu</span>
                                             <span>@line.Amount.ToString("N2")</span>
                                         </div>
@@ -169,12 +169,12 @@
             </table>
         </div>
 
-        <div class="pakki-save-totals-row">
-            <div class="pakki-save-col">
+        <div class="batch-save-totals-row">
+            <div class="batch-save-col">
                 <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: false)">@(_saving ? "Saving…" : "Save")</button>
                 <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: true)">@(_saving ? "Saving…" : "Save & Print")</button>
             </div>
-            <div class="pakki-grand-totals total-figure rtl-urdu">
+            <div class="batch-grand-totals total-figure rtl-urdu">
                 <span>مجموعی رقم (کل): Rs @GrandGross.ToString("N2")</span>
                 <span>مجموعی کٹوتی (کل): Rs @GrandDeductions.ToString("N2")</span>
                 <span>مجموعی کل رقم (کسان): Rs @GrandTotal.ToString("N2")</span>
