@@ -1,3 +1,5 @@
+using GrainMarket.Application.Common;
+
 namespace GrainMarket.Application.MultiSale;
 
 /// <summary>
@@ -8,7 +10,8 @@ namespace GrainMarket.Application.MultiSale;
 public record MultiSaleRowRequest(
     int FarmerId, int ProductId,
     decimal? BhartiKgPerBag, decimal? TotalWeightKg,
-    decimal? RatePerUnit, string? VehicleNumber, string? Notes);
+    decimal? RatePerUnit, string? VehicleNumber, string? Notes,
+    List<DeductionOverrideRequest>? DeductionOverrides = null);
 
 /// <summary>
 /// One buyer settling with multiple farmers/vendors in a single sitting. Each row becomes its own

@@ -54,6 +54,7 @@ public class KachiService : IKachiService
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);
+        calc = DeductionEngine.ApplyOverrides(calc, grossAmount, request.DeductionOverrides?.ToDictionary(o => o.DeductionRuleId, o => o.Amount));
         var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
         var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
 

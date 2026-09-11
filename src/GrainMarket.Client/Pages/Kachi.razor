@@ -94,9 +94,9 @@
                                     <span>&nbsp;·&nbsp;بوری: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
                                 }
                                 <span>&nbsp;·&nbsp;مجموعی رقم: <b>@calc.GrossAmount.ToString("N2")</b></span>
-                                @if (calc.FarmerLines.Count > 0 || calc.BuyerLines.Count > 0)
+                                @foreach (var line in calc.FarmerLines.Concat(calc.BuyerLines))
                                 {
-                                    <span>&nbsp;·&nbsp;@string.Join("، ", calc.FarmerLines.Concat(calc.BuyerLines).Select(l => $"{l.NameUrdu} {l.Amount:N2}"))</span>
+                                    <span>&nbsp;·&nbsp;@line.NameUrdu: <input type="number" step="0.01" style="width:65px;" value="@line.Amount" @onchange="@(e => SetOverride(row, line.DeductionRuleId, e.Value))" /></span>
                                 }
                             </div>
                         }
@@ -215,6 +215,16 @@
         _selectedIndex = null;
     }
 
+    /// <summary>Lets the operator charge less (or more) than the standard Setup > Format rate for
+    /// one deduction line on this one row — e.g. less Commission for a specific farmer.</summary>
+    private void SetOverride(RowModel row, int deductionRuleId, object? value)
+    {
+        if (decimal.TryParse(value?.ToString(), out var amount) && amount >= 0)
+        {
+            row.DeductionOverrides[deductionRuleId] = amount;
+        }
+    }
+
     /// <summary>Drives both the per-row calculation line and the grand-total summary — reuses the
     /// exact same DeductionEngine/UnitConversionCalculator the server's KachiService uses to post
     /// the Kachi (AppliesTo.Kachi, matching the Kachi-stage deduction rules, not Pakki's), so what's
@@ -245,6 +255,7 @@
 
             var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, _productId, _unitConversionEntities);
             var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Kachi, _productId, row.FarmerId, _deductionRuleEntities);
+            deductions = DeductionEngine.ApplyOverrides(deductions, gross, row.DeductionOverrides);
             var farmerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).ToList();
             var buyerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).ToList();
             var farmerTotal = farmerLines.Sum(l => l.Amount);
@@ -265,7 +276,8 @@
         try
         {
             var request = new CreateMultiPurchaseRequest(_date, _seasonId, _buyerId,
-                _rows.Select(r => new MultiPurchaseRowRequest(r.FarmerId, _productId, r.BhartiKgPerBag, r.TotalWeightKg, r.RatePerUnit, r.VehicleNumber, r.Notes)).ToList(),
+                _rows.Select(r => new MultiPurchaseRowRequest(r.FarmerId, _productId, r.BhartiKgPerBag, r.TotalWeightKg, r.RatePerUnit, r.VehicleNumber, r.Notes,
+                    r.DeductionOverrides.Select(o => new DeductionOverrideRequest(o.Key, o.Value)).ToList())).ToList(),
                 _billNumber);
 
             var result = await Api.CreateMultiPurchaseAsync(request);
@@ -295,6 +307,7 @@
         public decimal? RatePerUnit { get; set; }
         public string? VehicleNumber { get; set; }
         public string? Notes { get; set; }
+        public Dictionary<int, decimal> DeductionOverrides { get; } = new();
     }
 
     private record RowCalculation(

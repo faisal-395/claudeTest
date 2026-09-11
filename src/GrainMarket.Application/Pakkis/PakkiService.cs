@@ -136,6 +136,7 @@ public class PakkiService : IPakkiService
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Pakki, request.ProductId, request.FarmerId, rules);
+        calc = DeductionEngine.ApplyOverrides(calc, grossAmount, request.DeductionOverrides?.ToDictionary(o => o.DeductionRuleId, o => o.Amount));
 
         var pakki = new Pakki
         {

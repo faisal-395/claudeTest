@@ -1,3 +1,4 @@
+using GrainMarket.Application.Common;
 using GrainMarket.Domain.Enums;
 
 namespace GrainMarket.Application.Pakkis;
@@ -19,7 +20,8 @@ public record CreatePakkiFromKachiRequest(
 public record CreateStandalonePakkiRequest(
     DateTime Date, int SeasonId, int BuyerId, int FarmerId, int ProductId,
     decimal? BhartiKgPerBag, decimal? TotalWeightKg,
-    decimal RatePerUnit, string? VehicleNumber, string? Notes, string? BillNumber = null);
+    decimal RatePerUnit, string? VehicleNumber, string? Notes, string? BillNumber = null,
+    List<DeductionOverrideRequest>? DeductionOverrides = null);
 
 /// <summary>Edits an open Pakki's buyer/rate/vehicle/notes. Weight, product, farmer and season stay
 /// fixed (they carry the Kachi's identity forward, or fix the standalone sale's own identity) —

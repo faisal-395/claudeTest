@@ -67,4 +67,23 @@ public static class DeductionEngine
         var net = grossAmount - total;
         return new DeductionCalculationResult(lines, total, net);
     }
+
+    /// <summary>Applies operator-entered per-line overrides (e.g. charging less Commission for one
+    /// transaction) on top of an already-computed result, and recomputes TotalDeductions/NetAmount
+    /// from the adjusted lines. Returns <paramref name="calc"/> unchanged when there are no
+    /// overrides, so callers can always run this unconditionally.</summary>
+    public static DeductionCalculationResult ApplyOverrides(
+        DeductionCalculationResult calc,
+        decimal grossAmount,
+        IReadOnlyDictionary<int, decimal>? overrides)
+    {
+        if (overrides is null || overrides.Count == 0) return calc;
+
+        var lines = calc.Lines
+            .Select(l => overrides.TryGetValue(l.DeductionRuleId, out var amount) ? l with { Amount = amount } : l)
+            .ToList();
+        var total = lines.Sum(l => l.Amount);
+
+        return new DeductionCalculationResult(lines, total, grossAmount - total);
+    }
 }

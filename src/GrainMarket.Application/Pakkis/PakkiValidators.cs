@@ -1,4 +1,5 @@
 using FluentValidation;
+using GrainMarket.Application.Common;
 
 namespace GrainMarket.Application.Pakkis;
 
@@ -23,6 +24,7 @@ public class CreateStandalonePakkiRequestValidator : AbstractValidator<CreateSta
         RuleFor(x => x.RatePerUnit).GreaterThan(0).WithMessage("Rate must be greater than zero to finalize a Pakki.");
         RuleFor(x => x.BhartiKgPerBag).NotNull().GreaterThan(0).WithMessage("Bharti (weight per bag) is required.");
         RuleFor(x => x.TotalWeightKg).NotNull().GreaterThan(0).WithMessage("Total weight is required.");
+        RuleForEach(x => x.DeductionOverrides).SetValidator(new DeductionOverrideRequestValidator());
     }
 }
 
