@@ -321,6 +321,10 @@ table.data-grid tbody tr.selected-row:hover {
 
 .pakki-grid-deductions {
     min-width: 150px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px 10px;
     font-size: 0.72rem;
     color: #555;
 }
@@ -328,13 +332,13 @@ table.data-grid tbody tr.selected-row:hover {
 .pakki-grid-deduction-line {
     display: flex;
     direction: rtl;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 1px 0;
+    gap: 4px;
+    white-space: nowrap;
 }
 
 .pakki-grid-deduction-line + .pakki-grid-deduction-line {
-    border-top: 1px dashed #eee;
+    border-left: 1px dashed #ddd;
+    padding-left: 10px;
 }
 
 /* SearchSelect — replaces native <select> for long pickers (farmer/buyer/product/account) so the
