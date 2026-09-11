@@ -8,6 +8,7 @@ using GrainMarket.Application.Expenses;
 using GrainMarket.Application.Kachis;
 using GrainMarket.Application.Ledger;
 using GrainMarket.Application.MultiPurchase;
+using GrainMarket.Application.MultiSale;
 using GrainMarket.Application.Pakkis;
 using GrainMarket.Application.Parties;
 using GrainMarket.Application.Products;
@@ -101,6 +102,7 @@ public class ApiClient
     public Task CancelPakkiAsync(int id) => PostAsync($"api/pakkis/{id}/cancel");
 
     public Task<MultiPurchaseResultDto> CreateMultiPurchaseAsync(CreateMultiPurchaseRequest request) => PostAsync<CreateMultiPurchaseRequest, MultiPurchaseResultDto>("api/multi-purchase", request);
+    public Task<MultiSaleResultDto> CreateMultiSaleAsync(CreateMultiSaleRequest request) => PostAsync<CreateMultiSaleRequest, MultiSaleResultDto>("api/multi-sale", request);
 
     // --- Sale Invoice / Purchase -----------------------------------------------------------------
     public Task<List<SaleInvoiceDto>> GetSaleInvoicesAsync() => GetAsync<List<SaleInvoiceDto>>("api/sale-invoices");
