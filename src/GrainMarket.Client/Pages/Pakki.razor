@@ -112,57 +112,60 @@
             </div>
         </div>
 
-        <table class="data-grid multi-purchase-grid pakki-results-grid">
-            <thead>
-                <tr>
-                    <th class="rtl-urdu" style="min-width:140px;">فروخت کنندہ</th>
-                    <th class="rtl-urdu">بھرتی</th>
-                    <th class="rtl-urdu">کل وزن</th>
-                    <th class="rtl-urdu">ریٹ</th>
-                    <th class="rtl-urdu">صافی وزن</th>
-                    <th class="rtl-urdu">بوری</th>
-                    <th class="rtl-urdu">مجموعی رقم</th>
-                    <th class="rtl-urdu" style="min-width:170px;">کٹوتی کی تفصیل</th>
-                    <th class="rtl-urdu">کل کٹوتی</th>
-                    <th class="rtl-urdu">ادائیگی</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var row in _rows)
-                {
-                    var calc = Calculate(row);
+        <div class="pakki-results-grid-wrapper">
+            <table class="data-grid multi-purchase-grid pakki-results-grid">
+                <thead>
                     <tr>
-                        <td>@DisplayText.Party(_vendors?.FirstOrDefault(v => v.Id == row.FarmerId))</td>
-                        <td style="text-align:right;">@row.BhartiKgPerBag?.ToString("N2")</td>
-                        <td style="text-align:right;">@row.TotalWeightKg?.ToString("N2")</td>
-                        <td style="text-align:right;">@row.RatePerUnit?.ToString("N2")</td>
-                        <td style="text-align:right;">@(calc?.NetWeightKg.ToString("N2") ?? "—")</td>
-                        <td style="text-align:right;">@(calc?.BoriQty?.ToString("N2") ?? "—")</td>
-                        <td style="text-align:right;">@(calc?.GrossAmount.ToString("N2") ?? "—")</td>
-                        <td class="pakki-grid-deductions">
-                            @if (calc is not null && (calc.FarmerLines.Count > 0 || calc.BuyerLines.Count > 0))
-                            {
-                                @foreach (var line in calc.FarmerLines.Concat(calc.BuyerLines))
-                                {
-                                    <div class="pakki-grid-deduction-line">
-                                        <span>@line.NameUrdu</span>
-                                        <span>@line.Amount.ToString("N2")</span>
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <span>—</span>
-                            }
-                        </td>
-                        <td style="text-align:right;"><b>@(calc?.TotalDeductions.ToString("N2") ?? "—")</b></td>
-                        <td style="text-align:right;"><b>@(calc?.NetPayableToFarmer.ToString("N2") ?? "—")</b></td>
-                        <td><a href="#" @onclick="() => RemoveRow(row)" @onclick:preventDefault="true">Remove</a></td>
+                        <th class="rtl-urdu" style="min-width:140px;">فروخت کنندہ</th>
+                        <th class="rtl-urdu">بھرتی</th>
+                        <th class="rtl-urdu">کل وزن</th>
+                        <th class="rtl-urdu">ریٹ</th>
+                        <th class="rtl-urdu">صافی وزن</th>
+                        <th class="rtl-urdu">بوری</th>
+                        <th class="rtl-urdu">مجموعی رقم</th>
+                        <th class="rtl-urdu">کٹوتی کی تفصیل</th>
+                        <th class="rtl-urdu">کل کٹوتی</th>
+                        <th class="rtl-urdu">ادائیگی</th>
+                        <th></th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var row in _rows)
+                    {
+                        var calc = Calculate(row);
+                        var deductionLines = calc?.FarmerLines.Concat(calc.BuyerLines).Where(l => l.Amount != 0).ToList();
+                        <tr>
+                            <td>@DisplayText.Party(_vendors?.FirstOrDefault(v => v.Id == row.FarmerId))</td>
+                            <td style="text-align:right;">@row.BhartiKgPerBag?.ToString("N2")</td>
+                            <td style="text-align:right;">@row.TotalWeightKg?.ToString("N2")</td>
+                            <td style="text-align:right;">@row.RatePerUnit?.ToString("N2")</td>
+                            <td style="text-align:right;">@(calc?.NetWeightKg.ToString("N2") ?? "—")</td>
+                            <td style="text-align:right;">@(calc?.BoriQty?.ToString("N2") ?? "—")</td>
+                            <td style="text-align:right;">@(calc?.GrossAmount.ToString("N2") ?? "—")</td>
+                            <td class="pakki-grid-deductions">
+                                @if (deductionLines is { Count: > 0 })
+                                {
+                                    @foreach (var line in deductionLines)
+                                    {
+                                        <div class="pakki-grid-deduction-line">
+                                            <span>@line.NameUrdu</span>
+                                            <span>@line.Amount.ToString("N2")</span>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
+                            <td style="text-align:right;"><b>@(calc?.TotalDeductions.ToString("N2") ?? "—")</b></td>
+                            <td style="text-align:right;"><b>@(calc?.NetPayableToFarmer.ToString("N2") ?? "—")</b></td>
+                            <td><a href="#" @onclick="() => RemoveRow(row)" @onclick:preventDefault="true">Remove</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
 
         <div class="pakki-save-totals-row">
             <div class="pakki-save-col">

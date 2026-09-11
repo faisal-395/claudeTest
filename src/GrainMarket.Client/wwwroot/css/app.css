@@ -306,6 +306,14 @@ table.data-grid tbody tr.selected-row:hover {
     flex-wrap: wrap;
 }
 
+/* This grid (unlike the entry area above it, which has SearchSelect dropdowns that would get
+   clipped by overflow) is read-only — safe to scroll horizontally on its own so a wide deduction
+   breakdown never pushes the whole page sideways. */
+.pakki-results-grid-wrapper {
+    overflow-x: auto;
+    margin-bottom: 6px;
+}
+
 /* Pakki results grid — adds an itemized deduction breakdown column and right-aligned numeric
    columns on top of the shared .multi-purchase-grid look (also used by Kachi), scoped so Kachi's
    grid is untouched. The "table." prefix raises specificity above the base table.data-grid rule
