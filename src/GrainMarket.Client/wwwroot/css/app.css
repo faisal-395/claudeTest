@@ -274,7 +274,13 @@ table.data-grid tbody tr.selected-row:hover {
 
 .batch-entry-row {
     display: grid;
+    align-items: start;
     gap: 6px 8px;
+}
+
+.batch-entry-row > div {
+    display: flex;
+    flex-direction: column;
 }
 
 /* Bill #, Date, Season stay narrow; Buyer/Product need more room for long picked names. */
@@ -289,13 +295,21 @@ table.data-grid tbody tr.selected-row:hover {
     grid-template-columns: minmax(220px, 6fr) minmax(70px, 1fr) minmax(70px, 1fr) minmax(70px, 1fr);
 }
 
+/* Bilingual (English / Urdu) labels vary a lot in length — "Bill # / بل نمبر" vs "Date / تاریخ" —
+   so a narrow column's label can wrap while a wide column's doesn't. Without a reserved height,
+   that makes the actual inputs start at different vertical positions from column to column, which
+   is what reads as "not aligned". Fixing the label box to two lines' worth of height (whether it
+   needs one line or two) keeps every control's top edge level across the row. */
 .batch-entry-inputs label {
     display: block;
     font-size: 0.8rem;
     font-weight: 600;
     color: #333;
+    line-height: 1.3;
+    min-height: 2.6em;
     margin-bottom: 3px;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: break-word;
 }
 
 .batch-entry-inputs input, .batch-entry-inputs select {

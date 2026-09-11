@@ -107,7 +107,7 @@
                     {
                         <span>&nbsp;·&nbsp;خریدار چارجز: <b>@StagingCalc.BuyerChargesTotal.ToString("N2")</b></span>
                     }
-                    <span>&nbsp;·&nbsp;کسان کو ادائیگی: <b>@StagingCalc.NetPayableToFarmer.ToString("N2")</b></span>
+                    <span>&nbsp;·&nbsp;فروخت کنندہ کو ادائیگی: <b>@StagingCalc.NetPayableToFarmer.ToString("N2")</b></span>
                 }
                 else
                 {
@@ -128,7 +128,6 @@
                         <th class="rtl-urdu">بوری</th>
                         <th class="rtl-urdu">مجموعی رقم</th>
                         <th class="rtl-urdu">کٹوتی کی تفصیل</th>
-                        <th class="rtl-urdu">کسان کٹوتی</th>
                         <th class="rtl-urdu">خریدار چارجز</th>
                         <th class="rtl-urdu">ادائیگی</th>
                         <th></th>
@@ -163,7 +162,6 @@
                                     <span>—</span>
                                 }
                             </td>
-                            <td style="text-align:right;"><b>@(calc?.FarmerDeductionsTotal.ToString("N2") ?? "—")</b></td>
                             <td style="text-align:right;">@(calc?.BuyerChargesTotal.ToString("N2") ?? "—")</td>
                             <td style="text-align:right;"><b>@(calc?.NetPayableToFarmer.ToString("N2") ?? "—")</b></td>
                             <td><a href="#" @onclick="() => RemoveRow(row)" @onclick:preventDefault="true">Remove</a></td>
@@ -181,7 +179,7 @@
             <div class="batch-grand-totals total-figure rtl-urdu">
                 <span>مجموعی رقم (کل): Rs @GrandGross.ToString("N2")</span>
                 <span>مجموعی کٹوتی (کل): Rs @GrandDeductions.ToString("N2")</span>
-                <span>مجموعی کل رقم (کسان): Rs @GrandTotal.ToString("N2")</span>
+                <span>مجموعی کل رقم (فروخت کنندہ): Rs @GrandTotal.ToString("N2")</span>
                 @if (GrandBuyerCharges > 0)
                 {
                     <span>مجموعی خریدار چارجز: Rs @GrandBuyerCharges.ToString("N2")</span>

@@ -49,7 +49,7 @@
                     <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
                 }
                 <tr><td><b>مجموعی کٹوتی</b></td><td class="ltr-inline"><b>@_pakki.TotalDeductions.ToString("N2")</b></td></tr>
-                <tr><td><b>کسان کو ادائیگی</b></td><td class="ltr-inline"><b>@_pakki.NetPayableToFarmer.ToString("N2")</b></td></tr>
+                <tr><td><b>فروخت کنندہ کو ادائیگی</b></td><td class="ltr-inline"><b>@_pakki.NetPayableToFarmer.ToString("N2")</b></td></tr>
             </table>
             @if (_pakki.DeductionLines.Any(l => l.ChargedTo == DeductionChargedTo.Buyer))
             {
