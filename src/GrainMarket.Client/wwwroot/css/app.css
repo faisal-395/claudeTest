@@ -49,11 +49,20 @@ html, body {
 
 .sidebar {
     width: 230px;
+    flex-shrink: 0;
     background: #1B4332;
     color: white;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    transition: width 0.2s ease;
+}
+
+/* Squeezed by wide batch-entry screens (e.g. Pakki's grid, via UiState) to reclaim horizontal
+   space while rows are being added, then restored on save. */
+.sidebar.collapsed {
+    width: 0;
+    overflow: hidden;
 }
 
 .sidebar .brand {

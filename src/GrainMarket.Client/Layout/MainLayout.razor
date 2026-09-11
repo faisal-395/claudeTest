@@ -1,6 +1,8 @@
 @inherits LayoutComponentBase
 @inject AuthState AuthState
+@inject UiState UiState
 @inject NavigationManager Nav
+@implements IDisposable
 
 @if (!AuthState.IsAuthenticated)
 {
@@ -9,7 +11,7 @@
 else
 {
     <div class="app-shell">
-        <div class="sidebar">
+        <div class="sidebar @(UiState.SidebarCollapsed ? "collapsed" : "")">
             <div class="brand">
                 Umer Farooq &amp; Brothers<br />
                 <small>@AuthState.FullName (@AuthState.RoleName)</small>
@@ -51,6 +53,16 @@ else
 }
 
 @code {
+    protected override void OnInitialized()
+    {
+        UiState.Changed += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        UiState.Changed -= StateHasChanged;
+    }
+
     private void Logout()
     {
         AuthState.Clear();
