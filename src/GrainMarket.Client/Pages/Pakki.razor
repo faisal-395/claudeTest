@@ -70,7 +70,9 @@
                 <span style="font-weight:600;">Pakki Tax / Deductions:</span>
                 @foreach (var r in PakkiRules)
                 {
-                    <span>@r.Name (@r.ChargedTo): <b>@FormatRuleValue(r)</b></span>
+                    <span>
+                        @r.Name (@r.ChargedTo): @RatePrefix(r)<input type="number" step="0.01" style="width:60px;" value="@GetEffectiveRate(r)" @onchange="@(e => SetRateOverride(r.Id, e.Value))" />@RateSuffix(r)
+                    </span>
                 }
             </div>
         }
@@ -108,9 +110,9 @@
                                         <span>&nbsp;·&nbsp;بوری: <b>@calc.BoriQty.Value.ToString("N2")</b></span>
                                     }
                                     <span>&nbsp;·&nbsp;مجموعی رقم: <b>@calc.GrossAmount.ToString("N2")</b></span>
-                                    @foreach (var line in calc.FarmerLines.Concat(calc.BuyerLines))
+                                    @if (calc.FarmerLines.Count > 0 || calc.BuyerLines.Count > 0)
                                     {
-                                        <span>&nbsp;·&nbsp;@line.NameUrdu: <input type="number" step="0.01" style="width:65px;" value="@line.Amount" @onchange="@(e => SetOverride(row, line.DeductionRuleId, e.Value))" /></span>
+                                        <span>&nbsp;·&nbsp;@string.Join("، ", calc.FarmerLines.Concat(calc.BuyerLines).Select(l => $"{l.NameUrdu} {l.Amount:N2}"))</span>
                                     }
                                     <span>&nbsp;·&nbsp;کسان کو ادائیگی: <b>@calc.NetPayableToFarmer.ToString("N2")</b></span>
                                 </div>
@@ -166,6 +168,11 @@
     private decimal? _convertRate;
     private string? _convertVehicleNumber;
 
+    /// <summary>Operator-entered rate overrides for this batch only (e.g. less Commission than the
+    /// standard Setup > Format rate) — keyed by DeductionRuleId, applied identically to every row
+    /// when saving. Never changes the underlying DeductionRule.</summary>
+    private readonly Dictionary<int, decimal> _rateOverrides = new();
+
     /// <summary>Pakki is vendor-to-vendor: a Vendor can't sell to itself in the same Pakki, so the
     /// grid's per-row seller list excludes whichever Vendor is picked as the top purchaser.</summary>
     private List<PartyDto> SellerChoices => (_vendors ?? new()).Where(v => v.Id != _buyerId).ToList();
@@ -182,11 +189,14 @@
             .OrderBy(r => r.SortOrder)
             .ToList();
 
-    private static string FormatRuleValue(DeductionRule r) => r.CalculationType switch
+    private decimal GetEffectiveRate(DeductionRule r) => _rateOverrides.TryGetValue(r.Id, out var v) ? v : r.Value;
+
+    private static string RatePrefix(DeductionRule r) => r.CalculationType == DeductionCalculationType.PercentOfGross ? "" : "Rs ";
+    private static string RateSuffix(DeductionRule r) => r.CalculationType switch
     {
-        DeductionCalculationType.PercentOfGross => $"{r.Value:N2}%",
-        DeductionCalculationType.PerUnitWeight => $"Rs {r.Value:N2}/kg",
-        _ => $"Rs {r.Value:N2}"
+        DeductionCalculationType.PercentOfGross => "%",
+        DeductionCalculationType.PerUnitWeight => "/kg",
+        _ => ""
     };
 
     private bool CanSave =>
@@ -246,12 +256,12 @@
     }
 
     /// <summary>Lets the operator charge less (or more) than the standard Setup > Format rate for
-    /// one deduction line on this one row — e.g. less Commission for a specific vendor.</summary>
-    private void SetOverride(RowModel row, int deductionRuleId, object? value)
+    /// one deduction rule, for this whole batch — e.g. less Commission this time.</summary>
+    private void SetRateOverride(int deductionRuleId, object? value)
     {
-        if (decimal.TryParse(value?.ToString(), out var amount) && amount >= 0)
+        if (decimal.TryParse(value?.ToString(), out var rate) && rate >= 0)
         {
-            row.DeductionOverrides[deductionRuleId] = amount;
+            _rateOverrides[deductionRuleId] = rate;
         }
     }
 
@@ -272,8 +282,7 @@
             var boriQty = netWeightKg / boriFactor;
 
             var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, _productId, _unitConversionEntities);
-            var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Pakki, _productId, row.FarmerId, _deductionRuleEntities);
-            deductions = DeductionEngine.ApplyOverrides(deductions, gross, row.DeductionOverrides);
+            var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Pakki, _productId, row.FarmerId, _deductionRuleEntities, _rateOverrides);
             var farmerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).ToList();
             var buyerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).ToList();
             return new RowCalculation(netWeightKg, boriQty, gross, farmerLines, buyerLines, deductions.TotalDeductions, deductions.NetAmount);
@@ -291,9 +300,9 @@
         _saving = true;
         try
         {
+            var overrides = _rateOverrides.Select(o => new DeductionOverrideRequest(o.Key, o.Value)).ToList();
             var request = new CreateMultiSaleRequest(_date, _seasonId, _buyerId,
-                _rows.Select(r => new MultiSaleRowRequest(r.FarmerId, _productId, r.BhartiKgPerBag, r.TotalWeightKg, r.RatePerUnit, r.VehicleNumber, r.Notes,
-                    r.DeductionOverrides.Select(o => new DeductionOverrideRequest(o.Key, o.Value)).ToList())).ToList(),
+                _rows.Select(r => new MultiSaleRowRequest(r.FarmerId, _productId, r.BhartiKgPerBag, r.TotalWeightKg, r.RatePerUnit, r.VehicleNumber, r.Notes, overrides)).ToList(),
                 _billNumber);
 
             var result = await Api.CreateMultiSaleAsync(request);
@@ -307,6 +316,7 @@
 
             _successMessage = $"Saved {result.Rows.Count} Pakki record(s) for {result.BuyerName}.";
             _billNumber = null;
+            _rateOverrides.Clear();
             _rows.Clear();
             _selectedIndex = null;
             AddRow();
@@ -334,7 +344,6 @@
         public decimal? RatePerUnit { get; set; }
         public string? VehicleNumber { get; set; }
         public string? Notes { get; set; }
-        public Dictionary<int, decimal> DeductionOverrides { get; } = new();
     }
 
     private record RowCalculation(

@@ -22,7 +22,8 @@ public static class DeductionEngine
         DeductionAppliesTo appliesTo,
         int? productId,
         int? partyId,
-        IReadOnlyCollection<DeductionRule> allRules)
+        IReadOnlyCollection<DeductionRule> allRules,
+        IReadOnlyDictionary<int, decimal>? rateOverrides = null)
     {
         if (grossAmount < 0)
         {
@@ -47,11 +48,20 @@ public static class DeductionEngine
 
         foreach (var rule in applicableRules)
         {
+            // An operator can override a rule's rate/value for one specific Kachi or Pakki (e.g.
+            // charging less Commission this time) without touching the standing Setup > Format
+            // configuration — the override substitutes for rule.Value but still goes through the
+            // rule's own CalculationType formula, so a percentage override still scales correctly
+            // per row's own gross/weight.
+            var effectiveValue = rateOverrides is not null && rateOverrides.TryGetValue(rule.Id, out var overrideValue)
+                ? overrideValue
+                : rule.Value;
+
             var amount = rule.CalculationType switch
             {
-                DeductionCalculationType.FixedAmount => rule.Value,
-                DeductionCalculationType.PercentOfGross => Math.Round(grossAmount * (rule.Value / 100m), 2, MidpointRounding.AwayFromZero),
-                DeductionCalculationType.PerUnitWeight => Math.Round(rule.Value * netWeightKg, 2, MidpointRounding.AwayFromZero),
+                DeductionCalculationType.FixedAmount => effectiveValue,
+                DeductionCalculationType.PercentOfGross => Math.Round(grossAmount * (effectiveValue / 100m), 2, MidpointRounding.AwayFromZero),
+                DeductionCalculationType.PerUnitWeight => Math.Round(effectiveValue * netWeightKg, 2, MidpointRounding.AwayFromZero),
                 _ => throw new InvalidCalculationException($"Unknown deduction calculation type '{rule.CalculationType}'.")
             };
 
@@ -66,24 +76,5 @@ public static class DeductionEngine
 
         var net = grossAmount - total;
         return new DeductionCalculationResult(lines, total, net);
-    }
-
-    /// <summary>Applies operator-entered per-line overrides (e.g. charging less Commission for one
-    /// transaction) on top of an already-computed result, and recomputes TotalDeductions/NetAmount
-    /// from the adjusted lines. Returns <paramref name="calc"/> unchanged when there are no
-    /// overrides, so callers can always run this unconditionally.</summary>
-    public static DeductionCalculationResult ApplyOverrides(
-        DeductionCalculationResult calc,
-        decimal grossAmount,
-        IReadOnlyDictionary<int, decimal>? overrides)
-    {
-        if (overrides is null || overrides.Count == 0) return calc;
-
-        var lines = calc.Lines
-            .Select(l => overrides.TryGetValue(l.DeductionRuleId, out var amount) ? l with { Amount = amount } : l)
-            .ToList();
-        var total = lines.Sum(l => l.Amount);
-
-        return new DeductionCalculationResult(lines, total, grossAmount - total);
     }
 }
