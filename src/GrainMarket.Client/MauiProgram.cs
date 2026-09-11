@@ -32,7 +32,6 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<AppSettings>();
         builder.Services.AddSingleton<AuthState>();
-        builder.Services.AddSingleton<UiState>();
 
         // Must be Transient, not Singleton: IHttpClientFactory rebuilds ApiClient's handler
         // pipeline every 2 minutes by default (HandlerLifetime, to pick up DNS changes), and each

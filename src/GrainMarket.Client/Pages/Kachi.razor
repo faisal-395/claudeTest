@@ -5,8 +5,6 @@
 @using GrainMarket.Application.MultiPurchase
 @inject ApiClient Api
 @inject NavigationManager Nav
-@inject UiState UiState
-@implements IDisposable
 
 <RequireAuth>
     <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
@@ -294,13 +292,7 @@
         _stagingBharti = null;
         _stagingTotalWeight = null;
         _stagingRate = null;
-
-        // Reclaim the sidebar's width for the grid while rows are being added; restored on save
-        // (or, as a safety net, if the operator navigates away without saving — see Dispose).
-        UiState.CollapseSidebar();
     }
-
-    public void Dispose() => UiState.ExpandSidebar();
 
     private void RemoveRow(RowModel row) => _rows.Remove(row);
 
@@ -369,7 +361,6 @@
                 _billNumber);
 
             var result = await Api.CreateMultiPurchaseAsync(request);
-            UiState.ExpandSidebar();
 
             if (andPrint)
             {

@@ -58,30 +58,73 @@ html, body {
     transition: width 0.2s ease;
 }
 
-/* Squeezed by wide batch-entry screens (Kachi/Pakki's grids, via UiState) to reclaim horizontal
-   space while rows are being added, then restored on save. */
+/* Squeezed to an icon-only rail on Kachi/Pakki (their batch-entry grids are wide) so those pages
+   get more room, while still leaving the menu reachable — see MainLayout's route-driven
+   _iconOnly, not a click/save toggle. */
 .sidebar.collapsed {
-    width: 0;
-    overflow: hidden;
+    width: 56px;
+}
+
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .brand-full {
+    display: none;
+}
+
+.sidebar.collapsed nav a {
+    justify-content: center;
+    padding: 10px 0;
 }
 
 .sidebar .brand {
     padding: 16px;
     font-weight: 600;
     border-bottom: 1px solid rgba(255,255,255,0.15);
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .sidebar nav a {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 10px 16px;
     color: #e8f5e9;
     text-decoration: none;
     font-size: 0.92rem;
+    white-space: nowrap;
 }
 
 .sidebar nav a:hover, .sidebar nav a.active {
     background: #2D6A4F;
     color: white;
+}
+
+.nav-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.nav-logout {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    color: #e8f5e9;
+    text-decoration: none;
+    font-size: 0.92rem;
+    white-space: nowrap;
+    margin-top: 16px;
+}
+
+.nav-logout:hover {
+    background: #2D6A4F;
+    color: white;
+}
+
+.sidebar.collapsed .nav-logout {
+    justify-content: center;
+    padding: 10px 0;
 }
 
 .main-content {
