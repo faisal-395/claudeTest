@@ -55,7 +55,7 @@ public class PakkiService : IPakkiService
             throw new InvalidCalculationException("Only an open Kachi can be converted to a Pakki.");
         }
 
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
         {
             throw new NotFoundException(nameof(Party), request.BuyerId);
         }
@@ -121,9 +121,11 @@ public class PakkiService : IPakkiService
     {
         if (!await _db.Seasons.AnyAsync(s => s.Id == request.SeasonId && !s.IsDeleted, ct))
             throw new NotFoundException(nameof(Season), request.SeasonId);
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
             throw new NotFoundException(nameof(Party), request.BuyerId);
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.FarmerId && !p.IsDeleted && p.PartyType == PartyType.Farmer, ct))
+        // Pakki is vendor-to-vendor: the payee (request.FarmerId) must also be a Vendor-flagged
+        // party, not necessarily a Farmer — unlike Kachi, where the payee is always a Farmer.
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.FarmerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
             throw new NotFoundException(nameof(Party), request.FarmerId);
         if (!await _db.Products.AnyAsync(p => p.Id == request.ProductId && !p.IsDeleted, ct))
             throw new NotFoundException(nameof(Product), request.ProductId);
@@ -186,7 +188,7 @@ public class PakkiService : IPakkiService
         {
             throw new InvalidCalculationException("Only an open Pakki (not yet cancelled) can be edited.");
         }
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
         {
             throw new NotFoundException(nameof(Party), request.BuyerId);
         }

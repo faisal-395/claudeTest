@@ -30,7 +30,7 @@
             <div><label>Net Weight (kg)</label><input value="@_sourceKachi.NetWeightKg.ToString("N2")" disabled /></div>
             <div>
                 <label>Buyer / خریدار</label>
-                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_convertBuyerId" Placeholder="Search buyer…" />
+                <SearchSelect TItem="PartyDto" Items="_vendors" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_convertBuyerId" Placeholder="Search buyer…" />
             </div>
             <div><label>Rate per Man / ریٹ فی مَن</label><input type="number" step="0.01" @bind="_convertRate" /></div>
             <div><label>Vehicle Number / گاڑی نمبر</label><input @bind="_convertVehicleNumber" /></div>
@@ -56,7 +56,7 @@
         <div class="form-grid" style="max-width:1100px;margin-bottom:12px;">
             <div>
                 <label>Buyer / خریدار</label>
-                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
+                <SearchSelect TItem="PartyDto" Items="_vendors" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
             </div>
             <div>
                 <label>Product / جنس</label>
@@ -92,7 +92,7 @@
                     var calc = Calculate(row);
                     <tr class="@(_selectedIndex == index ? "selected-row" : "")">
                         <td style="text-align:center;"><input type="radio" name="rowSelect" checked="@(_selectedIndex == index)" @onchange="() => _selectedIndex = index" /></td>
-                        <td><SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Vendor…" /></td>
+                        <td><SearchSelect TItem="PartyDto" Items="@SellerChoices" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" Value="@row.FarmerId" ValueChanged="@(v => row.FarmerId = v)" Placeholder="Vendor…" /></td>
                         <td><input type="number" step="0.01" style="width:80px;" @bind="row.BhartiKgPerBag" /></td>
                         <td><input type="number" step="0.01" style="width:90px;" @bind="row.TotalWeightKg" /></td>
                         <td><input type="number" step="0.01" style="width:80px;" @bind="row.RatePerUnit" /></td>
@@ -145,8 +145,7 @@
 
     private KachiDto? _sourceKachi;
     private List<SeasonDto>? _seasons;
-    private List<PartyDto>? _farmers;
-    private List<PartyDto>? _buyers;
+    private List<PartyDto>? _vendors;
     private List<ProductDto>? _products;
     private List<DeductionRule>? _deductionRuleEntities;
     private List<UnitConversion>? _unitConversionEntities;
@@ -166,6 +165,10 @@
     private int _convertBuyerId;
     private decimal? _convertRate;
     private string? _convertVehicleNumber;
+
+    /// <summary>Pakki is vendor-to-vendor: a Vendor can't sell to itself in the same Pakki, so the
+    /// grid's per-row seller list excludes whichever Vendor is picked as the top purchaser.</summary>
+    private List<PartyDto> SellerChoices => (_vendors ?? new()).Where(v => v.Id != _buyerId).ToList();
 
     private decimal GrandGross => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.GrossAmount);
     private decimal GrandDeductions => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.TotalDeductions);
@@ -196,11 +199,10 @@
         try
         {
             _seasons = await Api.GetSeasonsAsync();
-            _farmers = await Api.GetPartiesAsync(PartyType.Farmer);
-            _buyers = await Api.GetPartiesAsync(PartyType.Buyer);
+            _vendors = await Api.GetPartiesAsync(PartyType.Vendor);
             _products = await Api.GetProductsAsync();
             if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
-            if (_buyers.Count > 0) { _buyerId = _buyers[0].Id; _convertBuyerId = _buyers[0].Id; }
+            if (_vendors.Count > 0) { _buyerId = _vendors[0].Id; _convertBuyerId = _vendors[0].Id; }
             if (_products.Count > 0) _productId = _products[0].Id;
 
             var rules = await Api.GetDeductionRulesAsync();
@@ -233,7 +235,7 @@
 
     private void AddRow() => _rows.Add(new RowModel
     {
-        FarmerId = _farmers?.FirstOrDefault()?.Id ?? 0
+        FarmerId = SellerChoices.FirstOrDefault()?.Id ?? 0
     });
 
     private void RemoveSelectedRow()

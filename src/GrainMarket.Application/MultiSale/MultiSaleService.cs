@@ -20,7 +20,7 @@ public class MultiSaleService : IMultiSaleService
 
     public async Task<MultiSaleResultDto> CreateAsync(CreateMultiSaleRequest request, CancellationToken ct = default)
     {
-        var buyer = await _db.Parties.FirstOrDefaultAsync(p => p.Id == request.BuyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct)
+        var buyer = await _db.Parties.FirstOrDefaultAsync(p => p.Id == request.BuyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct)
             ?? throw new NotFoundException(nameof(Party), request.BuyerId);
 
         var rows = new List<MultiSaleRowResultDto>();

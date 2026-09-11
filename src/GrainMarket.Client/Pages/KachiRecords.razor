@@ -142,7 +142,7 @@
         {
             _seasons = await Api.GetSeasonsAsync();
             _farmers = await Api.GetPartiesAsync(PartyType.Farmer);
-            _buyers = await Api.GetPartiesAsync(PartyType.Buyer);
+            _buyers = await Api.GetPartiesAsync(PartyType.Vendor);
             _products = await Api.GetProductsAsync();
 
             var conversions = await Api.GetUnitConversionsAsync();

@@ -1,10 +1,10 @@
 namespace GrainMarket.Domain.Enums;
 
+[Flags]
 public enum PartyType
 {
     Farmer = 1,
-    Buyer = 2,
-    Agent = 3,
+    Vendor = 2,
     Other = 4
 }
 

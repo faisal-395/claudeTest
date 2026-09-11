@@ -216,7 +216,7 @@ public class KachiService : IKachiService
     {
         if (!await _db.Seasons.AnyAsync(s => s.Id == seasonId && !s.IsDeleted, ct))
             throw new NotFoundException(nameof(Season), seasonId);
-        if (!await _db.Parties.AnyAsync(p => p.Id == farmerId && !p.IsDeleted && p.PartyType == PartyType.Farmer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == farmerId && !p.IsDeleted && (p.PartyType & PartyType.Farmer) == PartyType.Farmer, ct))
             throw new NotFoundException(nameof(Party), farmerId);
         if (!await _db.Products.AnyAsync(p => p.Id == productId && !p.IsDeleted, ct))
             throw new NotFoundException(nameof(Product), productId);
@@ -225,7 +225,7 @@ public class KachiService : IKachiService
     private async Task EnsureBuyerExistsAsync(int? buyerId, CancellationToken ct)
     {
         if (buyerId is null) return;
-        if (!await _db.Parties.AnyAsync(p => p.Id == buyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == buyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
             throw new NotFoundException(nameof(Party), buyerId.Value);
     }
 

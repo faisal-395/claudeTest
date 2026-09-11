@@ -108,7 +108,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        try { _buyers = await Api.GetPartiesAsync(PartyType.Buyer); }
+        try { _buyers = await Api.GetPartiesAsync(PartyType.Vendor); }
         catch (Models.ApiException ex) { _error = ex.Message; return; }
 
         await LoadAsync();
