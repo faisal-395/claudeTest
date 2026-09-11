@@ -59,7 +59,7 @@
             </table>
             <hr />
             <table style="width:100%;">
-                @foreach (var line in _kachi.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer))
+                @foreach (var line in _kachi.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Seller))
                 {
                     <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
                 }

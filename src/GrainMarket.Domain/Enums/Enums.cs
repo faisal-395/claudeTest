@@ -43,7 +43,7 @@ public enum DeductionAppliesTo
 /// top, informational only for now (no ledger posting).</summary>
 public enum DeductionChargedTo
 {
-    Farmer = 1,
+    Seller = 1,
     Buyer = 2
 }
 

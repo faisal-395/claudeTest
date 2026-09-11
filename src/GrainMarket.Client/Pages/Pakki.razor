@@ -263,7 +263,7 @@
 
             var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, _productId, _unitConversionEntities);
             var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Pakki, _productId, row.FarmerId, _deductionRuleEntities);
-            var farmerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).ToList();
+            var farmerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).ToList();
             var buyerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).ToList();
             return new RowCalculation(netWeightKg, boriQty, gross, farmerLines, buyerLines, deductions.TotalDeductions, deductions.NetAmount);
         }

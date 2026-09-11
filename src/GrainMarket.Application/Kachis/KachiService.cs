@@ -54,7 +54,7 @@ public class KachiService : IKachiService
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);
-        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).Sum(l => l.Amount);
+        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
         var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
 
         var kachi = new Kachi
@@ -121,7 +121,7 @@ public class KachiService : IKachiService
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);
-        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).Sum(l => l.Amount);
+        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
         var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
 
         // Reverse against the pre-update buyer/amounts before anything is mutated — mirrors

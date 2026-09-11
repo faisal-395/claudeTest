@@ -117,6 +117,7 @@ public static class SeedData
             new ChartOfAccount { Code = "3000", Name = "Owner's Equity", NameUrdu = "سرمایہ", AccountType = AccountType.Equity, IsProtected = true },
             new ChartOfAccount { Code = DomainConstants.SalesIncomeAccountCode, Name = "Sales Income", NameUrdu = "آمدنی فروخت", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4100", Name = "Commission Income", NameUrdu = "آمدنی کمیشن", AccountType = AccountType.Income },
+            new ChartOfAccount { Code = "4200", Name = "Market Fee Income", NameUrdu = "آمدنی مارکیٹ فیس", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4110", Name = "Brokerage Income", NameUrdu = "آمدنی بروکری", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4120", Name = "Arhat Income", NameUrdu = "آمدنی آڑت", AccountType = AccountType.Income },
             new ChartOfAccount { Code = "4300", Name = "Association Fund Income", NameUrdu = "آمدنی انجمن فنڈ", AccountType = AccountType.Income },
@@ -167,12 +168,12 @@ public static class SeedData
         // and charges nothing until switched on.
         var rules = new[]
         {
-            new DeductionRule { Name = "Labour (Palledari)", NameUrdu = "پلیداری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.75m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 1, IsActive = true, IncomeAccountId = accounts["4600"].Id },
-            new DeductionRule { Name = "Brokerage", NameUrdu = "بروکری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.15m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 2, IsActive = true, IncomeAccountId = accounts["4110"].Id },
+            new DeductionRule { Name = "Labour (Palledari)", NameUrdu = "پلیداری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.75m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Seller, SortOrder = 1, IsActive = true, IncomeAccountId = accounts["4600"].Id },
+            new DeductionRule { Name = "Brokerage", NameUrdu = "بروکری", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0.15m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Seller, SortOrder = 2, IsActive = true, IncomeAccountId = accounts["4110"].Id },
             new DeductionRule { Name = "Commission", NameUrdu = "کمیشن", CalculationType = DeductionCalculationType.PercentOfGross, Value = 1.60m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 3, IsActive = true, IncomeAccountId = accounts["4100"].Id },
-            new DeductionRule { Name = "Withholding Tax", NameUrdu = "ویدہولڈنگ ٹیکس", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 4, IsActive = false, IncomeAccountId = accounts["4500"].Id },
-            new DeductionRule { Name = "Association Fund", NameUrdu = "انجمن فنڈ", CalculationType = DeductionCalculationType.FixedAmount, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 5, IsActive = false, IncomeAccountId = accounts["4300"].Id },
-            new DeductionRule { Name = "Arhat", NameUrdu = "آڑت", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Farmer, SortOrder = 6, IsActive = false, IncomeAccountId = accounts["4120"].Id },
+            new DeductionRule { Name = "Withholding Tax", NameUrdu = "ویدہولڈنگ ٹیکس", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Seller, SortOrder = 4, IsActive = false, IncomeAccountId = accounts["4500"].Id },
+            new DeductionRule { Name = "Association Fund", NameUrdu = "انجمن فنڈ", CalculationType = DeductionCalculationType.FixedAmount, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Seller, SortOrder = 5, IsActive = false, IncomeAccountId = accounts["4300"].Id },
+            new DeductionRule { Name = "Arhat", NameUrdu = "آڑت", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Both, ChargedTo = DeductionChargedTo.Seller, SortOrder = 6, IsActive = false, IncomeAccountId = accounts["4120"].Id },
 
             // Pakki-only bag-handling charges (bharai, silvai, dhaga lagai, dumra karai, sotli,
             // bardana) — charged to the Vendor/Buyer, same percent-of-gross shape as Labour/
@@ -183,7 +184,14 @@ public static class SeedData
             new DeductionRule { Name = "Dhaga Lagai", NameUrdu = "دھاگہ لگائی", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 9, IsActive = false, IncomeAccountId = accounts["4630"].Id },
             new DeductionRule { Name = "Dumra Karai", NameUrdu = "ڈمرہ کرائی", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 10, IsActive = false, IncomeAccountId = accounts["4640"].Id },
             new DeductionRule { Name = "Sotli", NameUrdu = "سوتلی", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 11, IsActive = false, IncomeAccountId = accounts["4650"].Id },
-            new DeductionRule { Name = "Bardana", NameUrdu = "بردانہ", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 12, IsActive = false, IncomeAccountId = accounts["4660"].Id }
+            new DeductionRule { Name = "Bardana", NameUrdu = "بردانہ", CalculationType = DeductionCalculationType.PercentOfGross, Value = 0m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 12, IsActive = false, IncomeAccountId = accounts["4660"].Id },
+
+            // Market Fee — Rs 2 per 100kg (0.02/kg), charged to the Buyer, on top of the price (same
+            // shape as Commission). Kept as two separate rules (not AppliesTo = Both) since the rate
+            // can differ by stage; both start at the same 2/100kg figure and are independently
+            // editable under Setup > Format.
+            new DeductionRule { Name = "Market Fee (Kachi)", NameUrdu = "مارکیٹ فیس (کچی)", CalculationType = DeductionCalculationType.PerUnitWeight, Value = 0.02m, AppliesTo = DeductionAppliesTo.Kachi, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 13, IsActive = true, IncomeAccountId = accounts["4200"].Id },
+            new DeductionRule { Name = "Market Fee (Pakki)", NameUrdu = "مارکیٹ فیس (پکی)", CalculationType = DeductionCalculationType.PerUnitWeight, Value = 0.02m, AppliesTo = DeductionAppliesTo.Pakki, ChargedTo = DeductionChargedTo.Buyer, SortOrder = 14, IsActive = true, IncomeAccountId = accounts["4200"].Id }
         };
 
         // Same reconciliation-migration overlap as SeedChartOfAccountsAsync above: skip any rule a
