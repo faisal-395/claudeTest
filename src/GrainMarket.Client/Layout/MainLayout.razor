@@ -17,6 +17,10 @@ else
                     <small>@AuthState.FullName (@AuthState.RoleName)</small>
                 </span>
             </div>
+            <button class="sidebar-toggle" @onclick="ToggleSidebar" title="@(_iconOnly ? "Expand menu" : "Collapse menu")">
+                @Icon(_iconOnly ? "chevron-right" : "chevron-left")
+                <span class="nav-text">@(_iconOnly ? "Expand" : "Collapse")</span>
+            </button>
             <nav>
                 <NavLink href="" Match="NavLinkMatch.All" title="Dashboard">@Icon("dashboard")<span class="nav-text">Dashboard</span></NavLink>
 
@@ -33,6 +37,10 @@ else
                         {
                             <li><NavLink href="pakki" title="Pakki">@Icon("pakki")<span class="nav-text">Pakki</span></NavLink></li>
                             <li><NavLink href="pakki-records" title="Pakki Records">@Icon("records")<span class="nav-text">Pakki Records</span></NavLink></li>
+                        }
+                        @if (AuthState.CanView(ModuleName.Reports))
+                        {
+                            <li><NavLink href="records-report" title="Records Report">@Icon("chart-of-accounts")<span class="nav-text">Records Report</span></NavLink></li>
                         }
                     </ul>
                 }
@@ -54,13 +62,15 @@ else
                     </ul>
                 }
 
-                @if (AuthState.CanView(ModuleName.Ledger) || AuthState.CanView(ModuleName.Recovery))
+                @if (AuthState.CanView(ModuleName.Ledger))
                 {
                     <div class="brand nav-section-label"><span class="brand-full">Accounts</span></div>
                     <ul class="nav-group">
-                        @if (AuthState.CanView(ModuleName.Ledger)) { <li><NavLink href="ledger" title="Ledger">@Icon("ledger")<span class="nav-text">Ledger</span></NavLink></li> }
-                        @if (AuthState.CanView(ModuleName.Ledger)) { <li><NavLink href="reports/party-account" title="Farmer / Purchase Account">@Icon("user")<span class="nav-text">Farmer / Purchase Account</span></NavLink></li> }
+                        <li><NavLink href="ledger" title="Ledger">@Icon("ledger")<span class="nav-text">Ledger</span></NavLink></li>
+                        <li><NavLink href="reports/party-account" title="Farmer / Purchase Account">@Icon("user")<span class="nav-text">Farmer / Purchase Account</span></NavLink></li>
+                        @* Recovery — hidden for now; re-enable by restoring this NavLink.
                         @if (AuthState.CanView(ModuleName.Recovery)) { <li><NavLink href="recovery" title="Recovery">@Icon("recovery")<span class="nav-text">Recovery</span></NavLink></li> }
+                        *@
                     </ul>
                 }
 
@@ -110,6 +120,11 @@ else
         _iconOnly = IconOnlyRoutes.Contains(relativePath, StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>Manual override for the auto (route-based) icon-only squeeze — lets the operator
+    /// collapse or expand the sidebar on any page. The next navigation recomputes it from the
+    /// route again via UpdateIconOnly.</summary>
+    private void ToggleSidebar() => _iconOnly = !_iconOnly;
+
     public void Dispose()
     {
         Nav.LocationChanged -= OnLocationChanged;
@@ -126,6 +141,8 @@ else
     {
         var inner = name switch
         {
+            "chevron-left" => "<polyline points='15,18 9,12 15,6'/>",
+            "chevron-right" => "<polyline points='9,18 15,12 9,6'/>",
             "dashboard" => "<polyline points='4,12 12,5 20,12'/><rect x='6' y='12' width='12' height='8'/>",
             "kachi" => "<rect x='5' y='3' width='14' height='18' rx='1'/><line x1='8' y1='9' x2='16' y2='9'/><line x1='8' y1='13' x2='16' y2='13'/><line x1='8' y1='17' x2='13' y2='17'/>",
             "pakki" => "<rect x='5' y='3' width='14' height='18' rx='1'/><polyline points='9,12 11,14 15,9'/>",

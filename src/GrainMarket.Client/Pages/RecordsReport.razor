@@ -1,0 +1,98 @@
+@page "/records-report"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Records Report <span class="rtl-urdu" style="font-size:1rem;">ریکارڈ رپورٹ</span></h1>
+    <p style="color:#777;">Kachi and Pakki records together, newest first — filter by type below.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="max-width:320px;margin-bottom:16px;">
+        <div>
+            <label>Type / قسم</label>
+            <select @bind="_typeFilter">
+                <option value="All">All</option>
+                <option value="Kachi">Kachi only</option>
+                <option value="Pakki">Pakki only</option>
+            </select>
+        </div>
+    </div>
+
+    @if (_rows is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid kachi-records-grid">
+            <thead>
+                <tr>
+                    <th>Type</th><th>Invoice</th><th>Date</th><th>Farmer / Vendor</th><th>Buyer</th>
+                    <th>Product</th><th>Net Weight</th><th>Gross</th><th>Deductions</th><th>Net Amount</th><th>Status</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in FilteredRows)
+                {
+                    <tr>
+                        <td>@row.Type</td>
+                        <td>@row.InvoiceNo</td>
+                        <td>@row.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@row.PartyName</td>
+                        <td>@(row.BuyerName ?? "—")</td>
+                        <td>@row.ProductName</td>
+                        <td>@row.NetWeightKg.ToString("N2") kg</td>
+                        <td>@row.GrossAmount.ToString("N2")</td>
+                        <td>@row.TotalDeductions.ToString("N2")</td>
+                        <td>@row.NetAmount.ToString("N2")</td>
+                        <td>@row.Status</td>
+                        <td><a href="print/@(row.Type.ToLowerInvariant())/@row.Id">Details</a></td>
+                    </tr>
+                }
+                @if (FilteredRows.Count == 0)
+                {
+                    <tr><td colspan="12" style="text-align:center;color:#999;">No records found.</td></tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private record CombinedRow(
+        string Type, int Id, string InvoiceNo, DateTime Date, string PartyName, string? BuyerName,
+        string ProductName, decimal NetWeightKg, decimal GrossAmount, decimal TotalDeductions,
+        decimal NetAmount, InvoiceStatus Status);
+
+    private List<CombinedRow>? _rows;
+    private string _typeFilter = "All";
+    private string? _error;
+
+    private List<CombinedRow> FilteredRows =>
+        (_rows ?? new())
+            .Where(r => _typeFilter == "All" || r.Type == _typeFilter)
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var kachis = await Api.GetKachisAsync();
+            var pakkis = await Api.GetPakkisAsync();
+
+            var kachiRows = kachis.Select(k => new CombinedRow(
+                "Kachi", k.Id, k.InvoiceNo, k.Date, k.FarmerName, k.BuyerName, k.ProductName,
+                k.NetWeightKg, k.GrossAmount, k.TotalDeductions, k.Total, k.Status));
+
+            var pakkiRows = pakkis.Select(p => new CombinedRow(
+                "Pakki", p.Id, p.InvoiceNo, p.Date, p.FarmerName, p.BuyerName, p.ProductName,
+                p.NetWeightKg, p.GrossAmount, p.TotalDeductions, p.NetPayableToFarmer, p.Status));
+
+            _rows = kachiRows.Concat(pakkiRows).OrderByDescending(r => r.Date).ThenByDescending(r => r.Id).ToList();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}
