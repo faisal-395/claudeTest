@@ -36,18 +36,21 @@ else
                         {
                             <li><NavLink href="pakki" title="Pakki">@Icon("pakki")<span class="nav-text">Pakki</span></NavLink></li>
                         }
-                        @if (AuthState.CanView(ModuleName.Reports))
-                        {
-                            <li><NavLink href="records-report" title="Records Report">@Icon("chart-of-accounts")<span class="nav-text">Records Report</span></NavLink></li>
-                        }
                     </ul>
                 }
 
                 @* Trading — hidden for now; re-enable by restoring this NavLink.
                 @if (AuthState.CanView(ModuleName.Trading)) { <NavLink href="trading" title="Trading">@Icon("trading")<span class="nav-text">Trading</span></NavLink> }
                 *@
-                @if (AuthState.CanView(ModuleName.SaleInvoice)) { <NavLink href="sale-invoice" title="Sale Invoice">@Icon("sale-invoice")<span class="nav-text">Sale Invoice</span></NavLink> }
-                @if (AuthState.CanView(ModuleName.Purchase)) { <NavLink href="purchase" title="Purchase">@Icon("purchase")<span class="nav-text">Purchase</span></NavLink> }
+                @if (AuthState.CanView(ModuleName.SaleInvoice) || AuthState.CanView(ModuleName.Purchase))
+                {
+                    <div class="brand nav-section-label"><span class="brand-full">Purchase &amp; Sale</span></div>
+                    <ul class="nav-group">
+                        @if (AuthState.CanView(ModuleName.SaleInvoice)) { <li><NavLink href="sale-invoice" title="Sale Invoice">@Icon("sale-invoice")<span class="nav-text">Sale Invoice</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Purchase)) { <li><NavLink href="purchase" title="Purchase">@Icon("purchase")<span class="nav-text">Purchase</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Reports)) { <li><NavLink href="records-report" title="Records Report">@Icon("chart-of-accounts")<span class="nav-text">Records Report</span></NavLink></li> }
+                    </ul>
+                }
 
                 @if (AuthState.CanView(ModuleName.Payment) || AuthState.CanView(ModuleName.Receipt) || AuthState.CanView(ModuleName.Journal) || AuthState.CanView(ModuleName.Expense))
                 {
