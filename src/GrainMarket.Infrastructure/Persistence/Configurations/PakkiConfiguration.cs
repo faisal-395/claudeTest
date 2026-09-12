@@ -10,9 +10,10 @@ public class PakkiConfiguration : IEntityTypeConfiguration<Pakki>
     {
         builder.Property(p => p.InvoiceNo).IsRequired().HasMaxLength(30);
         builder.HasIndex(p => p.InvoiceNo).IsUnique();
+        builder.Property(p => p.BillNumber).HasMaxLength(30);
         builder.Property(p => p.VehicleNumber).HasMaxLength(30);
 
-        foreach (var name in new[] { nameof(Pakki.ManQty), nameof(Pakki.KiloQty), nameof(Pakki.GramQty), nameof(Pakki.BoriQty) })
+        foreach (var name in new[] { nameof(Pakki.BhartiKgPerBag), nameof(Pakki.TotalWeightKg), nameof(Pakki.BoriQty) })
         {
             builder.Property(name).HasPrecision(18, 4);
         }
@@ -20,6 +21,7 @@ public class PakkiConfiguration : IEntityTypeConfiguration<Pakki>
         builder.Property(p => p.RatePerUnit).HasPrecision(18, 4);
         builder.Property(p => p.GrossAmount).HasPrecision(18, 2);
         builder.Property(p => p.TotalDeductions).HasPrecision(18, 2);
+        builder.Property(p => p.BuyerChargesTotal).HasPrecision(18, 2);
         builder.Property(p => p.NetPayableToFarmer).HasPrecision(18, 2);
 
         builder.HasOne(p => p.Season).WithMany().HasForeignKey(p => p.SeasonId).OnDelete(DeleteBehavior.Restrict);

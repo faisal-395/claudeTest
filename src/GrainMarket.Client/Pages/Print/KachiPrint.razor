@@ -2,11 +2,10 @@
 @using GrainMarket.Application.Common.Services
 @inject ApiClient Api
 @inject IJSRuntime JS
-@inject NavigationManager Nav
 
 <RequireAuth>
     <div class="no-print" style="margin-bottom:12px;">
-        <button class="btn secondary" @onclick='() => Nav.NavigateTo("/kachi-records")'>← Back to Kachi Records</button>
+        <button class="btn secondary" @onclick="GoBackAsync">← Back</button>
         <button class="btn" @onclick="PrintAsync">Print</button>
     </div>
 
@@ -59,7 +58,7 @@
             </table>
             <hr />
             <table style="width:100%;">
-                @foreach (var line in _kachi.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer))
+                @foreach (var line in _kachi.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Seller))
                 {
                     <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
                 }
@@ -116,4 +115,9 @@
     }
 
     private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
+
+    // Uses real browser history instead of a hardcoded route — this page is reachable from Kachi
+    // Records and from the combined Records Report, and "Back" should return to whichever one the
+    // operator actually came from.
+    private Task GoBackAsync() => JS.InvokeVoidAsync("history.back").AsTask();
 }

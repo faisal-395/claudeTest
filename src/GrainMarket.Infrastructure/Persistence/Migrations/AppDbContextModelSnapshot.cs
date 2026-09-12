@@ -502,12 +502,24 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal?>("BhartiKgPerBag")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("BillNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<decimal?>("BoriQty")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
                     b.Property<int>("BuyerId")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("BuyerChargesTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -520,10 +532,6 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("FarmerId")
                         .HasColumnType("integer");
-
-                    b.Property<decimal?>("GramQty")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
 
                     b.Property<decimal>("GrossAmount")
                         .HasPrecision(18, 2)
@@ -539,14 +547,6 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     b.Property<int?>("KachiId")
                         .HasColumnType("integer");
-
-                    b.Property<decimal?>("KiloQty")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
-
-                    b.Property<decimal?>("ManQty")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
 
                     b.Property<decimal>("NetPayableToFarmer")
                         .HasPrecision(18, 2)
@@ -575,6 +575,10 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("TotalDeductions")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("TotalWeightKg")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -616,6 +620,9 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("ChargedTo")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");

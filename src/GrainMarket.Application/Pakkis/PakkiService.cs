@@ -55,7 +55,7 @@ public class PakkiService : IPakkiService
             throw new InvalidCalculationException("Only an open Kachi can be converted to a Pakki.");
         }
 
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
         {
             throw new NotFoundException(nameof(Party), request.BuyerId);
         }
@@ -69,6 +69,8 @@ public class PakkiService : IPakkiService
         var grossAmount = UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit, kachi.NetWeightKg, kachi.ProductId, conversions);
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, kachi.NetWeightKg, DeductionAppliesTo.Pakki, kachi.ProductId, kachi.FarmerId, rules);
+        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
+        var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
 
         var pakki = new Pakki
         {
@@ -79,12 +81,15 @@ public class PakkiService : IPakkiService
             BuyerId = request.BuyerId,
             FarmerId = kachi.FarmerId,
             ProductId = kachi.ProductId,
+            BhartiKgPerBag = kachi.BhartiKgPerBag,
+            TotalWeightKg = kachi.TotalWeightKg,
             BoriQty = kachi.BoriQty,
             NetWeightKg = kachi.NetWeightKg,
             RatePerUnit = request.RatePerUnit,
             GrossAmount = grossAmount,
-            TotalDeductions = calc.TotalDeductions,
-            NetPayableToFarmer = calc.NetAmount,
+            TotalDeductions = farmerTotal,
+            BuyerChargesTotal = buyerTotal,
+            NetPayableToFarmer = grossAmount - farmerTotal,
             VehicleNumber = request.VehicleNumber,
             Status = InvoiceStatus.Open,
             Notes = request.Notes
@@ -98,7 +103,8 @@ public class PakkiService : IPakkiService
                 Name = line.Name,
                 NameUrdu = line.NameUrdu,
                 Amount = line.Amount,
-                VehicleNumber = line.RequiresVehicleNumber ? request.VehicleNumber : null
+                VehicleNumber = line.RequiresVehicleNumber ? request.VehicleNumber : null,
+                ChargedTo = line.ChargedTo
             });
         }
 
@@ -119,38 +125,44 @@ public class PakkiService : IPakkiService
     {
         if (!await _db.Seasons.AnyAsync(s => s.Id == request.SeasonId && !s.IsDeleted, ct))
             throw new NotFoundException(nameof(Season), request.SeasonId);
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
             throw new NotFoundException(nameof(Party), request.BuyerId);
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.FarmerId && !p.IsDeleted && p.PartyType == PartyType.Farmer, ct))
+        // Pakki is vendor-to-vendor: the payee (request.FarmerId) must also be a Vendor-flagged
+        // party, not necessarily a Farmer — unlike Kachi, where the payee is always a Farmer.
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.FarmerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
             throw new NotFoundException(nameof(Party), request.FarmerId);
         if (!await _db.Products.AnyAsync(p => p.Id == request.ProductId && !p.IsDeleted, ct))
             throw new NotFoundException(nameof(Product), request.ProductId);
 
         var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
-        var netWeightKg = UnitConversionCalculator.ToBaseKg(request.ManQty, request.KiloQty, request.GramQty, request.BoriQty, request.ProductId, conversions);
+        var (netWeightKg, boriQty) = CalculateWeights(request.TotalWeightKg, request.ProductId, conversions);
         var grossAmount = UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit, netWeightKg, request.ProductId, conversions);
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
-        var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Pakki, request.ProductId, request.FarmerId, rules);
+        var rateOverrides = request.DeductionOverrides?.ToDictionary(o => o.DeductionRuleId, o => o.Value);
+        var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Pakki, request.ProductId, request.FarmerId, rules, rateOverrides);
+        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
+        var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
 
         var pakki = new Pakki
         {
             InvoiceNo = await _numberGenerator.NextAsync("P", ct),
+            BillNumber = request.BillNumber,
             Date = request.Date,
             SeasonId = request.SeasonId,
             KachiId = null,
             BuyerId = request.BuyerId,
             FarmerId = request.FarmerId,
             ProductId = request.ProductId,
-            ManQty = request.ManQty,
-            KiloQty = request.KiloQty,
-            GramQty = request.GramQty,
-            BoriQty = request.BoriQty,
+            BhartiKgPerBag = request.BhartiKgPerBag,
+            TotalWeightKg = request.TotalWeightKg,
+            BoriQty = boriQty,
             NetWeightKg = netWeightKg,
             RatePerUnit = request.RatePerUnit,
             GrossAmount = grossAmount,
-            TotalDeductions = calc.TotalDeductions,
-            NetPayableToFarmer = calc.NetAmount,
+            TotalDeductions = farmerTotal,
+            BuyerChargesTotal = buyerTotal,
+            NetPayableToFarmer = grossAmount - farmerTotal,
             VehicleNumber = request.VehicleNumber,
             Status = InvoiceStatus.Open,
             Notes = request.Notes
@@ -164,7 +176,8 @@ public class PakkiService : IPakkiService
                 Name = line.Name,
                 NameUrdu = line.NameUrdu,
                 Amount = line.Amount,
-                VehicleNumber = line.RequiresVehicleNumber ? request.VehicleNumber : null
+                VehicleNumber = line.RequiresVehicleNumber ? request.VehicleNumber : null,
+                ChargedTo = line.ChargedTo
             });
         }
 
@@ -184,7 +197,7 @@ public class PakkiService : IPakkiService
         {
             throw new InvalidCalculationException("Only an open Pakki (not yet cancelled) can be edited.");
         }
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
         {
             throw new NotFoundException(nameof(Party), request.BuyerId);
         }
@@ -199,12 +212,15 @@ public class PakkiService : IPakkiService
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, pakki.NetWeightKg, DeductionAppliesTo.Pakki, pakki.ProductId, pakki.FarmerId, rules);
+        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
+        var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
 
         pakki.BuyerId = request.BuyerId;
         pakki.RatePerUnit = request.RatePerUnit;
         pakki.GrossAmount = grossAmount;
-        pakki.TotalDeductions = calc.TotalDeductions;
-        pakki.NetPayableToFarmer = calc.NetAmount;
+        pakki.TotalDeductions = farmerTotal;
+        pakki.BuyerChargesTotal = buyerTotal;
+        pakki.NetPayableToFarmer = grossAmount - farmerTotal;
         pakki.VehicleNumber = request.VehicleNumber;
         pakki.Notes = request.Notes;
         pakki.UpdatedAtUtc = _clock.UtcNow;
@@ -222,7 +238,8 @@ public class PakkiService : IPakkiService
                 Name = line.Name,
                 NameUrdu = line.NameUrdu,
                 Amount = line.Amount,
-                VehicleNumber = line.RequiresVehicleNumber ? request.VehicleNumber : null
+                VehicleNumber = line.RequiresVehicleNumber ? request.VehicleNumber : null,
+                ChargedTo = line.ChargedTo
             });
         }
 
@@ -268,7 +285,7 @@ public class PakkiService : IPakkiService
     /// CancelAsync and UpdateAsync (which reverses, then posts fresh entries for the new terms).</summary>
     private async Task ReverseLedgerAsync(Pakki pakki, string reason, CancellationToken ct)
     {
-        await _ledger.PostPartyEntryAsync(pakki.BuyerId, _clock.UtcNow, 0, pakki.GrossAmount, LedgerSourceType.Pakki, pakki.Id, reason, ct);
+        await _ledger.PostPartyEntryAsync(pakki.BuyerId, _clock.UtcNow, 0, pakki.GrossAmount + pakki.BuyerChargesTotal, LedgerSourceType.Pakki, pakki.Id, reason, ct);
         await _ledger.PostPartyEntryAsync(pakki.FarmerId, _clock.UtcNow, pakki.NetPayableToFarmer, 0, LedgerSourceType.Pakki, pakki.Id, reason, ct);
         foreach (var line in pakki.DeductionLines)
         {
@@ -279,7 +296,10 @@ public class PakkiService : IPakkiService
 
     private async Task PostLedgerAsync(Pakki pakki, DeductionCalculationResult calc, CancellationToken ct)
     {
-        await _ledger.PostPartyEntryAsync(pakki.BuyerId, pakki.Date, pakki.GrossAmount, 0, LedgerSourceType.Pakki, pakki.Id, $"Pakki {pakki.InvoiceNo}", ct);
+        // Buyer pays the price plus whatever's charged to them (GrossAmount + BuyerChargesTotal) —
+        // mirrors KachiService's exact treatment, and is what keeps this posting balanced against
+        // the farmer's payout (only reduced by seller-charged lines) plus every line's own credit.
+        await _ledger.PostPartyEntryAsync(pakki.BuyerId, pakki.Date, pakki.GrossAmount + pakki.BuyerChargesTotal, 0, LedgerSourceType.Pakki, pakki.Id, $"Pakki {pakki.InvoiceNo}", ct);
         await _ledger.PostPartyEntryAsync(pakki.FarmerId, pakki.Date, 0, pakki.NetPayableToFarmer, LedgerSourceType.Pakki, pakki.Id, $"Pakki {pakki.InvoiceNo}", ct);
 
         foreach (var line in calc.Lines)
@@ -287,6 +307,21 @@ public class PakkiService : IPakkiService
             var accountId = await ResolveIncomeAccountIdAsync(line.IncomeAccountId, ct);
             await _ledger.PostAccountEntryAsync(accountId, pakki.Date, 0, line.Amount, LedgerSourceType.Pakki, pakki.Id, $"Pakki {pakki.InvoiceNo}: {line.Name}", ct);
         }
+    }
+
+    /// <summary>Net weight ("Safi Wazan") is simply TotalWeightKg — mirrors
+    /// KachiService.CalculateWeights exactly. Bori is the same net weight re-expressed in the
+    /// market's Bori unit, purely for display — computed, never entered.</summary>
+    private static (decimal NetWeightKg, decimal? BoriQty) CalculateWeights(
+        decimal? totalWeightKg, int? productId, IReadOnlyCollection<UnitConversion> conversions)
+    {
+        if (totalWeightKg is not > 0) return (0m, null);
+
+        var netWeightKg = totalWeightKg.Value;
+        var boriFactor = UnitConversionCalculator.FactorFor(WeightUnit.Bori, productId, conversions);
+        var boriQty = netWeightKg / boriFactor;
+
+        return (netWeightKg, boriQty);
     }
 
     private async Task<int> ResolveIncomeAccountIdAsync(int? explicitAccountId, CancellationToken ct)
@@ -308,9 +343,9 @@ public class PakkiService : IPakkiService
     }
 
     private static PakkiDto ToDto(Pakki p) => new(
-        p.Id, p.InvoiceNo, p.Date, p.SeasonId, p.Season.Name, p.KachiId, p.Kachi?.InvoiceNo,
+        p.Id, p.InvoiceNo, p.BillNumber, p.Date, p.SeasonId, p.Season.Name, p.KachiId, p.Kachi?.InvoiceNo,
         p.BuyerId, p.Buyer.Name, p.FarmerId, p.Farmer.Name, p.ProductId, p.Product.Name,
-        p.ManQty, p.KiloQty, p.GramQty, p.BoriQty, p.NetWeightKg, p.RatePerUnit, p.GrossAmount,
-        p.TotalDeductions, p.NetPayableToFarmer, p.VehicleNumber, p.Status, p.Notes,
-        p.DeductionLines.Select(l => new PakkiDeductionLineDto(l.DeductionRuleId, l.Name, l.NameUrdu, l.Amount, l.VehicleNumber)).ToList());
+        p.BhartiKgPerBag, p.TotalWeightKg, p.BoriQty, p.NetWeightKg, p.RatePerUnit, p.GrossAmount,
+        p.TotalDeductions, p.BuyerChargesTotal, p.NetPayableToFarmer, p.VehicleNumber, p.Status, p.Notes,
+        p.DeductionLines.Select(l => new PakkiDeductionLineDto(l.DeductionRuleId, l.Name, l.NameUrdu, l.Amount, l.VehicleNumber, l.ChargedTo)).ToList());
 }

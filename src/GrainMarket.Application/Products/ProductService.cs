@@ -16,10 +16,11 @@ public class ProductService : IProductService
         _clock = clock;
     }
 
-    public async Task<List<ProductDto>> GetAllAsync(bool includeInactive = false, CancellationToken ct = default)
+    public async Task<List<ProductDto>> GetAllAsync(bool includeInactive = false, string? category = null, CancellationToken ct = default)
     {
         var query = _db.Products.Where(p => !p.IsDeleted);
         if (!includeInactive) query = query.Where(p => p.IsActive);
+        if (category is not null) query = query.Where(p => p.Category == category);
         var products = await query.OrderBy(p => p.Name).ToListAsync(ct);
         return products.Select(ToDto).ToList();
     }

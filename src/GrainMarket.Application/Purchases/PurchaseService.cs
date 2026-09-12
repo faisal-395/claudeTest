@@ -37,13 +37,19 @@ public class PurchaseService : IPurchaseService
 
     public async Task<PurchaseDto> CreateAsync(CreatePurchaseRequest request, CancellationToken ct = default)
     {
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.SupplierId && !p.IsDeleted, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.SupplierId && !p.IsDeleted && (p.PartyType & PartyType.Supplier) == PartyType.Supplier, ct))
             throw new NotFoundException(nameof(Party), request.SupplierId);
 
         var productIds = request.Lines.Select(l => l.ProductId).Distinct().ToList();
         var productCount = await _db.Products.CountAsync(p => productIds.Contains(p.Id) && !p.IsDeleted, ct);
         if (productCount != productIds.Count)
             throw new InvalidCalculationException("One or more products on the purchase do not exist.");
+
+        // Purchase is for farm inputs (pesticides, seeds, fertilizer) bought from a supplier — not
+        // the grain catalog Kachi/Pakki trade in.
+        var nonInputCount = await _db.Products.CountAsync(p => productIds.Contains(p.Id) && p.Category != DomainConstants.ProductCategoryInput, ct);
+        if (nonInputCount > 0)
+            throw new InvalidCalculationException("Purchase can only include input products (pesticides, seeds, fertilizer), not grain products.");
 
         var purchase = new Purchase
         {

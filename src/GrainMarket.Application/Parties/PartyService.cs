@@ -22,7 +22,7 @@ public class PartyService : IPartyService
     public async Task<List<PartyDto>> GetAllAsync(PartyType? type = null, bool includeInactive = false, CancellationToken ct = default)
     {
         var query = _db.Parties.Where(p => !p.IsDeleted);
-        if (type is not null) query = query.Where(p => p.PartyType == type);
+        if (type is not null) query = query.Where(p => (p.PartyType & type.Value) == type.Value);
         if (!includeInactive) query = query.Where(p => p.IsActive);
 
         var parties = await query.OrderBy(p => p.Name).ToListAsync(ct);

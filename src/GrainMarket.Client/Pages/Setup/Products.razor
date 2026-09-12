@@ -1,4 +1,5 @@
 @page "/setup/products"
+@using GrainMarket.Application.Common
 @inject ApiClient Api
 
 <RequireAuth>
@@ -20,10 +21,13 @@
         </div>
         <div>
             <label>Category</label>
-            <input @bind="_category" />
+            <select @bind="_category">
+                <option value="@DomainConstants.ProductCategoryGrain">Grain (Kachi/Pakki)</option>
+                <option value="@DomainConstants.ProductCategoryInput">Input (Purchase/Sale)</option>
+            </select>
         </div>
         <div>
-            <label>Default Rate (per kg)</label>
+            <label>Default Rate</label>
             <input type="number" step="0.01" @bind="_defaultRate" />
         </div>
         <div style="grid-column: span 2;">
@@ -72,7 +76,7 @@
 
     private string _name = "";
     private string? _nameUrdu;
-    private string? _category;
+    private string _category = DomainConstants.ProductCategoryGrain;
     private decimal _defaultRate;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
@@ -86,13 +90,13 @@
     private void Edit(ProductDto p)
     {
         _editingId = p.Id;
-        _name = p.Name; _nameUrdu = p.NameUrdu; _category = p.Category; _defaultRate = p.DefaultRate;
+        _name = p.Name; _nameUrdu = p.NameUrdu; _category = p.Category ?? DomainConstants.ProductCategoryGrain; _defaultRate = p.DefaultRate;
     }
 
     private void ResetForm()
     {
         _editingId = null;
-        _name = ""; _nameUrdu = null; _category = null; _defaultRate = 0;
+        _name = ""; _nameUrdu = null; _category = DomainConstants.ProductCategoryGrain; _defaultRate = 0;
     }
 
     private async Task SaveAsync()

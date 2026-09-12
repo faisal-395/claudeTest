@@ -1,0 +1,153 @@
+@page "/pakki-records"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Pakki Records <span class="rtl-urdu" style="font-size:1rem;">پکی ریکارڈ</span></h1>
+    <p style="color:#777;">Every Pakki raised from the Pakki entry screen — edit or view/print details here.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    @if (_editingId is not null)
+    {
+        <div class="form-grid" style="margin-bottom:20px;">
+            <div style="grid-column: span 2;"><b>Editing @_editingInvoiceNo</b> — vendor, rate, vehicle and notes only; weight is fixed once posted.</div>
+            <div>
+                <label>Buyer / خریدار</label>
+                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
+            </div>
+            <div><label>Rate per Man / ریٹ فی مَن</label><input type="number" step="0.01" @bind="_rate" /></div>
+            <div><label>Vehicle Number / گاڑی نمبر</label><input @bind="_vehicleNumber" /></div>
+            <div style="grid-column: span 2;">
+                @if (_rate is null or <= 0)
+                {
+                    <div class="invalid-total">Enter a rate greater than zero.</div>
+                }
+                <button class="btn" disabled="@(_rate is null or <= 0)" @onclick="SaveEditAsync">Update Pakki</button>
+                <button class="btn secondary" @onclick="ResetForm">Cancel</button>
+            </div>
+        </div>
+    }
+
+    @if (_pakkis is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>Invoice</th><th>Date</th><th>Buyer / خریدار</th><th>Vendor / فروخت کنندہ (بیچنے والا)</th><th>Product / جنس</th><th>Gross</th><th>Deductions</th><th>Net to Farmer</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var p in _pakkis)
+                {
+                    <tr>
+                        <td>@p.InvoiceNo</td>
+                        <td>@p.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@p.BuyerName</td>
+                        <td>@p.FarmerName</td>
+                        <td>@p.ProductName</td>
+                        <td>@p.GrossAmount.ToString("N2")</td>
+                        <td>@p.TotalDeductions.ToString("N2")</td>
+                        <td>@p.NetPayableToFarmer.ToString("N2")</td>
+                        <td>@p.Status</td>
+                        <td>
+                            <a href="#" @onclick="() => ToggleDetails(p.Id)" @onclick:preventDefault="true">@(_expandedId == p.Id ? "Hide" : "Details")</a>
+                            <text> | </text>
+                            @if (p.Status == InvoiceStatus.Open)
+                            {
+                                <a href="#" @onclick="() => Edit(p)" @onclick:preventDefault="true">Edit</a>
+                                <text> | </text>
+                            }
+                            <a href="print/pakki/@p.Id">Print</a>
+                        </td>
+                    </tr>
+                    @if (_expandedId == p.Id)
+                    {
+                        <tr>
+                            <td colspan="10" style="background:#f7f9f7;">
+                                <table style="width:auto;min-width:280px;">
+                                    <thead><tr><th style="text-align:left;padding:2px 12px 2px 0;">Deduction</th><th style="text-align:left;padding:2px 12px;">اردو</th><th style="text-align:right;padding:2px 0;">Amount</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var line in p.DeductionLines)
+                                        {
+                                            <tr>
+                                                <td style="padding:2px 12px 2px 0;">@line.Name</td>
+                                                <td class="rtl-urdu" style="padding:2px 12px;font-size:1rem;">@line.NameUrdu</td>
+                                                <td style="text-align:right;padding:2px 0;">@line.Amount.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                        <tr>
+                                            <td colspan="2" style="padding:4px 12px 0 0;"><b>Total Deductions</b></td>
+                                            <td style="text-align:right;padding:4px 0 0;"><b>@p.TotalDeductions.ToString("N2")</b></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<PakkiDto>? _pakkis;
+    private List<PartyDto>? _buyers;
+    private string? _error;
+
+    private int? _editingId;
+    private string? _editingInvoiceNo;
+    private int? _expandedId;
+
+    private int _buyerId;
+    private decimal? _rate;
+    private string? _vehicleNumber;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _buyers = await Api.GetPartiesAsync(PartyType.Vendor); }
+        catch (Models.ApiException ex) { _error = ex.Message; return; }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _pakkis = await Api.GetPakkisAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private void ToggleDetails(int id) => _expandedId = _expandedId == id ? null : id;
+
+    private void Edit(PakkiDto p)
+    {
+        _editingId = p.Id;
+        _editingInvoiceNo = p.InvoiceNo;
+        _buyerId = p.BuyerId;
+        _rate = p.RatePerUnit;
+        _vehicleNumber = p.VehicleNumber;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _editingInvoiceNo = null;
+        _rate = null;
+        _vehicleNumber = null;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        _error = null;
+        try
+        {
+            await Api.UpdatePakkiAsync(_editingId!.Value, new UpdatePakkiRequest(_buyerId, _rate!.Value, _vehicleNumber, null));
+            ResetForm();
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

@@ -20,8 +20,8 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<ProductDto>>> GetAll([FromQuery] bool includeInactive, CancellationToken ct)
-        => Ok(await _productService.GetAllAsync(includeInactive, ct));
+    public async Task<ActionResult<List<ProductDto>>> GetAll([FromQuery] bool includeInactive, [FromQuery] string? category, CancellationToken ct)
+        => Ok(await _productService.GetAllAsync(includeInactive, category, ct));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ProductDto>> GetById(int id, CancellationToken ct)

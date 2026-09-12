@@ -1,0 +1,105 @@
+@page "/print/multi-sale"
+@inject ApiClient Api
+@inject IJSRuntime JS
+
+<RequireAuth>
+    <div class="no-print" style="margin-bottom:12px;">
+        <button class="btn" @onclick="PrintAsync">Print</button>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+    else if (_pakkis is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div class="no-print" style="background:#eaf7ee;border:1px solid #b6e3c2;padding:10px 14px;margin-bottom:14px;">
+            Each row below is its own Pakki. <a href="pakki-records">View / edit all Pakki records</a>.
+        </div>
+
+        <div class="print-a4 rtl-urdu" style="background:white;padding:20px;border:1px solid #ccc;">
+            <div style="text-align:center;font-size:1.3rem;font-weight:700;">عمر فاروق اینڈ برادرز</div>
+            <div style="text-align:center;">پکی رسید — کئی کسان</div>
+            <hr />
+            <table style="width:100%;">
+                <tr>
+                    <td>خریدار: @(_pakkis[0].BuyerName ?? "—")</td>
+                    <td>تاریخ: <span class="ltr-inline">@_pakkis[0].Date.ToString("yyyy-MM-dd")</span></td>
+                </tr>
+            </table>
+            <hr />
+            @foreach (var p in _pakkis)
+            {
+                <table style="width:100%;margin-bottom:10px;">
+                    <tr>
+                        <td>نمبر: <span class="ltr-inline">@p.InvoiceNo</span></td>
+                        <td>فروخت کنندہ: @p.FarmerName</td>
+                        <td>جنس: @p.ProductName</td>
+                    </tr>
+                    <tr>
+                        <td>صافی وزن (کلو): <span class="ltr-inline">@p.NetWeightKg.ToString("N2")</span></td>
+                        <td>بوری: <span class="ltr-inline">@(p.BoriQty?.ToString("N2") ?? "-")</span></td>
+                        <td>ریٹ فی مَن: <span class="ltr-inline">@p.RatePerUnit.ToString("N2")</span></td>
+                    </tr>
+                    <tr>
+                        <td>مجموعی رقم: <span class="ltr-inline">@p.GrossAmount.ToString("N2")</span></td>
+                    </tr>
+                </table>
+                <table style="width:100%;margin-bottom:6px;">
+                    @foreach (var line in p.DeductionLines)
+                    {
+                        <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
+                    }
+                    <tr><td><b>مجموعی کٹوتی</b></td><td class="ltr-inline"><b>@p.TotalDeductions.ToString("N2")</b></td></tr>
+                    <tr><td><b>کسان کو ادائیگی</b></td><td class="ltr-inline"><b>@p.NetPayableToFarmer.ToString("N2")</b></td></tr>
+                </table>
+                <hr />
+            }
+            <table style="width:100%;">
+                <tr><td><b>مجموعی رقم (کل)</b></td><td class="ltr-inline"><b>@_pakkis.Sum(p => p.GrossAmount).ToString("N2")</b></td></tr>
+                <tr><td><b>مجموعی کٹوتی (کل)</b></td><td class="ltr-inline"><b>@_pakkis.Sum(p => p.TotalDeductions).ToString("N2")</b></td></tr>
+                <tr><td><b>مجموعی کل رقم (کسان)</b></td><td class="ltr-inline"><b>@_pakkis.Sum(p => p.NetPayableToFarmer).ToString("N2")</b></td></tr>
+            </table>
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    [SupplyParameterFromQuery] public string? Ids { get; set; }
+
+    private List<PakkiDto>? _pakkis;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var ids = (Ids ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => int.TryParse(s, out var id) ? id : (int?)null)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToList();
+
+        if (ids.Count == 0)
+        {
+            _error = "No receipts to show — this page expects one or more Pakki ids in the URL.";
+            return;
+        }
+
+        try
+        {
+            var pakkis = new List<PakkiDto>();
+            foreach (var id in ids)
+            {
+                pakkis.Add(await Api.GetPakkiAsync(id));
+            }
+            _pakkis = pakkis;
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
+}

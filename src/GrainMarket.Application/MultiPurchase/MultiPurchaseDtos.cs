@@ -1,3 +1,5 @@
+using GrainMarket.Application.Common;
+
 namespace GrainMarket.Application.MultiPurchase;
 
 /// <summary>
@@ -6,7 +8,8 @@ namespace GrainMarket.Application.MultiPurchase;
 public record MultiPurchaseRowRequest(
     int FarmerId, int ProductId,
     decimal? BhartiKgPerBag, decimal? TotalWeightKg,
-    decimal? RatePerUnit, string? VehicleNumber, string? Notes);
+    decimal? RatePerUnit, string? VehicleNumber, string? Notes,
+    List<DeductionOverrideRequest>? DeductionOverrides = null);
 
 /// <summary>
 /// One buyer purchasing from multiple farmers in a single sitting. Each row becomes its own Kachi

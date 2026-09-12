@@ -37,13 +37,19 @@ public class SaleInvoiceService : ISaleInvoiceService
 
     public async Task<SaleInvoiceDto> CreateAsync(CreateSaleInvoiceRequest request, CancellationToken ct = default)
     {
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.CustomerId && !p.IsDeleted, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.CustomerId && !p.IsDeleted && (p.PartyType & PartyType.Farmer) == PartyType.Farmer, ct))
             throw new NotFoundException(nameof(Party), request.CustomerId);
 
         var productIds = request.Lines.Select(l => l.ProductId).Distinct().ToList();
         var productCount = await _db.Products.CountAsync(p => productIds.Contains(p.Id) && !p.IsDeleted, ct);
         if (productCount != productIds.Count)
             throw new InvalidCalculationException("One or more products on the invoice do not exist.");
+
+        // Sale Invoice is for farm inputs (pesticides, seeds, fertilizer) sold to a farmer — not the
+        // grain catalog Kachi/Pakki trade in.
+        var nonInputCount = await _db.Products.CountAsync(p => productIds.Contains(p.Id) && p.Category != DomainConstants.ProductCategoryInput, ct);
+        if (nonInputCount > 0)
+            throw new InvalidCalculationException("Sale Invoice can only include input products (pesticides, seeds, fertilizer), not grain products.");
 
         var sale = new SaleInvoice
         {

@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject AuthState AuthState
 @inject NavigationManager Nav
+@implements IDisposable
 
 @if (!AuthState.IsAuthenticated)
 {
@@ -9,38 +10,84 @@
 else
 {
     <div class="app-shell">
-        <div class="sidebar">
+        <div class="sidebar @(_iconOnly ? "collapsed" : "")">
             <div class="brand">
-                Umer Farooq &amp; Brothers<br />
-                <small>@AuthState.FullName (@AuthState.RoleName)</small>
+                <span class="brand-full">
+                    Umer Farooq &amp; Brothers<br />
+                    <small>@AuthState.FullName (@AuthState.RoleName)</small>
+                </span>
             </div>
+            <button class="sidebar-toggle" @onclick="ToggleSidebar" title="@(_iconOnly ? "Expand menu" : "Collapse menu")">
+                @Icon(_iconOnly ? "chevron-right" : "chevron-left")
+                <span class="nav-text">@(_iconOnly ? "Expand" : "Collapse")</span>
+            </button>
             <nav>
-                <NavLink href="" Match="NavLinkMatch.All">Dashboard</NavLink>
-                @if (AuthState.CanView(ModuleName.Kachi)) { <NavLink href="kachi">Kachi</NavLink> }
-                @if (AuthState.CanView(ModuleName.Kachi)) { <NavLink href="kachi-records">Kachi Records</NavLink> }
-                @if (AuthState.CanView(ModuleName.Pakki)) { <NavLink href="pakki">Pakki</NavLink> }
-                @if (AuthState.CanView(ModuleName.Trading)) { <NavLink href="trading">Trading</NavLink> }
-                @if (AuthState.CanView(ModuleName.SaleInvoice)) { <NavLink href="sale-invoice">Sale Invoice</NavLink> }
-                @if (AuthState.CanView(ModuleName.Purchase)) { <NavLink href="purchase">Purchase</NavLink> }
-                @if (AuthState.CanView(ModuleName.Payment)) { <NavLink href="payment">Payment</NavLink> }
-                @if (AuthState.CanView(ModuleName.Receipt)) { <NavLink href="receipt">Receipt</NavLink> }
-                @if (AuthState.CanView(ModuleName.Journal)) { <NavLink href="journal">Journal</NavLink> }
-                @if (AuthState.CanView(ModuleName.Expense)) { <NavLink href="expense">Expense</NavLink> }
-                @if (AuthState.CanView(ModuleName.Ledger)) { <NavLink href="ledger">Ledger</NavLink> }
-                @if (AuthState.CanView(ModuleName.Ledger)) { <NavLink href="reports/party-account">Farmer / Purchase Account</NavLink> }
-                @if (AuthState.CanView(ModuleName.Recovery)) { <NavLink href="recovery">Recovery</NavLink> }
+                <NavLink href="" Match="NavLinkMatch.All" title="Dashboard">@Icon("dashboard")<span class="nav-text">Dashboard</span></NavLink>
 
-                <div class="brand" style="margin-top:8px;">Setup</div>
-                @if (AuthState.CanView(ModuleName.SetupParty)) { <NavLink href="setup/parties">Party</NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupProducts)) { <NavLink href="setup/products">Products</NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupChartOfAccounts)) { <NavLink href="setup/chart-of-accounts">Chart of Accounts</NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupDeductionRules)) { <NavLink href="setup/deduction-rules">Format (Deductions)</NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupUnitConversions)) { <NavLink href="setup/unit-conversions">Unit Conversions</NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupSeasons)) { <NavLink href="setup/seasons">Seasons</NavLink> }
-                @if (AuthState.CanView(ModuleName.SetupUsersRoles)) { <NavLink href="setup/users">User Account</NavLink> }
-                @if (AuthState.CanView(ModuleName.Backup)) { <NavLink href="backup">Backup</NavLink> }
+                @if (AuthState.CanView(ModuleName.Kachi) || AuthState.CanView(ModuleName.Pakki))
+                {
+                    <div class="brand nav-section-label"><span class="brand-full">Receipts</span></div>
+                    <ul class="nav-group">
+                        @if (AuthState.CanView(ModuleName.Kachi))
+                        {
+                            <li><NavLink href="kachi" title="Kachi">@Icon("kachi")<span class="nav-text">Kachi</span></NavLink></li>
+                        }
+                        @if (AuthState.CanView(ModuleName.Pakki))
+                        {
+                            <li><NavLink href="pakki" title="Pakki">@Icon("pakki")<span class="nav-text">Pakki</span></NavLink></li>
+                        }
+                    </ul>
+                }
 
-                <a href="#" @onclick="Logout" @onclick:preventDefault="true" style="display:block;padding:10px 16px;color:#e8f5e9;margin-top:16px;">Quit / Logout</a>
+                @* Trading — hidden for now; re-enable by restoring this NavLink.
+                @if (AuthState.CanView(ModuleName.Trading)) { <NavLink href="trading" title="Trading">@Icon("trading")<span class="nav-text">Trading</span></NavLink> }
+                *@
+                @if (AuthState.CanView(ModuleName.SaleInvoice) || AuthState.CanView(ModuleName.Purchase))
+                {
+                    <div class="brand nav-section-label"><span class="brand-full">Purchase &amp; Sale</span></div>
+                    <ul class="nav-group">
+                        @if (AuthState.CanView(ModuleName.SaleInvoice)) { <li><NavLink href="sale-invoice" title="Sale Invoice">@Icon("sale-invoice")<span class="nav-text">Sale Invoice</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Purchase)) { <li><NavLink href="purchase" title="Purchase">@Icon("purchase")<span class="nav-text">Purchase</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Reports)) { <li><NavLink href="records-report" title="Records Report">@Icon("chart-of-accounts")<span class="nav-text">Records Report</span></NavLink></li> }
+                    </ul>
+                }
+
+                @if (AuthState.CanView(ModuleName.Payment) || AuthState.CanView(ModuleName.Receipt) || AuthState.CanView(ModuleName.Journal) || AuthState.CanView(ModuleName.Expense))
+                {
+                    <div class="brand nav-section-label"><span class="brand-full">Vouchers</span></div>
+                    <ul class="nav-group">
+                        @if (AuthState.CanView(ModuleName.Payment)) { <li><NavLink href="payment" title="Payment">@Icon("payment")<span class="nav-text">Payment</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Receipt)) { <li><NavLink href="receipt" title="Receipt">@Icon("receipt")<span class="nav-text">Receipt</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Journal)) { <li><NavLink href="journal" title="Journal">@Icon("journal")<span class="nav-text">Journal</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Expense)) { <li><NavLink href="expense" title="Expense">@Icon("expense")<span class="nav-text">Expense</span></NavLink></li> }
+                    </ul>
+                }
+
+                @if (AuthState.CanView(ModuleName.Ledger))
+                {
+                    <div class="brand nav-section-label"><span class="brand-full">Accounts</span></div>
+                    <ul class="nav-group">
+                        <li><NavLink href="ledger" title="Ledger">@Icon("ledger")<span class="nav-text">Ledger</span></NavLink></li>
+                        <li><NavLink href="reports/party-account" title="Farmer / Purchase Account">@Icon("user")<span class="nav-text">Farmer / Purchase Account</span></NavLink></li>
+                        @* Recovery — hidden for now; re-enable by restoring this NavLink.
+                        @if (AuthState.CanView(ModuleName.Recovery)) { <li><NavLink href="recovery" title="Recovery">@Icon("recovery")<span class="nav-text">Recovery</span></NavLink></li> }
+                        *@
+                    </ul>
+                }
+
+                <div class="brand nav-section-label"><span class="brand-full">Setup</span></div>
+                <ul class="nav-group">
+                    @if (AuthState.CanView(ModuleName.SetupParty)) { <li><NavLink href="setup/parties" title="Party">@Icon("party")<span class="nav-text">Party</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupProducts)) { <li><NavLink href="setup/products" title="Products">@Icon("products")<span class="nav-text">Products</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupChartOfAccounts)) { <li><NavLink href="setup/chart-of-accounts" title="Chart of Accounts">@Icon("chart-of-accounts")<span class="nav-text">Chart of Accounts</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupDeductionRules)) { <li><NavLink href="setup/deduction-rules" title="Format (Deductions)">@Icon("format")<span class="nav-text">Format (Deductions)</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupUnitConversions)) { <li><NavLink href="setup/unit-conversions" title="Unit Conversions">@Icon("unit-conversions")<span class="nav-text">Unit Conversions</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupSeasons)) { <li><NavLink href="setup/seasons" title="Seasons">@Icon("seasons")<span class="nav-text">Seasons</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupUsersRoles)) { <li><NavLink href="setup/users" title="User Account">@Icon("user-account")<span class="nav-text">User Account</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.Backup)) { <li><NavLink href="backup" title="Backup">@Icon("backup")<span class="nav-text">Backup</span></NavLink></li> }
+                </ul>
+
+                <a href="#" @onclick="Logout" @onclick:preventDefault="true" class="nav-logout" title="Quit / Logout">@Icon("logout")<span class="nav-text">Quit / Logout</span></a>
             </nav>
         </div>
         <div class="main-content">
@@ -50,10 +97,81 @@ else
 }
 
 @code {
+    // Kachi and Pakki's batch-entry grids are wide — squeeze the sidebar down to an icon-only
+    // rail on those two pages so the grid has more room, and restore full width everywhere else.
+    private static readonly string[] IconOnlyRoutes = { "kachi", "pakki" };
+
+    private bool _iconOnly;
+
+    protected override void OnInitialized()
+    {
+        UpdateIconOnly(Nav.Uri);
+        Nav.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        UpdateIconOnly(e.Location);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateIconOnly(string uri)
+    {
+        var relativePath = Nav.ToBaseRelativePath(uri).Split('?', '#')[0].TrimEnd('/');
+        _iconOnly = IconOnlyRoutes.Contains(relativePath, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Manual override for the auto (route-based) icon-only squeeze — lets the operator
+    /// collapse or expand the sidebar on any page. The next navigation recomputes it from the
+    /// route again via UpdateIconOnly.</summary>
+    private void ToggleSidebar() => _iconOnly = !_iconOnly;
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+
     private void Logout()
     {
         AuthState.Clear();
         AuthState.ClearPersistedToken();
         Nav.NavigateTo("/login", forceLoad: true);
+    }
+
+    private static MarkupString Icon(string name)
+    {
+        var inner = name switch
+        {
+            "chevron-left" => "<polyline points='15,18 9,12 15,6'/>",
+            "chevron-right" => "<polyline points='9,18 15,12 9,6'/>",
+            "dashboard" => "<polyline points='4,12 12,5 20,12'/><rect x='6' y='12' width='12' height='8'/>",
+            "kachi" => "<rect x='5' y='3' width='14' height='18' rx='1'/><line x1='8' y1='9' x2='16' y2='9'/><line x1='8' y1='13' x2='16' y2='13'/><line x1='8' y1='17' x2='13' y2='17'/>",
+            "pakki" => "<rect x='5' y='3' width='14' height='18' rx='1'/><polyline points='9,12 11,14 15,9'/>",
+            "records" => "<line x1='4' y1='7' x2='20' y2='7'/><line x1='4' y1='12' x2='20' y2='12'/><line x1='4' y1='17' x2='20' y2='17'/>",
+            "trading" => "<line x1='4' y1='20' x2='4' y2='12'/><line x1='10' y1='20' x2='10' y2='6'/><line x1='16' y1='20' x2='16' y2='14'/><line x1='20' y1='20' x2='20' y2='4'/>",
+            "sale-invoice" => "<rect x='5' y='3' width='14' height='18' rx='1'/><line x1='12' y1='8' x2='12' y2='16'/><line x1='9' y1='10.5' x2='15' y2='10.5'/><line x1='9' y1='13.5' x2='14' y2='13.5'/>",
+            "purchase" => "<circle cx='9' cy='20' r='1.4'/><circle cx='17' cy='20' r='1.4'/><polyline points='3,4 6,4 8,15 18,15 20,7 7,7'/>",
+            "payment" => "<rect x='3' y='6' width='18' height='12' rx='1.5'/><line x1='3' y1='10' x2='21' y2='10'/>",
+            "receipt" => "<polyline points='6,3 6,21 9,19 12,21 15,19 18,21 18,3 15,5 12,3 9,5'/><line x1='9' y1='9' x2='15' y2='9'/><line x1='9' y1='13' x2='15' y2='13'/>",
+            "journal" => "<rect x='3' y='5' width='8' height='14' rx='1'/><rect x='13' y='5' width='8' height='14' rx='1'/>",
+            "expense" => "<circle cx='12' cy='12' r='9'/><line x1='8' y1='12' x2='16' y2='12'/>",
+            "ledger" => "<rect x='3' y='4' width='18' height='16' rx='1'/><line x1='3' y1='10' x2='21' y2='10'/><line x1='9' y1='10' x2='9' y2='20'/><line x1='15' y1='10' x2='15' y2='20'/>",
+            "user" => "<path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/><circle cx='12' cy='7' r='4'/>",
+            "recovery" => "<path d='M21 12a9 9 0 1 1-3-6.7'/><polyline points='21 3 21 9 15 9'/>",
+            "party" => "<path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M23 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/>",
+            "products" => "<path d='M21 8l-9-5-9 5 9 5 9-5z'/><path d='M3 8v8l9 5 9-5V8'/><line x1='12' y1='13' x2='12' y2='21'/>",
+            "chart-of-accounts" => "<rect x='3' y='3' width='7' height='7'/><rect x='14' y='3' width='7' height='7'/><rect x='3' y='14' width='7' height='7'/><rect x='14' y='14' width='7' height='7'/>",
+            "format" => "<line x1='4' y1='21' x2='4' y2='14'/><line x1='4' y1='10' x2='4' y2='3'/><line x1='12' y1='21' x2='12' y2='12'/><line x1='12' y1='8' x2='12' y2='3'/><line x1='20' y1='21' x2='20' y2='16'/><line x1='20' y1='12' x2='20' y2='3'/><line x1='1' y1='14' x2='7' y2='14'/><line x1='9' y1='8' x2='15' y2='8'/><line x1='17' y1='16' x2='23' y2='16'/>",
+            "unit-conversions" => "<line x1='12' y1='3' x2='12' y2='21'/><path d='M5 7l-3 7a3 3 0 0 0 6 0z'/><path d='M19 7l-3 7a3 3 0 0 0 6 0z'/><line x1='5' y1='7' x2='19' y2='7'/>",
+            "seasons" => "<rect x='3' y='5' width='18' height='16' rx='2'/><line x1='16' y1='3' x2='16' y2='7'/><line x1='8' y1='3' x2='8' y2='7'/><line x1='3' y1='10' x2='21' y2='10'/>",
+            "user-account" => "<path d='M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='8.5' cy='7' r='4'/><polyline points='17,11 19,13 23,9'/>",
+            "backup" => "<circle cx='8' cy='14' r='4'/><circle cx='14' cy='11' r='5'/><circle cx='18' cy='15' r='3.5'/><rect x='6' y='14' width='14' height='6' rx='2'/>",
+            "logout" => "<path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/><polyline points='16,17 21,12 16,7'/><line x1='21' y1='12' x2='9' y2='12'/>",
+            _ => "<circle cx='12' cy='12' r='8'/>"
+        };
+
+        return new MarkupString(
+            "<svg class=\"nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" " +
+            "stroke-linecap=\"round\" stroke-linejoin=\"round\">" + inner + "</svg>");
     }
 }

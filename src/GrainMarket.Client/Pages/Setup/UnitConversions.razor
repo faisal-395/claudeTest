@@ -1,4 +1,5 @@
 @page "/setup/unit-conversions"
+@using GrainMarket.Application.Common
 @inject ApiClient Api
 
 <RequireAuth>
@@ -78,7 +79,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        try { _products = await Api.GetProductsAsync(); }
+        try { _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryGrain); }
         catch (Models.ApiException ex) { _error = ex.Message; return; }
         await LoadAsync();
     }

@@ -1,0 +1,154 @@
+@page "/records-report"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Records Report <span class="rtl-urdu" style="font-size:1rem;">ریکارڈ رپورٹ</span></h1>
+    <p style="color:#777;">Kachi, Pakki, Purchase and Sale Invoice records together, newest first — filter by type below.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="max-width:900px;margin-bottom:16px;">
+        <div>
+            <label>Type / قسم</label>
+            <select @bind="_typeFilter">
+                <option value="All">All</option>
+                <option value="Kachi">Kachi only</option>
+                <option value="Pakki">Pakki only</option>
+                <option value="Purchase">Purchase only</option>
+                <option value="Sale">Sale Invoice only</option>
+            </select>
+        </div>
+        <div>
+            <label>Party</label>
+            <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" @bind-Value="_partyId" Placeholder="All parties…" />
+        </div>
+        <div><label>From</label><input type="date" @bind="_from" /></div>
+        <div><label>To</label><input type="date" @bind="_to" /></div>
+    </div>
+
+    @if (_rows is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div class="batch-results-grid-wrapper">
+            <table class="data-grid kachi-records-grid">
+                <thead>
+                    <tr>
+                        <th>Type</th><th>Invoice</th><th>Date</th><th>Party</th><th>Buyer</th>
+                        <th>Product(s)</th><th>Weight</th><th>Gross</th><th>Deductions / Discount</th>
+                        <th>Net Amount</th><th>Cash</th><th>Status</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in FilteredRows)
+                    {
+                        <tr>
+                            <td>@row.Type</td>
+                            <td>@row.InvoiceNo</td>
+                            <td>@row.Date.ToString("yyyy-MM-dd")</td>
+                            <td>@row.PartyName</td>
+                            <td>@(row.BuyerName ?? "—")</td>
+                            <td>@row.ProductSummary</td>
+                            <td>@(row.WeightKg is { } w ? $"{w:N2} kg" : "—")</td>
+                            <td>@row.GrossAmount.ToString("N2")</td>
+                            <td>@row.Deductions.ToString("N2")</td>
+                            <td>@row.NetAmount.ToString("N2")</td>
+                            <td>@(row.Cash is { } c ? c.ToString("N2") : "—")</td>
+                            <td>@row.Status</td>
+                            <td>
+                                @if (row.DetailsUrl is not null)
+                                {
+                                    <a href="@row.DetailsUrl">Details</a>
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (FilteredRows.Count == 0)
+                    {
+                        <tr><td colspan="13" style="text-align:center;color:#999;">No records found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    private record CombinedRow(
+        string Type, int Id, string InvoiceNo, DateTime Date, int PartyId, string PartyName, string? BuyerName,
+        string ProductSummary, decimal? WeightKg, decimal GrossAmount, decimal Deductions,
+        decimal NetAmount, decimal? Cash, string Status, string? DetailsUrl);
+
+    private List<CombinedRow>? _rows;
+    private List<PartyDto>? _parties;
+    private string _typeFilter = "All";
+    private int _partyId;
+    private DateTime? _from;
+    private DateTime? _to;
+    private string? _error;
+
+    private List<CombinedRow> FilteredRows =>
+        (_rows ?? new())
+            .Where(r => _typeFilter == "All" || r.Type == _typeFilter)
+            .Where(r => _partyId == 0 || r.PartyId == _partyId)
+            .Where(r => _from is null || r.Date.Date >= _from.Value.Date)
+            .Where(r => _to is null || r.Date.Date <= _to.Value.Date)
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _parties = await Api.GetPartiesAsync();
+            var kachis = await Api.GetKachisAsync();
+            var pakkis = await Api.GetPakkisAsync();
+            var purchases = await Api.GetPurchasesAsync();
+            var sales = await Api.GetSaleInvoicesAsync();
+
+            var kachiRows = kachis.Select(k => new CombinedRow(
+                "Kachi", k.Id, k.InvoiceNo, k.Date, k.FarmerId, k.FarmerName, k.BuyerName, k.ProductName,
+                k.NetWeightKg, k.GrossAmount, k.TotalDeductions, k.Total, null, k.Status.ToString(), $"print/kachi/{k.Id}"));
+
+            var pakkiRows = pakkis.Select(p => new CombinedRow(
+                "Pakki", p.Id, p.InvoiceNo, p.Date, p.FarmerId, p.FarmerName, p.BuyerName, p.ProductName,
+                p.NetWeightKg, p.GrossAmount, p.TotalDeductions, p.NetPayableToFarmer, null, p.Status.ToString(), $"print/pakki/{p.Id}"));
+
+            // Purchase/Sale Invoice have no per-record print page of their own (only the Multi
+            // Purchase/Sale batch print exists) and can hold several different products per line,
+            // so — unlike Kachi/Pakki — there's no single "Details" link and no single weight figure.
+            var purchaseRows = purchases.Select(p => new CombinedRow(
+                "Purchase", p.Id, p.InvoiceNo, p.Date, p.SupplierId, p.SupplierName, null,
+                LineSummary(p.Lines.Select(l => l.ProductName)), null, p.TotalBill, p.TotalDiscount, p.NetBill,
+                p.PaidCash, p.IsCancelled ? "Cancelled" : "Open", null));
+
+            var saleRows = sales.Select(s => new CombinedRow(
+                "Sale", s.Id, s.InvoiceNo, s.Date, s.CustomerId, s.CustomerName, null,
+                LineSummary(s.Lines.Select(l => l.ProductName)), null, s.TotalBill, s.TotalDiscount, s.NetBill,
+                s.ReceivedCash, s.IsCancelled ? "Cancelled" : "Open", null));
+
+            _rows = kachiRows.Concat(pakkiRows).Concat(purchaseRows).Concat(saleRows)
+                .OrderByDescending(r => r.Date).ThenByDescending(r => r.Id).ToList();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private static string LineSummary(IEnumerable<string> productNames)
+    {
+        var names = productNames.ToList();
+        return names.Count switch
+        {
+            0 => "—",
+            <= 3 => string.Join(", ", names),
+            _ => string.Join(", ", names.Take(2)) + $" +{names.Count - 2} more"
+        };
+    }
+}
