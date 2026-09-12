@@ -1,0 +1,56 @@
+@page "/stock"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Stock <span class="rtl-urdu" style="font-size:1rem;">اسٹاک</span></h1>
+    <p style="color:#777;">Current on-hand quantity for farm inputs (pesticides, seeds, fertilizer), computed from all non-cancelled Purchase and Sale Invoice records.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    @if (_rows is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div class="batch-results-grid-wrapper">
+            <table class="data-grid" style="max-width:900px;">
+                <thead>
+                    <tr>
+                        <th>Product</th><th>Unit</th><th>Purchased</th><th>Sold</th><th>On Hand</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _rows)
+                    {
+                        <tr class="@(row.OnHandQty <= 0 ? "invalid-total" : "")">
+                            <td>@row.ProductName @(row.NameUrdu is { Length: > 0 } u ? $"/ {u}" : "")</td>
+                            <td>@row.BaseUnit</td>
+                            <td>@row.PurchasedQty.ToString("N2")</td>
+                            <td>@row.SoldQty.ToString("N2")</td>
+                            <td><strong>@row.OnHandQty.ToString("N2")</strong></td>
+                        </tr>
+                    }
+                    @if (_rows.Count == 0)
+                    {
+                        <tr><td colspan="5" style="text-align:center;color:#999;">No input products found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    private List<StockDto>? _rows;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _rows = await Api.GetStockAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

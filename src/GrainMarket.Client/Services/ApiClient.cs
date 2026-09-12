@@ -17,6 +17,7 @@ using GrainMarket.Application.Recovery;
 using GrainMarket.Application.Roles;
 using GrainMarket.Application.SaleInvoices;
 using GrainMarket.Application.Seasons;
+using GrainMarket.Application.Stock;
 using GrainMarket.Application.Trading;
 using GrainMarket.Application.UnitConversions;
 using GrainMarket.Application.Users;
@@ -114,6 +115,8 @@ public class ApiClient
     public Task<List<PurchaseDto>> GetPurchasesAsync() => GetAsync<List<PurchaseDto>>("api/purchases");
     public Task<PurchaseDto> GetPurchaseAsync(int id) => GetAsync<PurchaseDto>($"api/purchases/{id}");
     public Task<PurchaseDto> CreatePurchaseAsync(CreatePurchaseRequest request) => PostAsync<CreatePurchaseRequest, PurchaseDto>("api/purchases", request);
+
+    public Task<List<StockDto>> GetStockAsync() => GetAsync<List<StockDto>>("api/stock");
     public Task CancelPurchaseAsync(int id) => PostAsync($"api/purchases/{id}/cancel");
 
     // --- Vouchers: Payment / Receipt / Journal -----------------------------------------------------

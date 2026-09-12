@@ -18,6 +18,7 @@ using GrainMarket.Application.Recovery;
 using GrainMarket.Application.Roles;
 using GrainMarket.Application.SaleInvoices;
 using GrainMarket.Application.Seasons;
+using GrainMarket.Application.Stock;
 using GrainMarket.Application.Trading;
 using GrainMarket.Application.UnitConversions;
 using GrainMarket.Application.Users;
@@ -48,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<IMultiSaleService, MultiSaleService>();
         services.AddScoped<ISaleInvoiceService, SaleInvoiceService>();
         services.AddScoped<IPurchaseService, PurchaseService>();
+        services.AddScoped<IStockService, StockService>();
         services.AddScoped<IVoucherService, VoucherService>();
         services.AddScoped<IExpenseService, ExpenseService>();
         services.AddScoped<ILedgerQueryService, LedgerQueryService>();

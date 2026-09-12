@@ -1,6 +1,7 @@
 using GrainMarket.Application.Common;
 using GrainMarket.Application.Common.Exceptions;
 using GrainMarket.Application.Common.Interfaces;
+using GrainMarket.Application.Stock;
 using GrainMarket.Domain.Entities;
 using GrainMarket.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -13,13 +14,15 @@ public class SaleInvoiceService : ISaleInvoiceService
     private readonly ILedgerPostingService _ledger;
     private readonly IInvoiceNumberGenerator _numberGenerator;
     private readonly IDateTimeProvider _clock;
+    private readonly IStockService _stock;
 
-    public SaleInvoiceService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock)
+    public SaleInvoiceService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock, IStockService stock)
     {
         _db = db;
         _ledger = ledger;
         _numberGenerator = numberGenerator;
         _clock = clock;
+        _stock = stock;
     }
 
     public async Task<List<SaleInvoiceDto>> GetAllAsync(CancellationToken ct = default)
@@ -50,6 +53,15 @@ public class SaleInvoiceService : ISaleInvoiceService
         var nonInputCount = await _db.Products.CountAsync(p => productIds.Contains(p.Id) && p.Category != DomainConstants.ProductCategoryInput, ct);
         if (nonInputCount > 0)
             throw new InvalidCalculationException("Sale Invoice can only include input products (pesticides, seeds, fertilizer), not grain products.");
+
+        var productNames = await _db.Products.Where(p => productIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.Name, ct);
+        foreach (var group in request.Lines.GroupBy(l => l.ProductId))
+        {
+            var requestedQty = group.Sum(l => l.Quantity);
+            var onHandQty = await _stock.GetOnHandQtyAsync(group.Key, ct);
+            if (requestedQty > onHandQty)
+                throw new InvalidCalculationException($"Not enough stock for {productNames[group.Key]}: only {onHandQty:N2} available, {requestedQty:N2} requested.");
+        }
 
         var sale = new SaleInvoice
         {

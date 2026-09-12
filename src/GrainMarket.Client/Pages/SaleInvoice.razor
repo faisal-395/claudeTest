@@ -35,7 +35,7 @@
     </div>
 
     <table class="data-grid" style="max-width:1100px;margin-top:14px;">
-        <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Discount %</th><th>Net</th><th></th></tr></thead>
+        <thead><tr><th>Product</th><th>Qty</th><th>In Stock</th><th>Price</th><th>Discount %</th><th>Net</th><th></th></tr></thead>
         <tbody>
             @for (var i = 0; i < _lines.Count; i++)
             {
@@ -46,6 +46,7 @@
                         <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@line.ProductId" ValueChanged="@(v => line.ProductId = v)" Placeholder="Search product…" />
                     </td>
                     <td><input type="number" step="0.01" value="@line.Quantity" @onchange="e => line.Quantity = ParseDecimal(e.Value)" /></td>
+                    <td class="@(IsOverStock(line) ? "invalid-total" : "")">@AvailableFor(line.ProductId).ToString("N2")</td>
                     <td><input type="number" step="0.01" value="@line.Price" @onchange="e => line.Price = ParseDecimal(e.Value)" /></td>
                     <td><input type="number" step="0.01" value="@line.DiscountPercent" @onchange="e => line.DiscountPercent = ParseDecimal(e.Value)" /></td>
                     <td>@LineNet(line).ToString("N2")</td>
@@ -64,7 +65,11 @@
             {
                 <div class="invalid-total">Add at least one line item.</div>
             }
-            <button class="btn" disabled="@(_lines.Count == 0)" @onclick="SaveAsync">Save Sale Invoice</button>
+            else if (HasStockIssue)
+            {
+                <div class="invalid-total">One or more lines exceed the available stock. Reduce the quantity or check the Stock page.</div>
+            }
+            <button class="btn" disabled="@(_lines.Count == 0 || HasStockIssue)" @onclick="SaveAsync">Save Sale Invoice</button>
         </div>
     </div>
 
@@ -100,6 +105,7 @@
     private List<PartyDto>? _customers;
     private List<ProductDto>? _products;
     private List<SaleInvoiceDto>? _invoices;
+    private Dictionary<int, decimal> _stock = new();
     private string? _error;
 
     private string? _billNo;
@@ -112,12 +118,22 @@
 
     private decimal TotalBill => _lines.Sum(LineNet);
 
+    private Dictionary<int, decimal> RequestedByProduct =>
+        _lines.GroupBy(l => l.ProductId).ToDictionary(g => g.Key, g => g.Sum(l => l.Quantity));
+
+    private decimal AvailableFor(int productId) => _stock.GetValueOrDefault(productId);
+
+    private bool IsOverStock(LineModel line) => RequestedByProduct.GetValueOrDefault(line.ProductId) > AvailableFor(line.ProductId);
+
+    private bool HasStockIssue => _lines.Any(IsOverStock);
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
             _customers = await Api.GetPartiesAsync(PartyType.Farmer);
             _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryInput);
+            _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
             if (_customers.Count > 0) _customerId = _customers[0].Id;
         }
         catch (Models.ApiException ex) { _error = ex.Message; return; }
@@ -143,7 +159,12 @@
     private async Task CancelAsync(int id)
     {
         _error = null;
-        try { await Api.CancelSaleInvoiceAsync(id); await LoadAsync(); }
+        try
+        {
+            await Api.CancelSaleInvoiceAsync(id);
+            _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
+            await LoadAsync();
+        }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
@@ -160,6 +181,7 @@
             _lines.Clear();
             _receivedCash = 0;
             _billNo = null;
+            _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
             await LoadAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
