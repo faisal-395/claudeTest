@@ -43,11 +43,13 @@
                 var line = _lines[index];
                 <tr>
                     <td>
-                        <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@line.ProductId" ValueChanged="@(v => line.ProductId = v)" Placeholder="Search product…" />
+                        <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@line.ProductId" ValueChanged="@(v => OnProductChanged(line, v))" Placeholder="Search product…" />
                     </td>
-                    <td><input type="number" step="0.01" value="@line.Quantity" @onchange="e => line.Quantity = ParseDecimal(e.Value)" /></td>
+                    <td><input type="number" step="0.01" value="@line.Quantity" @onchange="e => OnQuantityChanged(line, ParseDecimal(e.Value))" /></td>
                     <td class="@(IsOverStock(line) ? "invalid-total" : "")">@AvailableFor(line.ProductId).ToString("N2")</td>
-                    <td><input type="number" step="0.01" value="@line.Price" @onchange="e => line.Price = ParseDecimal(e.Value)" /></td>
+                    <td>
+                        <input type="number" step="0.01" value="@line.Price" @onchange="e => { line.Price = ParseDecimal(e.Value); line.ManuallyPriced = true; }" title="Auto-filled from the product's sale price/markup setting — edit to override for this line only" />
+                    </td>
                     <td><input type="number" step="0.01" value="@line.DiscountPercent" @onchange="e => line.DiscountPercent = ParseDecimal(e.Value)" /></td>
                     <td>@LineNet(line).ToString("N2")</td>
                     <td><button class="btn danger" @onclick="() => _lines.RemoveAt(index)">Remove</button></td>
@@ -146,7 +148,39 @@
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private void AddLine() => _lines.Add(new LineModel { ProductId = _products?.FirstOrDefault()?.Id ?? 0, Quantity = 1 });
+    private async Task AddLine()
+    {
+        var line = new LineModel { ProductId = _products?.FirstOrDefault()?.Id ?? 0, Quantity = 1 };
+        _lines.Add(line);
+        await RefreshSuggestedPriceAsync(line);
+    }
+
+    private async Task OnProductChanged(LineModel line, int productId)
+    {
+        line.ProductId = productId;
+        line.ManuallyPriced = false;
+        await RefreshSuggestedPriceAsync(line);
+    }
+
+    private async Task OnQuantityChanged(LineModel line, decimal quantity)
+    {
+        line.Quantity = quantity;
+        await RefreshSuggestedPriceAsync(line);
+    }
+
+    /// <summary>Auto-fills Price from the product's SalePrice/SaleMarkupPercent setting (weighted
+    /// against the FIFO cost of whatever lots this quantity would actually draw from) so the operator
+    /// doesn't have to type one on every line — but never overwrites a price they've edited by hand.</summary>
+    private async Task RefreshSuggestedPriceAsync(LineModel line)
+    {
+        if (line.ProductId <= 0 || line.Quantity <= 0 || line.ManuallyPriced) return;
+        try
+        {
+            var suggestion = await Api.GetSuggestedSalePriceAsync(line.ProductId, line.Quantity);
+            line.Price = suggestion.SuggestedPrice;
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
 
     private static decimal LineNet(LineModel l)
     {
@@ -193,5 +227,8 @@
         public decimal Quantity { get; set; }
         public decimal Price { get; set; }
         public decimal DiscountPercent { get; set; }
+
+        /// <summary>Once the operator edits Price by hand, auto-fill stops touching this line.</summary>
+        public bool ManuallyPriced { get; set; }
     }
 }

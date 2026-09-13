@@ -17,4 +17,7 @@ public static class DomainConstants
     /// Invoice (sold to a Farmer) — the two catalogs are never shown in each other's pickers.</summary>
     public const string ProductCategoryGrain = "Grain";
     public const string ProductCategoryInput = "Input";
+
+    /// <summary>Dashboard flags a purchase lot once its expiry date is this many days away (or past).</summary>
+    public const int ExpiryAlertWindowDays = 15;
 }

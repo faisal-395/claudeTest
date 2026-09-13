@@ -54,15 +54,6 @@ public class SaleInvoiceService : ISaleInvoiceService
         if (nonInputCount > 0)
             throw new InvalidCalculationException("Sale Invoice can only include input products (pesticides, seeds, fertilizer), not grain products.");
 
-        var productNames = await _db.Products.Where(p => productIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.Name, ct);
-        foreach (var group in request.Lines.GroupBy(l => l.ProductId))
-        {
-            var requestedQty = group.Sum(l => l.Quantity);
-            var onHandQty = await _stock.GetOnHandQtyAsync(group.Key, ct);
-            if (requestedQty > onHandQty)
-                throw new InvalidCalculationException($"Not enough stock for {productNames[group.Key]}: only {onHandQty:N2} available, {requestedQty:N2} requested.");
-        }
-
         var sale = new SaleInvoice
         {
             InvoiceNo = await _numberGenerator.NextAsync("S", ct),
@@ -73,7 +64,12 @@ public class SaleInvoiceService : ISaleInvoiceService
             PrintLanguage = request.PrintLanguage
         };
 
+        // Each line draws its quantity from the product's oldest available purchase lot(s) first
+        // (FIFO) — AllocateFifoAsync itself throws if stock is insufficient, which doubles as this
+        // request's stock-availability check; nothing is persisted until SaveChangesAsync below, so
+        // a failure partway through leaves no partial allocation behind.
         decimal totalBill = 0, totalDiscount = 0;
+        var allocationsToAdd = new List<SaleInvoiceLineAllocation>();
         foreach (var line in request.Lines)
         {
             var gross = Math.Round(line.Quantity * line.Price, 2);
@@ -82,14 +78,24 @@ public class SaleInvoiceService : ISaleInvoiceService
             totalBill += gross;
             totalDiscount += discount;
 
-            sale.Lines.Add(new SaleInvoiceLine
+            var saleLine = new SaleInvoiceLine
             {
                 ProductId = line.ProductId,
                 Quantity = line.Quantity,
                 Price = line.Price,
                 DiscountPercent = line.DiscountPercent,
                 NetPrice = net
-            });
+            };
+            sale.Lines.Add(saleLine);
+
+            var fifoAllocations = await _stock.AllocateFifoAsync(line.ProductId, line.Quantity, ct);
+            allocationsToAdd.AddRange(fifoAllocations.Select(a => new SaleInvoiceLineAllocation
+            {
+                SaleInvoiceLine = saleLine,
+                PurchaseLineId = a.PurchaseLine.Id,
+                Quantity = a.Quantity,
+                UnitCost = a.UnitCost
+            }));
         }
 
         var netBill = totalBill - totalDiscount;
@@ -102,6 +108,7 @@ public class SaleInvoiceService : ISaleInvoiceService
         sale.PayCash = request.ReceivedCash > netBill ? request.ReceivedCash - netBill : 0;
 
         _db.SaleInvoices.Add(sale);
+        _db.SaleInvoiceLineAllocations.AddRange(allocationsToAdd);
         await _db.SaveChangesAsync(ct);
 
         var salesIncomeAccountId = await GetAccountIdAsync(DomainConstants.SalesIncomeAccountCode, ct);
@@ -141,6 +148,16 @@ public class SaleInvoiceService : ISaleInvoiceService
         {
             await _ledger.PostAccountEntryAsync(cashAccountId, _clock.UtcNow, 0, cashApplied, LedgerSourceType.Sale, sale.Id, reason, ct);
             await _ledger.PostPartyEntryAsync(sale.CustomerId, _clock.UtcNow, cashApplied, 0, LedgerSourceType.Sale, sale.Id, reason, ct);
+        }
+
+        // Return this invoice's FIFO allocations to their source lots so cancelling frees the stock
+        // back up for future sales.
+        var lineIds = sale.Lines.Select(l => l.Id).ToList();
+        var allocations = await _db.SaleInvoiceLineAllocations.Include(a => a.PurchaseLine)
+            .Where(a => lineIds.Contains(a.SaleInvoiceLineId) && !a.IsDeleted).ToListAsync(ct);
+        foreach (var allocation in allocations)
+        {
+            allocation.PurchaseLine.RemainingQuantity += allocation.Quantity;
         }
 
         await _db.SaveChangesAsync(ct);

@@ -272,10 +272,10 @@ public static class SeedData
             new Product { Name = "Moong", NameUrdu = "مونگ", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
             new Product { Name = "Masoor", NameUrdu = "مسور", Category = DomainConstants.ProductCategoryGrain, BaseUnit = "kg", DefaultRate = 0m },
 
-            new Product { Name = "Pesticide", NameUrdu = "کیڑے مار دوا", Category = DomainConstants.ProductCategoryInput, BaseUnit = "kg", DefaultRate = 0m },
+            new Product { Name = "Pesticide", NameUrdu = "کیڑے مار دوا", Category = DomainConstants.ProductCategoryInput, BaseUnit = "Litre", DefaultRate = 0m },
             new Product { Name = "Seed", NameUrdu = "بیج", Category = DomainConstants.ProductCategoryInput, BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Fertilizer (Urea)", NameUrdu = "کھاد (یوریا)", Category = DomainConstants.ProductCategoryInput, BaseUnit = "kg", DefaultRate = 0m },
-            new Product { Name = "Fertilizer (DAP)", NameUrdu = "کھاد (ڈی اے پی)", Category = DomainConstants.ProductCategoryInput, BaseUnit = "kg", DefaultRate = 0m }
+            new Product { Name = "Fertilizer (Urea)", NameUrdu = "کھاد (یوریا)", Category = DomainConstants.ProductCategoryInput, BaseUnit = "Bag", DefaultRate = 0m },
+            new Product { Name = "Fertilizer (DAP)", NameUrdu = "کھاد (ڈی اے پی)", Category = DomainConstants.ProductCategoryInput, BaseUnit = "Bag", DefaultRate = 0m }
         };
 
         // A reconciliation migration (SeedAdditionalGrainProducts) may already have inserted seven of

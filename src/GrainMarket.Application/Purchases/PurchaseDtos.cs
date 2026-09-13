@@ -2,8 +2,8 @@ using GrainMarket.Domain.Enums;
 
 namespace GrainMarket.Application.Purchases;
 
-public record PurchaseLineDto(int ProductId, string ProductName, decimal Quantity, decimal Price, decimal DiscountPercent, decimal NetPrice);
-public record PurchaseLineRequest(int ProductId, decimal Quantity, decimal Price, decimal DiscountPercent);
+public record PurchaseLineDto(int ProductId, string ProductName, decimal Quantity, decimal Price, decimal DiscountPercent, decimal NetPrice, DateTime? ExpiryDate);
+public record PurchaseLineRequest(int ProductId, decimal Quantity, decimal Price, decimal DiscountPercent, DateTime? ExpiryDate = null);
 
 public record PurchaseDto(
     int Id, string InvoiceNo, string? BillNo, DateTime Date, int SupplierId, string SupplierName,

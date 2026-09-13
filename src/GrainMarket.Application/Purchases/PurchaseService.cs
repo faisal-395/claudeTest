@@ -76,7 +76,9 @@ public class PurchaseService : IPurchaseService
                 Quantity = line.Quantity,
                 Price = line.Price,
                 DiscountPercent = line.DiscountPercent,
-                NetPrice = net
+                NetPrice = net,
+                RemainingQuantity = line.Quantity,
+                ExpiryDate = line.ExpiryDate
             });
         }
 
@@ -112,6 +114,12 @@ public class PurchaseService : IPurchaseService
     {
         var purchase = await LoadAsync(id, ct);
         if (purchase.IsCancelled) return;
+
+        // A cancelled purchase's lots drop out of stock entirely — if a Sale Invoice has already
+        // drawn FIFO stock from one of them, cancelling now would silently invalidate that sale's
+        // cost basis and on-hand math.
+        if (purchase.Lines.Any(l => l.RemainingQuantity < l.Quantity))
+            throw new InvalidCalculationException("This purchase can't be cancelled: some of its stock has already been sold.");
 
         purchase.IsCancelled = true;
         purchase.UpdatedAtUtc = _clock.UtcNow;
@@ -150,5 +158,5 @@ public class PurchaseService : IPurchaseService
     private static PurchaseDto ToDto(Purchase p) => new(
         p.Id, p.InvoiceNo, p.BillNo, p.Date, p.SupplierId, p.Supplier.Name,
         p.TotalBill, p.TotalDiscount, p.NetBill, p.PaidCash, p.PrintFormat, p.PrintLanguage, p.IsCancelled,
-        p.Lines.Select(l => new PurchaseLineDto(l.ProductId, l.Product.Name, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice)).ToList());
+        p.Lines.Select(l => new PurchaseLineDto(l.ProductId, l.Product.Name, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice, l.ExpiryDate)).ToList());
 }
