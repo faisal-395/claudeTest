@@ -69,7 +69,7 @@ else
                     <div class="brand nav-section-label"><span class="brand-full">Accounts</span></div>
                     <ul class="nav-group">
                         <li><NavLink href="ledger" title="Ledger">@Icon("ledger")<span class="nav-text">Ledger</span></NavLink></li>
-                        <li><NavLink href="reports/party-account" title="Farmer / Purchase Account">@Icon("user")<span class="nav-text">Farmer / Purchase Account</span></NavLink></li>
+                        <li><NavLink href="reports/party-account" title="Party Account Statement">@Icon("user")<span class="nav-text">Party Account Statement</span></NavLink></li>
                         @* Recovery — hidden for now; re-enable by restoring this NavLink.
                         @if (AuthState.CanView(ModuleName.Recovery)) { <li><NavLink href="recovery" title="Recovery">@Icon("recovery")<span class="nav-text">Recovery</span></NavLink></li> }
                         *@
