@@ -59,7 +59,7 @@
     {
         <h3 style="margin-top:24px;">Recent Purchases</h3>
         <table class="data-grid" style="max-width:1100px;">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Supplier</th><th>Net Bill</th><th>Paid</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Date</th><th>Supplier</th><th>Net Bill</th><th>Paid</th><th>Status</th><th></th><th></th></tr></thead>
             <tbody>
                 @foreach (var p in _purchases)
                 {
@@ -71,12 +71,38 @@
                         <td>@p.PaidCash.ToString("N2")</td>
                         <td>@(p.IsCancelled ? "Cancelled" : "Open")</td>
                         <td>
+                            <a href="#" @onclick="() => ToggleExpand(p.Id)" @onclick:preventDefault="true">@(_expandedPurchaseIds.Contains(p.Id) ? "Hide" : "Details")</a>
+                        </td>
+                        <td>
                             @if (!p.IsCancelled)
                             {
                                 <a href="#" @onclick="() => CancelAsync(p.Id)" @onclick:preventDefault="true">Cancel</a>
                             }
                         </td>
                     </tr>
+                    @if (_expandedPurchaseIds.Contains(p.Id))
+                    {
+                        <tr>
+                            <td colspan="8" style="background:#f7f7f7;">
+                                <table class="data-grid" style="margin:4px 0;">
+                                    <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Discount %</th><th>Net</th><th>Expiry</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var line in p.Lines)
+                                        {
+                                            <tr>
+                                                <td>@line.ProductName</td>
+                                                <td>@line.Quantity.ToString("N2")</td>
+                                                <td>@line.Price.ToString("N2")</td>
+                                                <td>@line.DiscountPercent.ToString("N2")%</td>
+                                                <td>@line.NetPrice.ToString("N2")</td>
+                                                <td>@(line.ExpiryDate is { } ed ? ed.ToString("yyyy-MM-dd") : "—")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>
@@ -87,6 +113,7 @@
     private List<PartyDto>? _suppliers;
     private List<ProductDto>? _products;
     private List<PurchaseDto>? _purchases;
+    private readonly HashSet<int> _expandedPurchaseIds = new();
     private string? _error;
 
     private string? _billNo;
@@ -116,6 +143,11 @@
     }
 
     private void AddLine() => _lines.Add(new LineModel { ProductId = _products?.FirstOrDefault()?.Id ?? 0, Quantity = 1 });
+
+    private void ToggleExpand(int purchaseId)
+    {
+        if (!_expandedPurchaseIds.Add(purchaseId)) _expandedPurchaseIds.Remove(purchaseId);
+    }
 
     private static decimal LineNet(LineModel l)
     {

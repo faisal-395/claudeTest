@@ -47,6 +47,7 @@
                 <tbody>
                     @foreach (var row in FilteredRows)
                     {
+                        var key = (row.Type, row.Id);
                         <tr>
                             <td>@row.Type</td>
                             <td>@row.InvoiceNo</td>
@@ -65,12 +66,39 @@
                                 {
                                     <a href="@row.DetailsUrl">Details</a>
                                 }
+                                else if (row.Lines is { Count: > 0 })
+                                {
+                                    <a href="#" @onclick="() => ToggleExpand(key)" @onclick:preventDefault="true">@(_expanded.Contains(key) ? "Hide" : "Details")</a>
+                                }
                                 else
                                 {
                                     <span>—</span>
                                 }
                             </td>
                         </tr>
+                        @if (row.Lines is { Count: > 0 } && _expanded.Contains(key))
+                        {
+                            <tr>
+                                <td colspan="13" style="background:#f7f7f7;">
+                                    <table class="data-grid" style="margin:4px 0;">
+                                        <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Discount %</th><th>Net</th><th>Expiry</th></tr></thead>
+                                        <tbody>
+                                            @foreach (var line in row.Lines)
+                                            {
+                                                <tr>
+                                                    <td>@line.ProductName</td>
+                                                    <td>@line.Quantity.ToString("N2")</td>
+                                                    <td>@line.Price.ToString("N2")</td>
+                                                    <td>@line.DiscountPercent.ToString("N2")%</td>
+                                                    <td>@line.NetPrice.ToString("N2")</td>
+                                                    <td>@(line.ExpiryDate is { } ed ? ed.ToString("yyyy-MM-dd") : "—")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        }
                     }
                     @if (FilteredRows.Count == 0)
                     {
@@ -83,13 +111,16 @@
 </RequireAuth>
 
 @code {
+    private record LineDetail(string ProductName, decimal Quantity, decimal Price, decimal DiscountPercent, decimal NetPrice, DateTime? ExpiryDate);
+
     private record CombinedRow(
         string Type, int Id, string InvoiceNo, DateTime Date, int PartyId, string PartyName, string? BuyerName,
         string ProductSummary, decimal? WeightKg, decimal GrossAmount, decimal Deductions,
-        decimal NetAmount, decimal? Cash, string Status, string? DetailsUrl);
+        decimal NetAmount, decimal? Cash, string Status, string? DetailsUrl, List<LineDetail>? Lines = null);
 
     private List<CombinedRow>? _rows;
     private List<PartyDto>? _parties;
+    private readonly HashSet<(string Type, int Id)> _expanded = new();
     private string _typeFilter = "All";
     private int _partyId;
     private DateTime? _from;
@@ -103,6 +134,11 @@
             .Where(r => _from is null || r.Date.Date >= _from.Value.Date)
             .Where(r => _to is null || r.Date.Date <= _to.Value.Date)
             .ToList();
+
+    private void ToggleExpand((string Type, int Id) key)
+    {
+        if (!_expanded.Add(key)) _expanded.Remove(key);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -123,17 +159,21 @@
                 p.NetWeightKg, p.GrossAmount, p.TotalDeductions, p.NetPayableToFarmer, null, p.Status.ToString(), $"print/pakki/{p.Id}"));
 
             // Purchase/Sale Invoice have no per-record print page of their own (only the Multi
-            // Purchase/Sale batch print exists) and can hold several different products per line,
-            // so — unlike Kachi/Pakki — there's no single "Details" link and no single weight figure.
+            // Purchase/Sale batch print exists) and can hold several different products per line, so
+            // — unlike Kachi/Pakki — there's no single navigable "Details" page. Instead the Product(s)
+            // summary shows each line's qty@price directly, and "Details" expands the full line
+            // breakdown (including per-unit purchase price) inline, right in this grid.
             var purchaseRows = purchases.Select(p => new CombinedRow(
                 "Purchase", p.Id, p.InvoiceNo, p.Date, p.SupplierId, p.SupplierName, null,
-                LineSummary(p.Lines.Select(l => l.ProductName)), null, p.TotalBill, p.TotalDiscount, p.NetBill,
-                p.PaidCash, p.IsCancelled ? "Cancelled" : "Open", null));
+                LineSummary(p.Lines.Select(l => (l.ProductName, l.Quantity, l.Price))), null, p.TotalBill, p.TotalDiscount, p.NetBill,
+                p.PaidCash, p.IsCancelled ? "Cancelled" : "Open", null,
+                p.Lines.Select(l => new LineDetail(l.ProductName, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice, l.ExpiryDate)).ToList()));
 
             var saleRows = sales.Select(s => new CombinedRow(
                 "Sale", s.Id, s.InvoiceNo, s.Date, s.CustomerId, s.CustomerName, null,
-                LineSummary(s.Lines.Select(l => l.ProductName)), null, s.TotalBill, s.TotalDiscount, s.NetBill,
-                s.ReceivedCash, s.IsCancelled ? "Cancelled" : "Open", null));
+                LineSummary(s.Lines.Select(l => (l.ProductName, l.Quantity, l.Price))), null, s.TotalBill, s.TotalDiscount, s.NetBill,
+                s.ReceivedCash, s.IsCancelled ? "Cancelled" : "Open", null,
+                s.Lines.Select(l => new LineDetail(l.ProductName, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice, null)).ToList()));
 
             _rows = kachiRows.Concat(pakkiRows).Concat(purchaseRows).Concat(saleRows)
                 .OrderByDescending(r => r.Date).ThenByDescending(r => r.Id).ToList();
@@ -141,14 +181,14 @@
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private static string LineSummary(IEnumerable<string> productNames)
+    private static string LineSummary(IEnumerable<(string Name, decimal Qty, decimal Price)> lines)
     {
-        var names = productNames.ToList();
-        return names.Count switch
+        var items = lines.Select(l => $"{l.Name} ({l.Qty:N2}@{l.Price:N2})").ToList();
+        return items.Count switch
         {
             0 => "—",
-            <= 3 => string.Join(", ", names),
-            _ => string.Join(", ", names.Take(2)) + $" +{names.Count - 2} more"
+            <= 3 => string.Join(", ", items),
+            _ => string.Join(", ", items.Take(2)) + $" +{items.Count - 2} more"
         };
     }
 }
