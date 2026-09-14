@@ -3,6 +3,7 @@ using GrainMarket.Application.Common.Interfaces;
 using GrainMarket.Domain.Entities;
 using GrainMarket.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace GrainMarket.Infrastructure.Persistence;
 
@@ -138,10 +139,41 @@ public static class SeedData
         // SeedPakkiVendorDeductionRules) may already have inserted some of these codes via raw SQL
         // before this runs — migrations always apply before SeedAsync, even on a brand-new database.
         // Skip codes that already exist instead of assuming the table is empty.
-        var existingAccounts = await db.ChartOfAccounts.ToDictionaryAsync(a => a.Code, ct);
+        //
+        // IgnoreQueryFilters(): Code has a plain (non-filtered) unique index, but this query would
+        // otherwise go through the global soft-delete filter — a Code that's merely soft-deleted
+        // (e.g. Setup > Chart of Accounts "Delete" was used, then this seed re-ran because Roles
+        // ended up empty again) still occupies that unique slot in the database while being
+        // invisible here, so re-inserting it would crash the whole app on startup instead of just
+        // skipping it like every other already-seeded code.
+        var existingAccounts = await db.ChartOfAccounts.IgnoreQueryFilters().ToDictionaryAsync(a => a.Code, ct);
         var newAccounts = accounts.Where(a => !existingAccounts.ContainsKey(a.Code)).ToArray();
         db.ChartOfAccounts.AddRange(newAccounts);
-        await db.SaveChangesAsync(ct);
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            // Belt-and-braces: something we didn't account for above (or a genuinely concurrent
+            // seed) still collided. Drop the failed inserts, re-resolve against what's actually in
+            // the database now, and retry only what's still missing — once. If that still fails,
+            // let it throw for real; two collisions in a row means something is actually wrong.
+            foreach (var entry in db.ChangeTracker.Entries<ChartOfAccount>().Where(e => e.State == EntityState.Added).ToList())
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            existingAccounts = await db.ChartOfAccounts.IgnoreQueryFilters().ToDictionaryAsync(a => a.Code, ct);
+            var stillMissing = accounts.Where(a => !existingAccounts.ContainsKey(a.Code)).ToArray();
+            if (stillMissing.Length > 0)
+            {
+                db.ChartOfAccounts.AddRange(stillMissing);
+                await db.SaveChangesAsync(ct);
+                existingAccounts = await db.ChartOfAccounts.IgnoreQueryFilters().ToDictionaryAsync(a => a.Code, ct);
+            }
+        }
 
         var accountsByCode = accounts.ToDictionary(a => a.Code, a => existingAccounts.TryGetValue(a.Code, out var existing) ? existing : a);
 
@@ -207,9 +239,10 @@ public static class SeedData
 
         // Same reconciliation-migration overlap as SeedChartOfAccountsAsync above: skip any rule a
         // migration already inserted, keyed the same way those migrations key their own NOT EXISTS
-        // checks — (Name, AppliesTo). The global soft-delete query filter already excludes
-        // IsDeleted rows, matching the migrations' "AND IsDeleted = FALSE" condition.
-        var existingRuleKeys = (await db.DeductionRules.Select(r => new { r.Name, r.AppliesTo }).ToListAsync(ct))
+        // checks — (Name, AppliesTo). IgnoreQueryFilters(): Name has a unique index, and a
+        // soft-deleted rule (Setup > Format "Delete") still occupies it — without this, a Name this
+        // seed wants to (re-)create would look free here but crash on the real unique constraint.
+        var existingRuleKeys = (await db.DeductionRules.IgnoreQueryFilters().Select(r => new { r.Name, r.AppliesTo }).ToListAsync(ct))
             .Select(r => (r.Name, r.AppliesTo))
             .ToHashSet();
         var newRules = rules.Where(r => !existingRuleKeys.Contains((r.Name, r.AppliesTo))).ToArray();
@@ -233,8 +266,10 @@ public static class SeedData
 
         // A reconciliation migration (e.g. DhrnAsDisplayBreakdown, which inserts the Dhrn row
         // directly) may already have inserted one of these — same overlap as ChartOfAccounts/
-        // DeductionRules above, keyed the same way: (Unit, ProductId).
-        var existingKeys = (await db.UnitConversions.Select(c => new { c.Unit, c.ProductId }).ToListAsync(ct))
+        // DeductionRules above, keyed the same way: (Unit, ProductId). IgnoreQueryFilters() for the
+        // same reason as those two: (Unit, ProductId) is a unique index, and a soft-deleted row
+        // still occupies it.
+        var existingKeys = (await db.UnitConversions.IgnoreQueryFilters().Select(c => new { c.Unit, c.ProductId }).ToListAsync(ct))
             .Select(c => (c.Unit, c.ProductId))
             .ToHashSet();
         var newConversions = conversions.Where(c => !existingKeys.Contains((c.Unit, c.ProductId))).ToArray();
@@ -286,4 +321,7 @@ public static class SeedData
         db.Products.AddRange(newProducts);
         await db.SaveChangesAsync(ct);
     }
+
+    private static bool IsUniqueViolation(DbUpdateException ex) =>
+        ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
 }
