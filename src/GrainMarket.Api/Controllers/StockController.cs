@@ -26,6 +26,6 @@ public class StockController : ControllerBase
     // to auto-fill a line's price, so anyone who can use Sale Invoice needs to be able to call it.
     [ModulePermission(ModuleName.SaleInvoice)]
     [HttpGet("suggested-price")]
-    public async Task<ActionResult<SuggestedSalePriceDto>> GetSuggestedPrice([FromQuery] int productId, [FromQuery] decimal quantity, CancellationToken ct)
-        => Ok(await _service.GetSuggestedSalePriceAsync(productId, quantity, ct));
+    public async Task<ActionResult<SuggestedSalePriceDto>> GetSuggestedPrice([FromQuery] int productId, CancellationToken ct)
+        => Ok(await _service.GetSuggestedSalePriceAsync(productId, ct));
 }

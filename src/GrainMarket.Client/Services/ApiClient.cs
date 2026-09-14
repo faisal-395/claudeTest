@@ -117,8 +117,8 @@ public class ApiClient
     public Task<PurchaseDto> CreatePurchaseAsync(CreatePurchaseRequest request) => PostAsync<CreatePurchaseRequest, PurchaseDto>("api/purchases", request);
 
     public Task<List<StockDto>> GetStockAsync() => GetAsync<List<StockDto>>("api/stock");
-    public Task<SuggestedSalePriceDto> GetSuggestedSalePriceAsync(int productId, decimal quantity) =>
-        GetAsync<SuggestedSalePriceDto>($"api/stock/suggested-price?productId={productId}&quantity={quantity}");
+    public Task<SuggestedSalePriceDto> GetSuggestedSalePriceAsync(int productId) =>
+        GetAsync<SuggestedSalePriceDto>($"api/stock/suggested-price?productId={productId}");
     public Task CancelPurchaseAsync(int id) => PostAsync($"api/purchases/{id}/cancel");
 
     // --- Vouchers: Payment / Receipt / Journal -----------------------------------------------------

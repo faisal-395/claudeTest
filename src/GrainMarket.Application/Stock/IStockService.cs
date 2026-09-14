@@ -5,7 +5,7 @@ namespace GrainMarket.Application.Stock;
 public interface IStockService
 {
     Task<List<StockDto>> GetStockAsync(CancellationToken ct = default);
-    Task<SuggestedSalePriceDto> GetSuggestedSalePriceAsync(int productId, decimal quantity, CancellationToken ct = default);
+    Task<SuggestedSalePriceDto> GetSuggestedSalePriceAsync(int productId, CancellationToken ct = default);
     Task<List<ExpiringLotDto>> GetExpiringLotsAsync(int withinDays, CancellationToken ct = default);
 
     /// <summary>Consumes <paramref name="quantity"/> of <paramref name="productId"/> from the oldest

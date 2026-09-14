@@ -8,12 +8,12 @@ namespace GrainMarket.Application.Stock;
 
 /// <summary>Stock is tracked lot-by-lot: every PurchaseLine is its own lot carrying a
 /// RemainingQuantity, so on-hand quantity and expiry stay tied to the specific goods actually in
-/// stock rather than a single aggregate balance. Two different orderings are deliberately used over
-/// the same lots: physical stock movement (AllocateFifoAsync) is FIFO — the oldest lot is drawn down
-/// first, which is what actually leaves the shelf and what expiry tracking assumes. The sale rate
-/// preview (GetSuggestedSalePriceAsync) instead prices from the LIFO end — the most recently
-/// purchased (replacement) cost — so markup reflects today's buying price rather than a potentially
-/// stale oldest-lot cost, even though that oldest lot is what physically ships.</summary>
+/// stock rather than a single aggregate balance. Physical stock movement (AllocateFifoAsync) is
+/// FIFO — the oldest lot is drawn down first, which is what actually leaves the shelf and what
+/// expiry tracking assumes. The sale rate preview (GetSuggestedSalePriceAsync) is priced on LIFO
+/// instead: always the single most recent purchase price, not a blend with older stock — so the
+/// moment a new purchase lands at a different price, that immediately becomes the pricing basis,
+/// even while older (cheaper or costlier) stock is what physically ships first.</summary>
 public class StockService : IStockService
 {
     private readonly IApplicationDbContext _db;
@@ -50,43 +50,28 @@ public class StockService : IStockService
         }).ToList();
     }
 
-    public async Task<SuggestedSalePriceDto> GetSuggestedSalePriceAsync(int productId, decimal quantity, CancellationToken ct = default)
+    public async Task<SuggestedSalePriceDto> GetSuggestedSalePriceAsync(int productId, CancellationToken ct = default)
     {
         var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == productId && !p.IsDeleted, ct)
             ?? throw new NotFoundException(nameof(Product), productId);
 
-        // LIFO for pricing: newest lot first, so the cost basis tracks today's replacement price —
-        // deliberately the reverse of AllocateFifoAsync's physical (oldest-first) stock draw-down.
-        var lines = await OrderedAvailableLinesAsync(productId, ct, lifo: true);
-        var availableQty = lines.Sum(l => l.RemainingQuantity);
+        // The single most recent purchase (by Purchase date, then line Id as tie-break) — not
+        // filtered by RemainingQuantity, so a fully-depleted-but-most-recent lot still counts as the
+        // latest known cost rather than falling back to an older, still-in-stock lot's price.
+        var latestLine = await ActiveLines().Include(l => l.Purchase)
+            .Where(l => l.ProductId == productId)
+            .OrderByDescending(l => l.Purchase.Date).ThenByDescending(l => l.Id)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(ct);
 
-        var remaining = quantity;
-        decimal costTotal = 0, costedQty = 0;
-        foreach (var line in lines)
-        {
-            if (remaining <= 0) break;
-            var take = Math.Min(remaining, line.RemainingQuantity);
-            costTotal += take * line.Price;
-            costedQty += take;
-            remaining -= take;
-        }
-        // Requested quantity exceeds on-hand stock — price the shortfall at the newest lot's cost
-        // (lines[0] under this LIFO ordering, or the product's default rate if there's no purchase
-        // history at all) so the preview still returns a sensible number instead of understating it;
-        // Sale Invoice itself still blocks the sale server-side if stock is actually insufficient at
-        // save time.
-        if (remaining > 0)
-        {
-            var fallbackCost = lines.Count > 0 ? lines[0].Price : product.DefaultRate;
-            costTotal += remaining * fallbackCost;
-            costedQty += remaining;
-        }
+        var latestCost = latestLine?.Price ?? product.DefaultRate;
+        var availableQty = await ActiveLines().Where(l => l.ProductId == productId)
+            .SumAsync(l => (decimal?)l.RemainingQuantity, ct) ?? 0;
 
-        var averageCost = costedQty > 0 ? costTotal / costedQty : 0;
         var suggestedPrice = product.SalePrice
-            ?? (product.SaleMarkupPercent.HasValue ? Math.Round(averageCost * (1 + product.SaleMarkupPercent.Value / 100m), 2) : averageCost);
+            ?? (product.SaleMarkupPercent.HasValue ? Math.Round(latestCost * (1 + product.SaleMarkupPercent.Value / 100m), 2) : latestCost);
 
-        return new SuggestedSalePriceDto(availableQty, averageCost, suggestedPrice);
+        return new SuggestedSalePriceDto(availableQty, latestCost, suggestedPrice);
     }
 
     public async Task<List<FifoAllocation>> AllocateFifoAsync(int productId, decimal quantity, CancellationToken ct = default)
@@ -132,17 +117,19 @@ public class StockService : IStockService
             l.Id, l.ExpiryDate!.Value, l.RemainingQuantity, (l.ExpiryDate.Value.Date - today).Days)).ToList();
     }
 
+    // Deliberately no .Include(Purchase) here — this is shared by plain aggregate (GroupBy/Sum)
+    // queries too, where an Include would be a no-op EF Core warns about. The `!l.Purchase.IsCancelled`
+    // filter still translates to a join either way; call sites that need Purchase.Date materialized
+    // (ordering by it below, or projecting it) add their own .Include(l => l.Purchase).
     private IQueryable<PurchaseLine> ActiveLines() =>
         _db.PurchaseLines.Where(l => !l.IsDeleted && !l.Purchase.IsCancelled && !l.Purchase.IsDeleted);
 
-    /// <summary>FIFO (oldest lot first) by default — pass <paramref name="lifo"/> to reverse the
-    /// order for cost-basis pricing instead of physical stock draw-down.</summary>
-    private async Task<List<PurchaseLine>> OrderedAvailableLinesAsync(int productId, CancellationToken ct, bool tracked = false, bool lifo = false)
+    /// <summary>FIFO — oldest lot (by Purchase date, then line Id) first, matching physical
+    /// stock draw-down.</summary>
+    private async Task<List<PurchaseLine>> OrderedAvailableLinesAsync(int productId, CancellationToken ct, bool tracked = false)
     {
         var query = ActiveLines().Include(l => l.Purchase).Where(l => l.ProductId == productId && l.RemainingQuantity > 0);
         if (!tracked) query = query.AsNoTracking();
-        return await (lifo
-            ? query.OrderByDescending(l => l.Purchase.Date).ThenByDescending(l => l.Id)
-            : query.OrderBy(l => l.Purchase.Date).ThenBy(l => l.Id)).ToListAsync(ct);
+        return await query.OrderBy(l => l.Purchase.Date).ThenBy(l => l.Id).ToListAsync(ct);
     }
 }

@@ -162,21 +162,23 @@
         await RefreshSuggestedPriceAsync(line);
     }
 
-    private async Task OnQuantityChanged(LineModel line, decimal quantity)
+    private void OnQuantityChanged(LineModel line, decimal quantity)
     {
+        // Price is priced on the latest purchase cost, not this line's quantity, so changing the
+        // quantity alone never needs to re-fetch a new suggestion.
         line.Quantity = quantity;
-        await RefreshSuggestedPriceAsync(line);
     }
 
-    /// <summary>Auto-fills Price from the product's SalePrice/SaleMarkupPercent setting (weighted
-    /// against the FIFO cost of whatever lots this quantity would actually draw from) so the operator
-    /// doesn't have to type one on every line — but never overwrites a price they've edited by hand.</summary>
+    /// <summary>Auto-fills Price from the product's SalePrice/SaleMarkupPercent setting, based on the
+    /// single most recent purchase price for the product (LIFO — a new purchase immediately becomes
+    /// the pricing basis) so the operator doesn't have to type one on every line — but never
+    /// overwrites a price they've edited by hand.</summary>
     private async Task RefreshSuggestedPriceAsync(LineModel line)
     {
-        if (line.ProductId <= 0 || line.Quantity <= 0 || line.ManuallyPriced) return;
+        if (line.ProductId <= 0 || line.ManuallyPriced) return;
         try
         {
-            var suggestion = await Api.GetSuggestedSalePriceAsync(line.ProductId, line.Quantity);
+            var suggestion = await Api.GetSuggestedSalePriceAsync(line.ProductId);
             line.Price = suggestion.SuggestedPrice;
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
