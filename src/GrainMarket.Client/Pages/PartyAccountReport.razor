@@ -16,11 +16,7 @@
     <div class="form-grid no-print" style="max-width:900px;">
         <div>
             <label>Account Type</label>
-            <select @bind="_partyType" @bind:after="OnPartyTypeChangedAsync">
-                <option value="@PartyType.Farmer">Farmer</option>
-                <option value="@PartyType.Vendor">Grain Buyer</option>
-                <option value="@PartyType.Supplier">Supplier</option>
-            </select>
+            <SearchSelect TItem="AccountTypeOption" Items="AccountTypeOptions" IdSelector="@(o => o.Id)" TextSelector="@(o => o.Label)" Value="@_accountTypeId" ValueChanged="@OnAccountTypeChangedAsync" Placeholder="Select…" />
         </div>
         <div>
             <label>@AccountTypeLabel</label>
@@ -84,18 +80,21 @@
     private PartyLedgerDto? _ledger;
     private string? _error;
 
+    private record AccountTypeOption(int Id, PartyType Type, string Label);
+    private static readonly List<AccountTypeOption> AccountTypeOptions = new()
+    {
+        new(0, PartyType.Farmer, "Farmer"),
+        new(1, PartyType.Vendor, "Grain Buyer"),
+        new(2, PartyType.Supplier, "Supplier")
+    };
+
+    private int _accountTypeId;
     private PartyType _partyType = PartyType.Farmer;
     private int _partyId;
     private DateTime? _from;
     private DateTime? _to;
 
-    private string AccountTypeLabel => _partyType switch
-    {
-        PartyType.Farmer => "Farmer",
-        PartyType.Vendor => "Grain Buyer",
-        PartyType.Supplier => "Supplier",
-        _ => "Party"
-    };
+    private string AccountTypeLabel => AccountTypeOptions[_accountTypeId].Label;
 
     protected override async Task OnInitializedAsync() => await LoadPartiesAsync();
 
@@ -109,8 +108,10 @@
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private async Task OnPartyTypeChangedAsync()
+    private async Task OnAccountTypeChangedAsync(int id)
     {
+        _accountTypeId = id;
+        _partyType = AccountTypeOptions[id].Type;
         _ledger = null;
         await LoadPartiesAsync();
     }

@@ -12,10 +12,7 @@
     <div class="form-grid" style="max-width:900px;">
         <div>
             <label>View</label>
-            <select @bind="_mode">
-                <option value="party">Party</option>
-                <option value="account">Chart of Accounts</option>
-            </select>
+            <SearchSelect TItem="ModeOption" Items="ModeOptions" IdSelector="@(m => m.Id)" TextSelector="@(m => m.Label)" Value="@_modeId" ValueChanged="@OnModeChanged" Placeholder="Select view…" />
         </div>
         @if (_mode == "party")
         {
@@ -76,11 +73,25 @@
     private AccountLedgerDto? _accountLedger;
     private string? _error;
 
+    private record ModeOption(int Id, string Label);
+    private static readonly List<ModeOption> ModeOptions = new()
+    {
+        new(0, "Party"),
+        new(1, "Chart of Accounts")
+    };
+
+    private int _modeId;
     private string _mode = "party";
     private int _partyId;
     private int _accountId;
     private DateTime? _from;
     private DateTime? _to;
+
+    private void OnModeChanged(int id)
+    {
+        _modeId = id;
+        _mode = id == 0 ? "party" : "account";
+    }
 
     protected override async Task OnInitializedAsync()
     {
