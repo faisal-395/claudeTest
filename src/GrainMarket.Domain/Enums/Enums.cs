@@ -1,11 +1,15 @@
 namespace GrainMarket.Domain.Enums;
 
+[Flags]
 public enum PartyType
 {
     Farmer = 1,
-    Buyer = 2,
-    Agent = 3,
-    Other = 4
+    Vendor = 2,
+    Other = 4,
+
+    /// <summary>Supplies agricultural inputs (pesticides, seeds, fertilizer, etc.) that the market
+    /// buys via Purchase — distinct from Vendor, which means the buyer a farmer sells grain to.</summary>
+    Supplier = 8
 }
 
 public enum BalanceSide
@@ -43,7 +47,7 @@ public enum DeductionAppliesTo
 /// top, informational only for now (no ledger posting).</summary>
 public enum DeductionChargedTo
 {
-    Farmer = 1,
+    Seller = 1,
     Buyer = 2
 }
 

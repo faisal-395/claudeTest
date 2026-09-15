@@ -31,6 +31,7 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<SaleInvoiceLine> SaleInvoiceLines => Set<SaleInvoiceLine>();
     public DbSet<Purchase> Purchases => Set<Purchase>();
     public DbSet<PurchaseLine> PurchaseLines => Set<PurchaseLine>();
+    public DbSet<SaleInvoiceLineAllocation> SaleInvoiceLineAllocations => Set<SaleInvoiceLineAllocation>();
     public DbSet<Voucher> Vouchers => Set<Voucher>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
     public DbSet<Expense> Expenses => Set<Expense>();

@@ -13,6 +13,8 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.Category).HasMaxLength(100);
         builder.Property(p => p.BaseUnit).IsRequired().HasMaxLength(10);
         builder.Property(p => p.DefaultRate).HasPrecision(18, 2);
+        builder.Property(p => p.SalePrice).HasPrecision(18, 2);
+        builder.Property(p => p.SaleMarkupPercent).HasPrecision(5, 2);
         builder.HasIndex(p => p.Name);
     }
 }

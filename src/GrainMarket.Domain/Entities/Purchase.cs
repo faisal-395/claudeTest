@@ -38,4 +38,11 @@ public class PurchaseLine : BaseEntity
     public decimal Price { get; set; }
     public decimal DiscountPercent { get; set; }
     public decimal NetPrice { get; set; }
+
+    /// <summary>Quantity from this lot not yet consumed by a FIFO Sale Invoice allocation — the unit
+    /// of stock-on-hand, drawn down oldest lot first.</summary>
+    public decimal RemainingQuantity { get; set; }
+
+    /// <summary>Optional — only products with a shelf life (fertilizer, pesticide, seed) need this.</summary>
+    public DateTime? ExpiryDate { get; set; }
 }

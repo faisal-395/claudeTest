@@ -20,7 +20,7 @@ public class MultiPurchaseService : IMultiPurchaseService
 
     public async Task<MultiPurchaseResultDto> CreateAsync(CreateMultiPurchaseRequest request, CancellationToken ct = default)
     {
-        var buyer = await _db.Parties.FirstOrDefaultAsync(p => p.Id == request.BuyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct)
+        var buyer = await _db.Parties.FirstOrDefaultAsync(p => p.Id == request.BuyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct)
             ?? throw new NotFoundException(nameof(Party), request.BuyerId);
 
         var rows = new List<MultiPurchaseRowResultDto>();
@@ -33,7 +33,8 @@ public class MultiPurchaseService : IMultiPurchaseService
         {
             var kachi = await _kachiService.CreateAsync(new CreateKachiRequest(
                 request.Date, request.SeasonId, row.FarmerId, request.BuyerId, row.ProductId,
-                row.BhartiKgPerBag, row.TotalWeightKg, row.RatePerUnit, row.VehicleNumber, row.Notes, request.BillNumber), ct);
+                row.BhartiKgPerBag, row.TotalWeightKg, row.RatePerUnit, row.VehicleNumber, row.Notes, request.BillNumber,
+                row.DeductionOverrides), ct);
 
             rows.Add(new MultiPurchaseRowResultDto(kachi.Id, kachi.InvoiceNo));
 

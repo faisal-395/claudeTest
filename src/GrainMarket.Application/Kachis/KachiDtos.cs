@@ -1,3 +1,4 @@
+using GrainMarket.Application.Common;
 using GrainMarket.Domain.Enums;
 
 namespace GrainMarket.Application.Kachis;
@@ -15,7 +16,8 @@ public record KachiDto(
 public record CreateKachiRequest(
     DateTime Date, int SeasonId, int FarmerId, int? BuyerId, int ProductId,
     decimal? BhartiKgPerBag, decimal? TotalWeightKg,
-    decimal? RatePerUnit, string? VehicleNumber, string? Notes, string? BillNumber = null);
+    decimal? RatePerUnit, string? VehicleNumber, string? Notes, string? BillNumber = null,
+    List<DeductionOverrideRequest>? DeductionOverrides = null);
 
 public record UpdateKachiRequest(
     DateTime Date, int SeasonId, int FarmerId, int? BuyerId, int ProductId,

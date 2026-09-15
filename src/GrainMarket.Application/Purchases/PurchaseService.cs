@@ -37,13 +37,19 @@ public class PurchaseService : IPurchaseService
 
     public async Task<PurchaseDto> CreateAsync(CreatePurchaseRequest request, CancellationToken ct = default)
     {
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.SupplierId && !p.IsDeleted, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.SupplierId && !p.IsDeleted && (p.PartyType & PartyType.Supplier) == PartyType.Supplier, ct))
             throw new NotFoundException(nameof(Party), request.SupplierId);
 
         var productIds = request.Lines.Select(l => l.ProductId).Distinct().ToList();
         var productCount = await _db.Products.CountAsync(p => productIds.Contains(p.Id) && !p.IsDeleted, ct);
         if (productCount != productIds.Count)
             throw new InvalidCalculationException("One or more products on the purchase do not exist.");
+
+        // Purchase is for farm inputs (pesticides, seeds, fertilizer) bought from a supplier — not
+        // the grain catalog Kachi/Pakki trade in.
+        var nonInputCount = await _db.Products.CountAsync(p => productIds.Contains(p.Id) && p.Category != DomainConstants.ProductCategoryInput, ct);
+        if (nonInputCount > 0)
+            throw new InvalidCalculationException("Purchase can only include input products (pesticides, seeds, fertilizer), not grain products.");
 
         var purchase = new Purchase
         {
@@ -70,7 +76,9 @@ public class PurchaseService : IPurchaseService
                 Quantity = line.Quantity,
                 Price = line.Price,
                 DiscountPercent = line.DiscountPercent,
-                NetPrice = net
+                NetPrice = net,
+                RemainingQuantity = line.Quantity,
+                ExpiryDate = line.ExpiryDate
             });
         }
 
@@ -106,6 +114,12 @@ public class PurchaseService : IPurchaseService
     {
         var purchase = await LoadAsync(id, ct);
         if (purchase.IsCancelled) return;
+
+        // A cancelled purchase's lots drop out of stock entirely — if a Sale Invoice has already
+        // drawn FIFO stock from one of them, cancelling now would silently invalidate that sale's
+        // cost basis and on-hand math.
+        if (purchase.Lines.Any(l => l.RemainingQuantity < l.Quantity))
+            throw new InvalidCalculationException("This purchase can't be cancelled: some of its stock has already been sold.");
 
         purchase.IsCancelled = true;
         purchase.UpdatedAtUtc = _clock.UtcNow;
@@ -144,5 +158,5 @@ public class PurchaseService : IPurchaseService
     private static PurchaseDto ToDto(Purchase p) => new(
         p.Id, p.InvoiceNo, p.BillNo, p.Date, p.SupplierId, p.Supplier.Name,
         p.TotalBill, p.TotalDiscount, p.NetBill, p.PaidCash, p.PrintFormat, p.PrintLanguage, p.IsCancelled,
-        p.Lines.Select(l => new PurchaseLineDto(l.ProductId, l.Product.Name, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice)).ToList());
+        p.Lines.Select(l => new PurchaseLineDto(l.ProductId, l.Product.Name, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice, l.ExpiryDate)).ToList());
 }

@@ -59,6 +59,18 @@ public class PurchaseLineConfiguration : IEntityTypeConfiguration<PurchaseLine>
         builder.Property(l => l.Price).HasPrecision(18, 2);
         builder.Property(l => l.DiscountPercent).HasPrecision(5, 2);
         builder.Property(l => l.NetPrice).HasPrecision(18, 2);
+        builder.Property(l => l.RemainingQuantity).HasPrecision(18, 4);
         builder.HasOne(l => l.Product).WithMany().HasForeignKey(l => l.ProductId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class SaleInvoiceLineAllocationConfiguration : IEntityTypeConfiguration<SaleInvoiceLineAllocation>
+{
+    public void Configure(EntityTypeBuilder<SaleInvoiceLineAllocation> builder)
+    {
+        builder.Property(a => a.Quantity).HasPrecision(18, 4);
+        builder.Property(a => a.UnitCost).HasPrecision(18, 2);
+        builder.HasOne(a => a.SaleInvoiceLine).WithMany().HasForeignKey(a => a.SaleInvoiceLineId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(a => a.PurchaseLine).WithMany().HasForeignKey(a => a.PurchaseLineId).OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -101,5 +101,5 @@ public class KachiDeductionLine : BaseEntity
 
     /// <summary>Copied from DeductionRule.ChargedTo at posting time, so historical lines keep
     /// reading correctly even if the rule's ChargedTo is changed later.</summary>
-    public DeductionChargedTo ChargedTo { get; set; } = DeductionChargedTo.Farmer;
+    public DeductionChargedTo ChargedTo { get; set; } = DeductionChargedTo.Seller;
 }

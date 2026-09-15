@@ -4,9 +4,9 @@
 
 <RequireAuth>
     <div class="no-print" style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <h1 class="page-title">Farmer / Purchase Account</h1>
+        <h1 class="page-title">Party Account Statement</h1>
     </div>
-    <p class="no-print" style="color:#777;">A farmer's or buyer's complete account — every Kachi, Pakki and payment/receipt posted to their ledger, with a running balance. Same data as Ledger, filtered and laid out as a printable statement.</p>
+    <p class="no-print" style="color:#777;">A farmer's, grain buyer's, or supplier's complete account — every transaction posted to their ledger, with a running balance. Same data as Ledger, filtered and laid out as a printable statement.</p>
 
     @if (_error is not null)
     {
@@ -16,13 +16,10 @@
     <div class="form-grid no-print" style="max-width:900px;">
         <div>
             <label>Account Type</label>
-            <select @bind="_partyType" @bind:after="OnPartyTypeChangedAsync">
-                <option value="@PartyType.Farmer">Farmer</option>
-                <option value="@PartyType.Buyer">Buyer (Purchase)</option>
-            </select>
+            <SearchSelect TItem="AccountTypeOption" Items="AccountTypeOptions" IdSelector="@(o => o.Id)" TextSelector="@(o => o.Label)" Value="@_accountTypeId" ValueChanged="@OnAccountTypeChangedAsync" Placeholder="Select…" />
         </div>
         <div>
-            <label>@(_partyType == PartyType.Farmer ? "Farmer" : "Buyer")</label>
+            <label>@AccountTypeLabel</label>
             <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" @bind-Value="_partyId" Placeholder="Search…" />
         </div>
         <div><label>From</label><input type="date" @bind="_from" /></div>
@@ -40,7 +37,7 @@
     {
         <div class="print-a4" style="background:white;padding:20px;border:1px solid #ccc;margin-top:16px;">
             <div style="text-align:center;font-size:1.2rem;font-weight:700;">Umer Farooq &amp; Brothers</div>
-            <div style="text-align:center;color:#666;">@(_partyType == PartyType.Farmer ? "Farmer Account" : "Purchase Account (Buyer)") Statement</div>
+            <div style="text-align:center;color:#666;">@AccountTypeLabel Account Statement</div>
             <hr />
             <table style="width:100%;margin-bottom:10px;">
                 <tr>
@@ -83,10 +80,21 @@
     private PartyLedgerDto? _ledger;
     private string? _error;
 
+    private record AccountTypeOption(int Id, PartyType Type, string Label);
+    private static readonly List<AccountTypeOption> AccountTypeOptions = new()
+    {
+        new(0, PartyType.Farmer, "Farmer"),
+        new(1, PartyType.Vendor, "Grain Buyer"),
+        new(2, PartyType.Supplier, "Supplier")
+    };
+
+    private int _accountTypeId;
     private PartyType _partyType = PartyType.Farmer;
     private int _partyId;
     private DateTime? _from;
     private DateTime? _to;
+
+    private string AccountTypeLabel => AccountTypeOptions[_accountTypeId].Label;
 
     protected override async Task OnInitializedAsync() => await LoadPartiesAsync();
 
@@ -100,8 +108,10 @@
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private async Task OnPartyTypeChangedAsync()
+    private async Task OnAccountTypeChangedAsync(int id)
     {
+        _accountTypeId = id;
+        _partyType = AccountTypeOptions[id].Type;
         _ledger = null;
         await LoadPartiesAsync();
     }
@@ -110,7 +120,7 @@
     {
         _error = null;
         _ledger = null;
-        if (_partyId == 0) { _error = $"Pick a {(_partyType == PartyType.Farmer ? "farmer" : "buyer")} first."; return; }
+        if (_partyId == 0) { _error = $"Pick a {AccountTypeLabel.ToLowerInvariant()} first."; return; }
         try { _ledger = await Api.GetPartyLedgerAsync(_partyId, _from, _to); }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }

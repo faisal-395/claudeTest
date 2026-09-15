@@ -72,7 +72,7 @@
                     </tr>
                 </table>
                 <table style="width:100%;margin-bottom:6px;">
-                    @foreach (var line in k.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer))
+                    @foreach (var line in k.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Seller))
                     {
                         <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
                     }

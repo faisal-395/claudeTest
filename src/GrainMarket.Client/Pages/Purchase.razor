@@ -1,8 +1,10 @@
 @page "/purchase"
+@using GrainMarket.Application.Common
 @inject ApiClient Api
 
 <RequireAuth>
     <h1 class="page-title">Purchase</h1>
+    <p style="color:#777;">Buy pesticides, seeds, fertilizer and other farm inputs from a supplier.</p>
 
     @if (_error is not null)
     {
@@ -19,7 +21,7 @@
     </div>
 
     <table class="data-grid" style="max-width:1100px;margin-top:14px;">
-        <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Discount %</th><th>Net</th><th></th></tr></thead>
+        <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Discount %</th><th>Net</th><th>Expiry Date</th><th></th></tr></thead>
         <tbody>
             @for (var i = 0; i < _lines.Count; i++)
             {
@@ -33,6 +35,7 @@
                     <td><input type="number" step="0.01" value="@line.Price" @onchange="e => line.Price = ParseDecimal(e.Value)" /></td>
                     <td><input type="number" step="0.01" value="@line.DiscountPercent" @onchange="e => line.DiscountPercent = ParseDecimal(e.Value)" /></td>
                     <td>@LineNet(line).ToString("N2")</td>
+                    <td><input type="date" value="@line.ExpiryDate?.ToString("yyyy-MM-dd")" @onchange="e => line.ExpiryDate = ParseDate(e.Value)" title="Optional — only for products with a shelf life" /></td>
                     <td><button class="btn danger" @onclick="() => _lines.RemoveAt(index)">Remove</button></td>
                 </tr>
             }
@@ -56,7 +59,7 @@
     {
         <h3 style="margin-top:24px;">Recent Purchases</h3>
         <table class="data-grid" style="max-width:1100px;">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Supplier</th><th>Net Bill</th><th>Paid</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Date</th><th>Supplier</th><th>Net Bill</th><th>Paid</th><th>Status</th><th></th><th></th></tr></thead>
             <tbody>
                 @foreach (var p in _purchases)
                 {
@@ -67,6 +70,9 @@
                         <td>@p.NetBill.ToString("N2")</td>
                         <td>@p.PaidCash.ToString("N2")</td>
                         <td>@(p.IsCancelled ? "Cancelled" : "Open")</td>
+                        <td>
+                            <a href="print/purchase/@p.Id">Details</a>
+                        </td>
                         <td>
                             @if (!p.IsCancelled)
                             {
@@ -98,8 +104,8 @@
     {
         try
         {
-            _suppliers = await Api.GetPartiesAsync();
-            _products = await Api.GetProductsAsync();
+            _suppliers = await Api.GetPartiesAsync(PartyType.Supplier);
+            _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryInput);
             if (_suppliers.Count > 0) _supplierId = _suppliers[0].Id;
         }
         catch (Models.ApiException ex) { _error = ex.Message; return; }
@@ -122,6 +128,8 @@
 
     private static decimal ParseDecimal(object? value) => decimal.TryParse(value?.ToString(), out var d) ? d : 0;
 
+    private static DateTime? ParseDate(object? value) => DateTime.TryParse(value?.ToString(), out var d) ? d : null;
+
     private async Task CancelAsync(int id)
     {
         _error = null;
@@ -134,7 +142,7 @@
         _error = null;
         var request = new CreatePurchaseRequest(
             _date, _billNo, _supplierId,
-            _lines.Select(l => new PurchaseLineRequest(l.ProductId, l.Quantity, l.Price, l.DiscountPercent)).ToList(),
+            _lines.Select(l => new PurchaseLineRequest(l.ProductId, l.Quantity, l.Price, l.DiscountPercent, l.ExpiryDate)).ToList(),
             _paidCash, PrintFormat.A4, PrintLanguage.English);
         try
         {
@@ -153,5 +161,6 @@
         public decimal Quantity { get; set; }
         public decimal Price { get; set; }
         public decimal DiscountPercent { get; set; }
+        public DateTime? ExpiryDate { get; set; }
     }
 }

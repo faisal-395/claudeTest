@@ -1,36 +1,27 @@
 @page "/pakki"
+@using GrainMarket.Application.Common
+@using GrainMarket.Application.Common.Exceptions
+@using GrainMarket.Application.Common.Services
+@using GrainMarket.Application.MultiSale
 @inject ApiClient Api
 @inject NavigationManager Nav
 
 <RequireAuth>
-    <h1 class="page-title">Pakki (Final Sale Invoice) <span class="rtl-urdu" style="font-size:1rem;">پکی رسید</span></h1>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title" style="margin-bottom:4px;">Pakki <span class="rtl-urdu" style="font-size:1rem;">پکی رسید</span></h1>
+        <a href="pakki-records">View Pakki Records</a>
+    </div>
 
     @if (_error is not null)
     {
         <div class="error-banner">@_error</div>
     }
-
-    @if (_editingId is not null)
+    @if (_successMessage is not null)
     {
-        <div class="form-grid" style="margin-bottom:20px;">
-            <div style="grid-column: span 2;"><b>Editing @_editingInvoiceNo</b> — buyer, rate, vehicle and notes only; weight is fixed once posted.</div>
-            <div>
-                <label>Buyer / خریدار</label>
-                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
-            </div>
-            <div><label>Rate per Man / ریٹ فی مَن</label><input type="number" step="0.01" @bind="_rate" /></div>
-            <div><label>Vehicle Number / گاڑی نمبر</label><input @bind="_vehicleNumber" /></div>
-            <div style="grid-column: span 2;">
-                @if (_rate is null or <= 0)
-                {
-                    <div class="invalid-total">Enter a rate greater than zero.</div>
-                }
-                <button class="btn" disabled="@(_rate is null or <= 0)" @onclick="SaveEditAsync">Update Pakki</button>
-                <button class="btn secondary" @onclick="ResetForm">Cancel</button>
-            </div>
-        </div>
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
     }
-    else if (FromKachi.HasValue && _sourceKachi is not null)
+
+    @if (FromKachi.HasValue && _sourceKachi is not null)
     {
         <div class="form-grid" style="margin-bottom:20px;">
             <div><label>Converting Kachi</label><input value="@_sourceKachi.InvoiceNo" disabled /></div>
@@ -39,112 +30,162 @@
             <div><label>Net Weight (kg)</label><input value="@_sourceKachi.NetWeightKg.ToString("N2")" disabled /></div>
             <div>
                 <label>Buyer / خریدار</label>
-                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
+                <SearchSelect TItem="PartyDto" Items="_vendors" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_convertBuyerId" Placeholder="Search buyer…" />
             </div>
-            <div><label>Rate per Man / ریٹ فی مَن</label><input type="number" step="0.01" @bind="_rate" /></div>
-            <div><label>Vehicle Number / گاڑی نمبر</label><input @bind="_vehicleNumber" /></div>
+            <div><label>Rate per Man / ریٹ فی مَن</label><input type="number" step="0.01" @bind="_convertRate" /></div>
+            <div><label>Vehicle Number / گاڑی نمبر</label><input @bind="_convertVehicleNumber" /></div>
             <div style="grid-column: span 2;">
-                @if (_rate is null or <= 0)
+                @if (_convertRate is null or <= 0)
                 {
                     <div class="invalid-total">Enter a rate greater than zero before finalizing.</div>
                 }
-                <button class="btn" disabled="@(_rate is null or <= 0)" @onclick="ConvertAsync">Finalize Pakki</button>
+                <button class="btn" disabled="@(_convertRate is null or <= 0)" @onclick="ConvertAsync">Finalize Pakki</button>
             </div>
         </div>
     }
     else
     {
-        <div class="form-grid" style="margin-bottom:20px;">
-            <div><label>Date / تاریخ</label><input type="date" @bind="_date" /></div>
-            <div>
-                <label>Season / سیزن</label>
-                <select @bind="_seasonId">
-                    @if (_seasons is not null) { @foreach (var s in _seasons) { <option value="@s.Id">@s.Name</option> } }
-                </select>
+        <div class="batch-entry-panel">
+            <div class="batch-entry-inputs">
+                <div class="batch-entry-row batch-entry-row-5">
+                    <div><label>Bill # / بل نمبر</label><input @bind="_billNumber" placeholder="Bill #" /></div>
+                    <div><label>Date / تاریخ</label><DatePicker @bind-Value="_date" /></div>
+                    <div>
+                        <label>Season / سیزن</label>
+                        <SearchSelect TItem="SeasonDto" Items="_seasons" IdSelector="@(s => s.Id)" TextSelector="@(s => s.Name)" @bind-Value="_seasonId" Placeholder="Season…" />
+                    </div>
+                    <div>
+                        <label>Buyer / خریدار</label>
+                        <SearchSelect TItem="PartyDto" Items="_vendors" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Buyer…" />
+                    </div>
+                    <div>
+                        <label>Product / جنس</label>
+                        <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Product…" />
+                    </div>
+                </div>
+                <div class="batch-entry-row batch-entry-row-4">
+                    <div>
+                        <label>فروخت کنندہ</label>
+                        <SearchSelect TItem="PartyDto" Items="@SellerChoices" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" @bind-Value="_stagingFarmerId" Placeholder="Vendor…" />
+                    </div>
+                    <div><label>بھرتی</label><input type="number" step="0.01" @bind="_stagingBharti" /></div>
+                    <div><label>کل وزن (کلو)</label><input type="number" step="0.01" @bind="_stagingTotalWeight" /></div>
+                    <div><label>ریٹ فی مَن</label><input type="number" step="0.01" @bind="_stagingRate" /></div>
+                </div>
             </div>
-            <div>
-                <label>Farmer / کسان</label>
-                <SearchSelect TItem="PartyDto" Items="_farmers" IdSelector="@(f => f.Id)" TextSelector="@DisplayText.Party" @bind-Value="_farmerId" Placeholder="Search farmer…" />
-            </div>
-            <div>
-                <label>Buyer / خریدار</label>
-                <SearchSelect TItem="PartyDto" Items="_buyers" IdSelector="@(b => b.Id)" TextSelector="@DisplayText.Party" @bind-Value="_buyerId" Placeholder="Search buyer…" />
-            </div>
-            <div>
-                <label>Product / جنس</label>
-                <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_productId" Placeholder="Search product…" />
-            </div>
-            <div><label>Man / مَن</label><input type="number" step="0.01" @bind="_man" /></div>
-            <div><label>Kilo / کلو</label><input type="number" step="0.01" @bind="_kilo" /></div>
-            <div><label>Gram / گرام</label><input type="number" step="1" @bind="_gram" /></div>
-            <div><label>Bori / بوری</label><input type="number" step="0.01" @bind="_bori" /></div>
-            <div><label>Rate per Man / ریٹ فی مَن</label><input type="number" step="0.01" @bind="_rate" /></div>
-            <div><label>Vehicle Number / گاڑی نمبر</label><input @bind="_vehicleNumber" /></div>
-            <div style="grid-column: span 2;">
-                <button class="btn" disabled="@(!CanCreateStandalone)" @onclick="CreateStandaloneAsync">Save Standalone Pakki</button>
-            </div>
-        </div>
-    }
 
-    @if (_pakkis is null)
-    {
-        <p>Loading…</p>
-    }
-    else
-    {
-        <table class="data-grid">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Buyer / خریدار</th><th>Farmer / کسان</th><th>Product / جنس</th><th>Gross</th><th>Deductions</th><th>Net to Farmer</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-                @foreach (var p in _pakkis)
-                {
-                    <tr>
-                        <td>@p.InvoiceNo</td>
-                        <td>@p.Date.ToString("yyyy-MM-dd")</td>
-                        <td>@p.BuyerName</td>
-                        <td>@p.FarmerName</td>
-                        <td>@p.ProductName</td>
-                        <td>@p.GrossAmount.ToString("N2")</td>
-                        <td>@p.TotalDeductions.ToString("N2")</td>
-                        <td>@p.NetPayableToFarmer.ToString("N2")</td>
-                        <td>@p.Status</td>
-                        <td>
-                            <a href="#" @onclick="() => ToggleDetails(p.Id)" @onclick:preventDefault="true">@(_expandedId == p.Id ? "Hide" : "Details")</a>
-                            <text> | </text>
-                            @if (p.Status == InvoiceStatus.Open)
-                            {
-                                <a href="#" @onclick="() => Edit(p)" @onclick:preventDefault="true">Edit</a>
-                                <text> | </text>
-                            }
-                            <a href="print/pakki/@p.Id">Print</a>
-                        </td>
-                    </tr>
-                    @if (_expandedId == p.Id)
+            @if (PakkiRules.Count > 0)
+            {
+                <div class="batch-entry-deductions">
+                    <div class="batch-entry-deductions-title">Deductions</div>
+                    @foreach (var r in PakkiRules)
                     {
+                        <div class="batch-entry-deduction-row" title="@r.ChargedTo">
+                            <span>@r.Name</span>
+                            <span class="ltr-inline">@RatePrefix(r)<input type="number" step="0.01" value="@GetEffectiveRate(r)" @onchange="@(e => SetRateOverride(r.Id, e.Value))" />@RateSuffix(r)</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="batch-add-calc-row">
+            <div class="batch-add-col">
+                <button class="btn secondary" disabled="@(!CanAddRow)" @onclick="AddStagedRow">Add</button>
+            </div>
+            <div class="batch-staging-calc rtl-urdu">
+                @if (StagingCalc is not null)
+                {
+                    <span>صافی وزن: <b>@StagingCalc.NetWeightKg.ToString("N2")</b> کلو</span>
+                    @if (StagingCalc.BoriQty is not null)
+                    {
+                        <span>&nbsp;·&nbsp;بوری: <b>@StagingCalc.BoriQty.Value.ToString("N2")</b></span>
+                    }
+                    <span>&nbsp;·&nbsp;مجموعی رقم: <b>@StagingCalc.GrossAmount.ToString("N2")</b></span>
+                    <span>&nbsp;·&nbsp;کٹوتی: <b>@StagingCalc.FarmerDeductionsTotal.ToString("N2")</b></span>
+                    @if (StagingCalc.BuyerChargesTotal > 0)
+                    {
+                        <span>&nbsp;·&nbsp;خریدار چارجز: <b>@StagingCalc.BuyerChargesTotal.ToString("N2")</b></span>
+                    }
+                    <span>&nbsp;·&nbsp;فروخت کنندہ کو ادائیگی: <b>@StagingCalc.NetPayableToFarmer.ToString("N2")</b></span>
+                }
+                else
+                {
+                    <span style="color:#999;">Enter weight and a rate to see the calculation</span>
+                }
+            </div>
+        </div>
+
+        <div class="batch-results-grid-wrapper">
+            <table class="data-grid multi-purchase-grid batch-results-grid">
+                <thead>
+                    <tr>
+                        <th class="rtl-urdu" style="min-width:140px;">فروخت کنندہ</th>
+                        <th class="rtl-urdu">بھرتی</th>
+                        <th class="rtl-urdu">کل وزن</th>
+                        <th class="rtl-urdu">ریٹ</th>
+                        <th class="rtl-urdu">صافی وزن</th>
+                        <th class="rtl-urdu">بوری</th>
+                        <th class="rtl-urdu">مجموعی رقم</th>
+                        <th class="rtl-urdu">کٹوتی کی تفصیل</th>
+                        <th class="rtl-urdu">خریدار چارجز</th>
+                        <th class="rtl-urdu">ادائیگی</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _rows)
+                    {
+                        var calc = Calculate(row);
+                        var deductionLines = calc?.FarmerLines.Concat(calc.BuyerLines).Where(l => l.Amount != 0).ToList();
                         <tr>
-                            <td colspan="10" style="background:#f7f9f7;">
-                                <table style="width:auto;min-width:280px;">
-                                    <thead><tr><th style="text-align:left;padding:2px 12px 2px 0;">Deduction</th><th style="text-align:left;padding:2px 12px;">اردو</th><th style="text-align:right;padding:2px 0;">Amount</th></tr></thead>
-                                    <tbody>
-                                        @foreach (var line in p.DeductionLines)
-                                        {
-                                            <tr>
-                                                <td style="padding:2px 12px 2px 0;">@line.Name</td>
-                                                <td class="rtl-urdu" style="padding:2px 12px;font-size:1rem;">@line.NameUrdu</td>
-                                                <td style="text-align:right;padding:2px 0;">@line.Amount.ToString("N2")</td>
-                                            </tr>
-                                        }
-                                        <tr>
-                                            <td colspan="2" style="padding:4px 12px 0 0;"><b>Total Deductions</b></td>
-                                            <td style="text-align:right;padding:4px 0 0;"><b>@p.TotalDeductions.ToString("N2")</b></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <td>@DisplayText.Party(_vendors?.FirstOrDefault(v => v.Id == row.FarmerId))</td>
+                            <td style="text-align:right;">@row.BhartiKgPerBag?.ToString("N2")</td>
+                            <td style="text-align:right;">@row.TotalWeightKg?.ToString("N2")</td>
+                            <td style="text-align:right;">@row.RatePerUnit?.ToString("N2")</td>
+                            <td style="text-align:right;">@(calc?.NetWeightKg.ToString("N2") ?? "—")</td>
+                            <td style="text-align:right;">@(calc?.BoriQty?.ToString("N2") ?? "—")</td>
+                            <td style="text-align:right;">@(calc?.GrossAmount.ToString("N2") ?? "—")</td>
+                            <td class="batch-grid-deductions">
+                                @if (deductionLines is { Count: > 0 })
+                                {
+                                    @foreach (var line in deductionLines)
+                                    {
+                                        <div class="batch-grid-deduction-line">
+                                            <span>@line.NameUrdu</span>
+                                            <span>@line.Amount.ToString("N2")</span>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
                             </td>
+                            <td style="text-align:right;">@(calc?.BuyerChargesTotal.ToString("N2") ?? "—")</td>
+                            <td style="text-align:right;"><b>@(calc?.NetPayableToFarmer.ToString("N2") ?? "—")</b></td>
+                            <td><a href="#" @onclick="() => RemoveRow(row)" @onclick:preventDefault="true">Remove</a></td>
                         </tr>
                     }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="batch-save-totals-row">
+            <div class="batch-save-col">
+                <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: false)">@(_saving ? "Saving…" : "Save")</button>
+                <button class="btn" disabled="@(!CanSave || _saving)" @onclick="() => SaveAsync(andPrint: true)">@(_saving ? "Saving…" : "Save & Print")</button>
+            </div>
+            <div class="batch-grand-totals total-figure rtl-urdu">
+                <span>مجموعی رقم (کل): Rs @GrandGross.ToString("N2")</span>
+                <span>مجموعی کٹوتی (کل): Rs @GrandDeductions.ToString("N2")</span>
+                <span>مجموعی کل رقم (فروخت کنندہ): Rs @GrandTotal.ToString("N2")</span>
+                @if (GrandBuyerCharges > 0)
+                {
+                    <span>مجموعی خریدار چارجز: Rs @GrandBuyerCharges.ToString("N2")</span>
                 }
-            </tbody>
-        </table>
+            </div>
+        </div>
     }
 </RequireAuth>
 
@@ -153,40 +194,107 @@
     public int? FromKachi { get; set; }
 
     private KachiDto? _sourceKachi;
-    private List<PakkiDto>? _pakkis;
     private List<SeasonDto>? _seasons;
-    private List<PartyDto>? _farmers;
-    private List<PartyDto>? _buyers;
+    private List<PartyDto>? _vendors;
     private List<ProductDto>? _products;
+    private List<DeductionRule>? _deductionRuleEntities;
+    private List<UnitConversion>? _unitConversionEntities;
     private string? _error;
+    private string? _successMessage;
+    private bool _saving;
 
-    private int? _editingId;
-    private string? _editingInvoiceNo;
-    private int? _expandedId;
-
+    private string? _billNumber;
     private DateTime _date = DateTime.Today;
     private int _seasonId;
-    private int _farmerId;
     private int _buyerId;
     private int _productId;
-    private decimal? _man, _kilo, _gram, _bori;
-    private decimal? _rate;
-    private string? _vehicleNumber;
+    private readonly List<RowModel> _rows = new();
 
-    private bool CanCreateStandalone => (_man ?? 0) + (_kilo ?? 0) + (_gram ?? 0) + (_bori ?? 0) > 0 && (_rate ?? 0) > 0;
+    // Staging inputs above the grid — filled in, then "Add" copies them into a read-only row.
+    private int _stagingFarmerId;
+    private decimal? _stagingBharti;
+    private decimal? _stagingTotalWeight;
+    private decimal? _stagingRate;
+
+    // From-Kachi conversion mode fields (single row, unrelated to the batch grid above).
+    private int _convertBuyerId;
+    private decimal? _convertRate;
+    private string? _convertVehicleNumber;
+
+    /// <summary>Operator-entered rate overrides for this batch only (e.g. less Commission than the
+    /// standard Setup > Format rate) — keyed by DeductionRuleId, applied identically to every row
+    /// when saving. Never changes the underlying DeductionRule.</summary>
+    private readonly Dictionary<int, decimal> _rateOverrides = new();
+
+    /// <summary>Pakki is vendor-to-vendor: a Vendor can't sell to itself in the same Pakki, so the
+    /// grid's per-row seller list excludes whichever Vendor is picked as the top purchaser.</summary>
+    private List<PartyDto> SellerChoices => (_vendors ?? new()).Where(v => v.Id != _buyerId).ToList();
+
+    private decimal GrandGross => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.GrossAmount);
+    private decimal GrandDeductions => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.FarmerDeductionsTotal);
+    private decimal GrandBuyerCharges => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.BuyerChargesTotal);
+    private decimal GrandTotal => _rows.Select(Calculate).Where(c => c is not null).Sum(c => c!.NetPayableToFarmer);
+
+    /// <summary>Active deduction rules that apply at the Pakki stage — drives the summary box shown
+    /// beside "View Pakki Records" so the operator can see current tax/deduction rates at a glance.</summary>
+    private List<DeductionRule> PakkiRules =>
+        (_deductionRuleEntities ?? new())
+            .Where(r => r.IsActive && (r.AppliesTo == DeductionAppliesTo.Pakki || r.AppliesTo == DeductionAppliesTo.Both))
+            .OrderBy(r => r.SortOrder)
+            .ToList();
+
+    private decimal GetEffectiveRate(DeductionRule r) => _rateOverrides.TryGetValue(r.Id, out var v) ? v : r.Value;
+
+    private static string RatePrefix(DeductionRule r) => r.CalculationType == DeductionCalculationType.PercentOfGross ? "" : "Rs ";
+    private static string RateSuffix(DeductionRule r) => r.CalculationType switch
+    {
+        DeductionCalculationType.PercentOfGross => "%",
+        DeductionCalculationType.PerUnitWeight => "/kg",
+        _ => ""
+    };
+
+    private bool CanSave =>
+        _buyerId > 0 && _productId > 0 && _rows.Count > 0 &&
+        _rows.All(r => r.FarmerId > 0 && (r.RatePerUnit ?? 0) > 0 &&
+                        (r.BhartiKgPerBag ?? 0) > 0 && (r.TotalWeightKg ?? 0) > 0);
+
+    private bool CanAddRow =>
+        _stagingFarmerId > 0 && (_stagingBharti ?? 0) > 0 &&
+        (_stagingTotalWeight ?? 0) > 0 && (_stagingRate ?? 0) > 0;
+
+    private RowCalculation? StagingCalc => Calculate(new RowModel
+    {
+        FarmerId = _stagingFarmerId,
+        BhartiKgPerBag = _stagingBharti,
+        TotalWeightKg = _stagingTotalWeight,
+        RatePerUnit = _stagingRate
+    });
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             _seasons = await Api.GetSeasonsAsync();
-            _farmers = await Api.GetPartiesAsync(PartyType.Farmer);
-            _buyers = await Api.GetPartiesAsync(PartyType.Buyer);
-            _products = await Api.GetProductsAsync();
+            _vendors = await Api.GetPartiesAsync(PartyType.Vendor);
+            _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryGrain);
             if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
-            if (_farmers.Count > 0) _farmerId = _farmers[0].Id;
-            if (_buyers.Count > 0) _buyerId = _buyers[0].Id;
+            if (_vendors.Count > 0) { _buyerId = _vendors[0].Id; _convertBuyerId = _vendors[0].Id; }
             if (_products.Count > 0) _productId = _products[0].Id;
+
+            var rules = await Api.GetDeductionRulesAsync();
+            _deductionRuleEntities = rules.Select(r => new DeductionRule
+            {
+                Id = r.Id, Name = r.Name, NameUrdu = r.NameUrdu, CalculationType = r.CalculationType, Value = r.Value,
+                AppliesTo = r.AppliesTo, ChargedTo = r.ChargedTo, SortOrder = r.SortOrder, IsActive = r.IsActive,
+                ProductId = r.ProductId, PartyId = r.PartyId, RequiresVehicleNumber = r.RequiresVehicleNumber,
+                IncomeAccountId = r.IncomeAccountId
+            }).ToList();
+
+            var conversions = await Api.GetUnitConversionsAsync();
+            _unitConversionEntities = conversions.Select(c => new UnitConversion
+            {
+                Id = c.Id, Unit = c.Unit, FactorToKg = c.FactorToKg, ProductId = c.ProductId, IsActive = c.IsActive
+            }).ToList();
         }
         catch (Models.ApiException ex) { _error = ex.Message; return; }
 
@@ -195,14 +303,103 @@
             try { _sourceKachi = await Api.GetKachiAsync(FromKachi.Value); }
             catch (Models.ApiException ex) { _error = ex.Message; }
         }
-
-        await LoadAsync();
+        else
+        {
+            _stagingFarmerId = SellerChoices.FirstOrDefault()?.Id ?? 0;
+        }
     }
 
-    private async Task LoadAsync()
+    private void AddStagedRow()
     {
-        try { _pakkis = await Api.GetPakkisAsync(); }
+        _rows.Add(new RowModel
+        {
+            FarmerId = _stagingFarmerId,
+            BhartiKgPerBag = _stagingBharti,
+            TotalWeightKg = _stagingTotalWeight,
+            RatePerUnit = _stagingRate
+        });
+
+        _stagingFarmerId = SellerChoices.FirstOrDefault()?.Id ?? 0;
+        _stagingBharti = null;
+        _stagingTotalWeight = null;
+        _stagingRate = null;
+    }
+
+    private void RemoveRow(RowModel row) => _rows.Remove(row);
+
+    /// <summary>Lets the operator charge less (or more) than the standard Setup > Format rate for
+    /// one deduction rule, for this whole batch — e.g. less Commission this time.</summary>
+    private void SetRateOverride(int deductionRuleId, object? value)
+    {
+        if (decimal.TryParse(value?.ToString(), out var rate) && rate >= 0)
+        {
+            _rateOverrides[deductionRuleId] = rate;
+        }
+    }
+
+    /// <summary>Drives both the per-row calculation line and the grand-total summary — reuses the
+    /// exact same DeductionEngine/UnitConversionCalculator the server's PakkiService uses to post a
+    /// standalone Pakki (AppliesTo.Pakki). NetPayableToFarmer is GrossAmount minus only the
+    /// seller-charged lines (in Pakki, every active rule is Buyer-charged, so this is normally the
+    /// full gross); buyer-charged lines are totalled separately and added to what the buyer owes
+    /// instead — mirrors KachiService/Kachi.razor's exact treatment.</summary>
+    private RowCalculation? Calculate(RowModel row)
+    {
+        if (_deductionRuleEntities is null || _unitConversionEntities is null || row.RatePerUnit is not > 0
+            || row.TotalWeightKg is not > 0) return null;
+
+        try
+        {
+            var netWeightKg = row.TotalWeightKg.Value;
+            var boriFactor = UnitConversionCalculator.FactorFor(WeightUnit.Bori, _productId, _unitConversionEntities);
+            var boriQty = netWeightKg / boriFactor;
+
+            var gross = UnitConversionCalculator.GrossAmountFromRatePerMan(row.RatePerUnit.Value, netWeightKg, _productId, _unitConversionEntities);
+            var deductions = DeductionEngine.Calculate(gross, netWeightKg, DeductionAppliesTo.Pakki, _productId, row.FarmerId, _deductionRuleEntities, _rateOverrides);
+            var farmerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).ToList();
+            var buyerLines = deductions.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).ToList();
+            var farmerTotal = farmerLines.Sum(l => l.Amount);
+            var buyerTotal = buyerLines.Sum(l => l.Amount);
+            return new RowCalculation(netWeightKg, boriQty, gross, farmerLines, buyerLines, farmerTotal, buyerTotal, gross - farmerTotal);
+        }
+        catch (InvalidCalculationException)
+        {
+            return null;
+        }
+    }
+
+    private async Task SaveAsync(bool andPrint)
+    {
+        _error = null;
+        _successMessage = null;
+        _saving = true;
+        try
+        {
+            var overrides = _rateOverrides.Select(o => new DeductionOverrideRequest(o.Key, o.Value)).ToList();
+            var request = new CreateMultiSaleRequest(_date, _seasonId, _buyerId,
+                _rows.Select(r => new MultiSaleRowRequest(r.FarmerId, _productId, r.BhartiKgPerBag, r.TotalWeightKg, r.RatePerUnit, r.VehicleNumber, r.Notes, overrides)).ToList(),
+                _billNumber);
+
+            var result = await Api.CreateMultiSaleAsync(request);
+
+            if (andPrint)
+            {
+                var ids = string.Join(",", result.Rows.Select(r => r.PakkiId));
+                Nav.NavigateTo($"/print/multi-sale?ids={ids}");
+                return;
+            }
+
+            _successMessage = $"Saved {result.Rows.Count} Pakki record(s) for {result.BuyerName}.";
+            _billNumber = null;
+            _rateOverrides.Clear();
+            _rows.Clear();
+            _stagingFarmerId = SellerChoices.FirstOrDefault()?.Id ?? 0;
+            _stagingBharti = null;
+            _stagingTotalWeight = null;
+            _stagingRate = null;
+        }
         catch (Models.ApiException ex) { _error = ex.Message; }
+        finally { _saving = false; }
     }
 
     private async Task ConvertAsync()
@@ -210,52 +407,24 @@
         _error = null;
         try
         {
-            await Api.CreatePakkiFromKachiAsync(new CreatePakkiFromKachiRequest(FromKachi!.Value, _date, _buyerId, _rate!.Value, _vehicleNumber, null));
-            Nav.NavigateTo("/pakki");
+            await Api.CreatePakkiFromKachiAsync(new CreatePakkiFromKachiRequest(FromKachi!.Value, _date, _convertBuyerId, _convertRate!.Value, _convertVehicleNumber, null));
+            Nav.NavigateTo("/pakki-records");
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private async Task CreateStandaloneAsync()
+    private class RowModel
     {
-        _error = null;
-        try
-        {
-            await Api.CreateStandalonePakkiAsync(new CreateStandalonePakkiRequest(_date, _seasonId, _buyerId, _farmerId, _productId, _man, _kilo, _gram, _bori, _rate!.Value, _vehicleNumber, null));
-            _man = null; _kilo = null; _gram = null; _bori = null; _rate = null; _vehicleNumber = null;
-            await LoadAsync();
-        }
-        catch (Models.ApiException ex) { _error = ex.Message; }
+        public int FarmerId { get; set; }
+        public decimal? BhartiKgPerBag { get; set; }
+        public decimal? TotalWeightKg { get; set; }
+        public decimal? RatePerUnit { get; set; }
+        public string? VehicleNumber { get; set; }
+        public string? Notes { get; set; }
     }
 
-    private void ToggleDetails(int id) => _expandedId = _expandedId == id ? null : id;
-
-    private void Edit(PakkiDto p)
-    {
-        _editingId = p.Id;
-        _editingInvoiceNo = p.InvoiceNo;
-        _buyerId = p.BuyerId;
-        _rate = p.RatePerUnit;
-        _vehicleNumber = p.VehicleNumber;
-    }
-
-    private void ResetForm()
-    {
-        _editingId = null;
-        _editingInvoiceNo = null;
-        _rate = null;
-        _vehicleNumber = null;
-    }
-
-    private async Task SaveEditAsync()
-    {
-        _error = null;
-        try
-        {
-            await Api.UpdatePakkiAsync(_editingId!.Value, new UpdatePakkiRequest(_buyerId, _rate!.Value, _vehicleNumber, null));
-            ResetForm();
-            await LoadAsync();
-        }
-        catch (Models.ApiException ex) { _error = ex.Message; }
-    }
+    private record RowCalculation(
+        decimal NetWeightKg, decimal? BoriQty, decimal GrossAmount,
+        List<DeductionLineResult> FarmerLines, List<DeductionLineResult> BuyerLines,
+        decimal FarmerDeductionsTotal, decimal BuyerChargesTotal, decimal NetPayableToFarmer);
 }

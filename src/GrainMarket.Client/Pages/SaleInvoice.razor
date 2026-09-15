@@ -1,8 +1,10 @@
 @page "/sale-invoice"
+@using GrainMarket.Application.Common
 @inject ApiClient Api
 
 <RequireAuth>
-    <h1 class="page-title">New Sale (General)</h1>
+    <h1 class="page-title">Sale Invoice</h1>
+    <p style="color:#777;">Sell pesticides, seeds, fertilizer and other farm inputs to a farmer.</p>
 
     @if (_error is not null)
     {
@@ -13,8 +15,8 @@
         <div><label>Bill No</label><input @bind="_billNo" /></div>
         <div><label>Date</label><input type="date" @bind="_date" /></div>
         <div>
-            <label>Customer</label>
-            <SearchSelect TItem="PartyDto" Items="_customers" IdSelector="@(c => c.Id)" TextSelector="@DisplayText.Party" @bind-Value="_customerId" Placeholder="Search customer…" />
+            <label>Customer (Farmer)</label>
+            <SearchSelect TItem="PartyDto" Items="_customers" IdSelector="@(c => c.Id)" TextSelector="@DisplayText.Party" @bind-Value="_customerId" Placeholder="Search farmer…" />
         </div>
         <div>
             <label>Print Format</label>
@@ -33,7 +35,7 @@
     </div>
 
     <table class="data-grid" style="max-width:1100px;margin-top:14px;">
-        <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Discount %</th><th>Net</th><th></th></tr></thead>
+        <thead><tr><th>Product</th><th>Qty</th><th>In Stock</th><th>Price</th><th>Discount %</th><th>Net</th><th></th></tr></thead>
         <tbody>
             @for (var i = 0; i < _lines.Count; i++)
             {
@@ -41,10 +43,13 @@
                 var line = _lines[index];
                 <tr>
                     <td>
-                        <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@line.ProductId" ValueChanged="@(v => line.ProductId = v)" Placeholder="Search product…" />
+                        <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@line.ProductId" ValueChanged="@(v => OnProductChanged(line, v))" Placeholder="Search product…" />
                     </td>
-                    <td><input type="number" step="0.01" value="@line.Quantity" @onchange="e => line.Quantity = ParseDecimal(e.Value)" /></td>
-                    <td><input type="number" step="0.01" value="@line.Price" @onchange="e => line.Price = ParseDecimal(e.Value)" /></td>
+                    <td><input type="number" step="0.01" value="@line.Quantity" @onchange="e => OnQuantityChanged(line, ParseDecimal(e.Value))" /></td>
+                    <td class="@(IsOverStock(line) ? "invalid-total" : "")">@AvailableFor(line.ProductId).ToString("N2")</td>
+                    <td>
+                        <input type="number" step="0.01" value="@line.Price" @onchange="e => { line.Price = ParseDecimal(e.Value); line.ManuallyPriced = true; }" title="Auto-filled from the product's sale price/markup setting — edit to override for this line only" />
+                    </td>
                     <td><input type="number" step="0.01" value="@line.DiscountPercent" @onchange="e => line.DiscountPercent = ParseDecimal(e.Value)" /></td>
                     <td>@LineNet(line).ToString("N2")</td>
                     <td><button class="btn danger" @onclick="() => _lines.RemoveAt(index)">Remove</button></td>
@@ -62,7 +67,11 @@
             {
                 <div class="invalid-total">Add at least one line item.</div>
             }
-            <button class="btn" disabled="@(_lines.Count == 0)" @onclick="SaveAsync">Save Sale Invoice</button>
+            else if (HasStockIssue)
+            {
+                <div class="invalid-total">One or more lines exceed the available stock. Reduce the quantity or check the Stock page.</div>
+            }
+            <button class="btn" disabled="@(_lines.Count == 0 || HasStockIssue)" @onclick="SaveAsync">Save Sale Invoice</button>
         </div>
     </div>
 
@@ -70,7 +79,7 @@
     {
         <h3 style="margin-top:24px;">Recent Sale Invoices</h3>
         <table class="data-grid" style="max-width:1100px;">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Net Bill</th><th>Received</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Net Bill</th><th>Received</th><th>Status</th><th></th><th></th></tr></thead>
             <tbody>
                 @foreach (var inv in _invoices)
                 {
@@ -81,6 +90,9 @@
                         <td>@inv.NetBill.ToString("N2")</td>
                         <td>@inv.ReceivedCash.ToString("N2")</td>
                         <td>@(inv.IsCancelled ? "Cancelled" : "Open")</td>
+                        <td>
+                            <a href="print/sale/@inv.Id">Details</a>
+                        </td>
                         <td>
                             @if (!inv.IsCancelled)
                             {
@@ -98,6 +110,7 @@
     private List<PartyDto>? _customers;
     private List<ProductDto>? _products;
     private List<SaleInvoiceDto>? _invoices;
+    private Dictionary<int, decimal> _stock = new();
     private string? _error;
 
     private string? _billNo;
@@ -110,12 +123,22 @@
 
     private decimal TotalBill => _lines.Sum(LineNet);
 
+    private Dictionary<int, decimal> RequestedByProduct =>
+        _lines.GroupBy(l => l.ProductId).ToDictionary(g => g.Key, g => g.Sum(l => l.Quantity));
+
+    private decimal AvailableFor(int productId) => _stock.GetValueOrDefault(productId);
+
+    private bool IsOverStock(LineModel line) => RequestedByProduct.GetValueOrDefault(line.ProductId) > AvailableFor(line.ProductId);
+
+    private bool HasStockIssue => _lines.Any(IsOverStock);
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _customers = await Api.GetPartiesAsync();
-            _products = await Api.GetProductsAsync();
+            _customers = await Api.GetPartiesAsync(PartyType.Farmer);
+            _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryInput);
+            _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
             if (_customers.Count > 0) _customerId = _customers[0].Id;
         }
         catch (Models.ApiException ex) { _error = ex.Message; return; }
@@ -128,7 +151,41 @@
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private void AddLine() => _lines.Add(new LineModel { ProductId = _products?.FirstOrDefault()?.Id ?? 0, Quantity = 1 });
+    private async Task AddLine()
+    {
+        var line = new LineModel { ProductId = _products?.FirstOrDefault()?.Id ?? 0, Quantity = 1 };
+        _lines.Add(line);
+        await RefreshSuggestedPriceAsync(line);
+    }
+
+    private async Task OnProductChanged(LineModel line, int productId)
+    {
+        line.ProductId = productId;
+        line.ManuallyPriced = false;
+        await RefreshSuggestedPriceAsync(line);
+    }
+
+    private void OnQuantityChanged(LineModel line, decimal quantity)
+    {
+        // Price is priced on the latest purchase cost, not this line's quantity, so changing the
+        // quantity alone never needs to re-fetch a new suggestion.
+        line.Quantity = quantity;
+    }
+
+    /// <summary>Auto-fills Price from the product's SalePrice/SaleMarkupPercent setting, based on the
+    /// single most recent purchase price for the product (LIFO — a new purchase immediately becomes
+    /// the pricing basis) so the operator doesn't have to type one on every line — but never
+    /// overwrites a price they've edited by hand.</summary>
+    private async Task RefreshSuggestedPriceAsync(LineModel line)
+    {
+        if (line.ProductId <= 0 || line.ManuallyPriced) return;
+        try
+        {
+            var suggestion = await Api.GetSuggestedSalePriceAsync(line.ProductId);
+            line.Price = suggestion.SuggestedPrice;
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
 
     private static decimal LineNet(LineModel l)
     {
@@ -141,7 +198,12 @@
     private async Task CancelAsync(int id)
     {
         _error = null;
-        try { await Api.CancelSaleInvoiceAsync(id); await LoadAsync(); }
+        try
+        {
+            await Api.CancelSaleInvoiceAsync(id);
+            _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
+            await LoadAsync();
+        }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
@@ -158,6 +220,7 @@
             _lines.Clear();
             _receivedCash = 0;
             _billNo = null;
+            _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
             await LoadAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
@@ -169,5 +232,8 @@
         public decimal Quantity { get; set; }
         public decimal Price { get; set; }
         public decimal DiscountPercent { get; set; }
+
+        /// <summary>Once the operator edits Price by hand, auto-fill stops touching this line.</summary>
+        public bool ManuallyPriced { get; set; }
     }
 }

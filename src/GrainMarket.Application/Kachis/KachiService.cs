@@ -53,8 +53,9 @@ public class KachiService : IKachiService
             : 0m;
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
-        var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);
-        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).Sum(l => l.Amount);
+        var rateOverrides = request.DeductionOverrides?.ToDictionary(o => o.DeductionRuleId, o => o.Value);
+        var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules, rateOverrides);
+        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
         var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
 
         var kachi = new Kachi
@@ -121,7 +122,7 @@ public class KachiService : IKachiService
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);
-        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).Sum(l => l.Amount);
+        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
         var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
 
         // Reverse against the pre-update buyer/amounts before anything is mutated — mirrors
@@ -216,7 +217,7 @@ public class KachiService : IKachiService
     {
         if (!await _db.Seasons.AnyAsync(s => s.Id == seasonId && !s.IsDeleted, ct))
             throw new NotFoundException(nameof(Season), seasonId);
-        if (!await _db.Parties.AnyAsync(p => p.Id == farmerId && !p.IsDeleted && p.PartyType == PartyType.Farmer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == farmerId && !p.IsDeleted && (p.PartyType & PartyType.Farmer) == PartyType.Farmer, ct))
             throw new NotFoundException(nameof(Party), farmerId);
         if (!await _db.Products.AnyAsync(p => p.Id == productId && !p.IsDeleted, ct))
             throw new NotFoundException(nameof(Product), productId);
@@ -225,7 +226,7 @@ public class KachiService : IKachiService
     private async Task EnsureBuyerExistsAsync(int? buyerId, CancellationToken ct)
     {
         if (buyerId is null) return;
-        if (!await _db.Parties.AnyAsync(p => p.Id == buyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == buyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
             throw new NotFoundException(nameof(Party), buyerId.Value);
     }
 
