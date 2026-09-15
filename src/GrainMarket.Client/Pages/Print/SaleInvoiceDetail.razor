@@ -1,0 +1,91 @@
+@page "/print/sale/{Id:int}"
+@inject ApiClient Api
+@inject IJSRuntime JS
+
+<RequireAuth>
+    <div class="no-print" style="margin-bottom:12px;">
+        <button class="btn secondary" @onclick="GoBackAsync">← Back</button>
+        <button class="btn" @onclick="PrintAsync">Print</button>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+    else if (_sale is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div class="print-a4" style="background:white;padding:20px;border:1px solid #ccc;">
+            <div style="text-align:center;font-size:1.3rem;font-weight:700;">Umer Farooq &amp; Brothers</div>
+            <div style="text-align:center;color:#666;">Sale Invoice</div>
+            <hr />
+            <table style="width:100%;">
+                <tr>
+                    <td>Invoice #: <b>@_sale.InvoiceNo</b></td>
+                    <td style="text-align:right;">Date: <b>@_sale.Date.ToString("yyyy-MM-dd")</b></td>
+                </tr>
+                @if (_sale.BillNo is { Length: > 0 })
+                {
+                    <tr>
+                        <td colspan="2">Bill #: <b>@_sale.BillNo</b></td>
+                    </tr>
+                }
+                <tr>
+                    <td>Customer: <b>@_sale.CustomerName</b></td>
+                    <td style="text-align:right;">Status: <b>@(_sale.IsCancelled ? "Cancelled" : "Open")</b></td>
+                </tr>
+            </table>
+            <hr />
+            <table class="data-grid" style="width:100%;">
+                <thead>
+                    <tr><th>Product</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Price</th><th style="text-align:right;">Discount %</th><th style="text-align:right;">Net</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in _sale.Lines)
+                    {
+                        <tr>
+                            <td>@line.ProductName</td>
+                            <td style="text-align:right;">@line.Quantity.ToString("N2")</td>
+                            <td style="text-align:right;">@line.Price.ToString("N2")</td>
+                            <td style="text-align:right;">@line.DiscountPercent.ToString("N2")%</td>
+                            <td style="text-align:right;">@line.NetPrice.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <hr />
+            <table style="width:100%;">
+                <tr><td>Total Bill</td><td style="text-align:right;">@_sale.TotalBill.ToString("N2")</td></tr>
+                <tr><td>Total Discount</td><td style="text-align:right;">@_sale.TotalDiscount.ToString("N2")</td></tr>
+                <tr><td><b>Net Bill</b></td><td style="text-align:right;"><b>@_sale.NetBill.ToString("N2")</b></td></tr>
+                <tr><td>Received Cash</td><td style="text-align:right;">@_sale.ReceivedCash.ToString("N2")</td></tr>
+                @if (_sale.PayCash > 0)
+                {
+                    <tr><td>Change Returned</td><td style="text-align:right;">@_sale.PayCash.ToString("N2")</td></tr>
+                }
+            </table>
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private SaleInvoiceDto? _sale;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _sale = await Api.GetSaleInvoiceAsync(Id); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
+
+    // Uses real browser history instead of a hardcoded route — this page is reachable from Sale
+    // Invoice's Recent Sale Invoices list and from the combined Records Report, and "Back" should
+    // return to whichever one the operator actually came from.
+    private Task GoBackAsync() => JS.InvokeVoidAsync("history.back").AsTask();
+}

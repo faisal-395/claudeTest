@@ -79,7 +79,7 @@
     {
         <h3 style="margin-top:24px;">Recent Sale Invoices</h3>
         <table class="data-grid" style="max-width:1100px;">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Net Bill</th><th>Received</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Net Bill</th><th>Received</th><th>Status</th><th></th><th></th></tr></thead>
             <tbody>
                 @foreach (var inv in _invoices)
                 {
@@ -90,6 +90,9 @@
                         <td>@inv.NetBill.ToString("N2")</td>
                         <td>@inv.ReceivedCash.ToString("N2")</td>
                         <td>@(inv.IsCancelled ? "Cancelled" : "Open")</td>
+                        <td>
+                            <a href="print/sale/@inv.Id" target="_blank">Details</a>
+                        </td>
                         <td>
                             @if (!inv.IsCancelled)
                             {
