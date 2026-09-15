@@ -1,0 +1,31 @@
+@using GrainMarket.Client.Pages.Print
+
+@* Root component for a standalone detail window (see DetailWindowPage/DetailWindowService) —
+   deliberately bypasses Main.razor's Router/MainLayout so this window shows just the document,
+   no sidebar, since it's a separate native window rather than an in-app page. *@
+<div style="padding:16px;background:#f7f9f7;min-height:100vh;box-sizing:border-box;">
+    @if (RecordType == "purchase")
+    {
+        <PurchaseDetail Id="@RecordId" OnBack="@OnCloseCallback" />
+    }
+    else if (RecordType == "sale")
+    {
+        <SaleInvoiceDetail Id="@RecordId" OnBack="@OnCloseCallback" />
+    }
+    else
+    {
+        <p>Unknown record type.</p>
+    }
+</div>
+
+@code {
+    [Parameter] public string RecordType { get; set; } = "";
+    [Parameter] public int RecordId { get; set; }
+
+    /// <summary>Invoked by the page's Back button — closes this window (set from
+    /// DetailWindowPage's code-behind; there's no "previous page" to go back to since this
+    /// window's BlazorWebView has no Router/history of its own).</summary>
+    [Parameter] public Action? OnClose { get; set; }
+
+    private EventCallback OnCloseCallback => EventCallback.Factory.Create(this, () => OnClose?.Invoke());
+}
