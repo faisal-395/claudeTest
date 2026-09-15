@@ -1,6 +1,5 @@
 @page "/records-report"
 @inject ApiClient Api
-@inject IDetailWindowService DetailWindow
 
 <RequireAuth>
     <h1 class="page-title">Records Report <span class="rtl-urdu" style="font-size:1rem;">ریکارڈ رپورٹ</span></h1>
@@ -62,14 +61,7 @@
                             <td>@(row.Cash is { } c ? c.ToString("N2") : "—")</td>
                             <td>@row.Status</td>
                             <td>
-                                @if (row.Type is "Purchase" or "Sale")
-                                {
-                                    <a href="#" @onclick="() => OpenDetailWindow(row)" @onclick:preventDefault="true">Details</a>
-                                }
-                                else
-                                {
-                                    <a href="@row.DetailsUrl">Details</a>
-                                }
+                                <a href="@row.DetailsUrl">Details</a>
                             </td>
                         </tr>
                     }
@@ -87,17 +79,7 @@
     private record CombinedRow(
         string Type, int Id, string InvoiceNo, DateTime Date, int PartyId, string PartyName, string? BuyerName,
         string ProductSummary, decimal? WeightKg, decimal GrossAmount, decimal Deductions,
-        decimal NetAmount, decimal? Cash, string Status, string? DetailsUrl);
-
-    /// <summary>Purchase/Sale don't use DetailsUrl at all — this is a MAUI desktop app, not a
-    /// browser, so their "Details" opens a real standalone window (DetailWindowService) instead of
-    /// navigating away from this filtered list. Kachi/Pakki keep their existing same-window
-    /// in-app navigation via DetailsUrl, unchanged.</summary>
-    private void OpenDetailWindow(CombinedRow row)
-    {
-        if (row.Type == "Purchase") DetailWindow.OpenPurchaseDetail(row.Id);
-        else if (row.Type == "Sale") DetailWindow.OpenSaleDetail(row.Id);
-    }
+        decimal NetAmount, decimal? Cash, string Status, string DetailsUrl);
 
     private List<CombinedRow>? _rows;
     private List<PartyDto>? _parties;
@@ -135,17 +117,16 @@
 
             // Purchase/Sale Invoice can hold several different products per line, so — unlike
             // Kachi/Pakki — there's no single weight figure; the Product(s) summary shows each
-            // line's qty@price instead. Their own detail page opens as a standalone window
-            // (OpenDetailWindow), not via DetailsUrl, so this filtered list stays exactly as-is.
+            // line's qty@price instead.
             var purchaseRows = purchases.Select(p => new CombinedRow(
                 "Purchase", p.Id, p.InvoiceNo, p.Date, p.SupplierId, p.SupplierName, null,
                 LineSummary(p.Lines.Select(l => (l.ProductName, l.Quantity, l.Price))), null, p.TotalBill, p.TotalDiscount, p.NetBill,
-                p.PaidCash, p.IsCancelled ? "Cancelled" : "Open", null));
+                p.PaidCash, p.IsCancelled ? "Cancelled" : "Open", $"print/purchase/{p.Id}"));
 
             var saleRows = sales.Select(s => new CombinedRow(
                 "Sale", s.Id, s.InvoiceNo, s.Date, s.CustomerId, s.CustomerName, null,
                 LineSummary(s.Lines.Select(l => (l.ProductName, l.Quantity, l.Price))), null, s.TotalBill, s.TotalDiscount, s.NetBill,
-                s.ReceivedCash, s.IsCancelled ? "Cancelled" : "Open", null));
+                s.ReceivedCash, s.IsCancelled ? "Cancelled" : "Open", $"print/sale/{s.Id}"));
 
             _rows = kachiRows.Concat(pakkiRows).Concat(purchaseRows).Concat(saleRows)
                 .OrderByDescending(r => r.Date).ThenByDescending(r => r.Id).ToList();

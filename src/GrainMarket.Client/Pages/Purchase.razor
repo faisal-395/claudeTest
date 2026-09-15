@@ -1,7 +1,6 @@
 @page "/purchase"
 @using GrainMarket.Application.Common
 @inject ApiClient Api
-@inject IDetailWindowService DetailWindow
 
 <RequireAuth>
     <h1 class="page-title">Purchase</h1>
@@ -72,7 +71,7 @@
                         <td>@p.PaidCash.ToString("N2")</td>
                         <td>@(p.IsCancelled ? "Cancelled" : "Open")</td>
                         <td>
-                            <a href="#" @onclick="() => DetailWindow.OpenPurchaseDetail(p.Id)" @onclick:preventDefault="true">Details</a>
+                            <a href="print/purchase/@p.Id">Details</a>
                         </td>
                         <td>
                             @if (!p.IsCancelled)
