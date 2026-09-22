@@ -10,23 +10,36 @@
         <div class="error-banner">@_error</div>
     }
 
-    <div class="form-grid" style="max-width:900px;margin-bottom:16px;">
-        <div>
-            <label>Type / قسم</label>
-            <select @bind="_typeFilter">
-                <option value="All">All</option>
-                <option value="Kachi">Kachi only</option>
-                <option value="Pakki">Pakki only</option>
-                <option value="Purchase">Purchase only</option>
-                <option value="Sale">Sale Invoice only</option>
-            </select>
-        </div>
-        <div>
-            <label>Party</label>
-            <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" @bind-Value="_partyId" Placeholder="All parties…" />
-        </div>
-        <div><label>From</label><input type="date" @bind="_from" /></div>
-        <div><label>To</label><input type="date" @bind="_to" /></div>
+    <div style="margin-bottom:16px;">
+        <button class="btn secondary" @onclick="() => _filtersExpanded = !_filtersExpanded">
+            @(_filtersExpanded ? "▾" : "▸") Filters
+            @if (!_filtersExpanded && (_typeFilter != "All" || _partyId != 0 || _from is not null || _to is not null))
+            {
+                <span style="font-weight:400;color:#666;">&nbsp;— active</span>
+            }
+        </button>
+
+        @if (_filtersExpanded)
+        {
+            <div class="form-grid" style="max-width:900px;margin-top:12px;">
+                <div>
+                    <label>Type / قسم</label>
+                    <select @bind="_typeFilter">
+                        <option value="All">All</option>
+                        <option value="Kachi">Kachi only</option>
+                        <option value="Pakki">Pakki only</option>
+                        <option value="Purchase">Purchase only</option>
+                        <option value="Sale">Sale Invoice only</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Party</label>
+                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" @bind-Value="_partyId" Placeholder="All parties…" />
+                </div>
+                <div><label>From</label><input type="date" @bind="_from" /></div>
+                <div><label>To</label><input type="date" @bind="_to" /></div>
+            </div>
+        }
     </div>
 
     @if (_rows is null)
@@ -91,6 +104,7 @@
     private DateTime? _from;
     private DateTime? _to;
     private string? _error;
+    private bool _filtersExpanded;
 
     private List<CombinedRow> FilteredRows =>
         (_rows ?? new())

@@ -99,9 +99,10 @@ else
 }
 
 @code {
-    // Kachi and Pakki's batch-entry grids are wide — squeeze the sidebar down to an icon-only
-    // rail on those two pages so the grid has more room, and restore full width everywhere else.
-    private static readonly string[] IconOnlyRoutes = { "kachi", "pakki" };
+    // Kachi and Pakki's batch-entry grids, and the combined Records Report grid, are wide — squeeze
+    // the sidebar down to an icon-only rail on those pages so the grid has more room, and restore
+    // full width everywhere else.
+    private static readonly string[] IconOnlyRoutes = { "kachi", "pakki", "records-report" };
 
     private bool _iconOnly;
 
