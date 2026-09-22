@@ -69,11 +69,9 @@ public class VoucherService : IVoucherService
         await _db.SaveChangesAsync(ct);
 
         var sourceType = request.VoucherType == VoucherType.Payment ? LedgerSourceType.Payment : LedgerSourceType.Receipt;
-        // Always keep the voucher number in the ledger description, even with a custom one entered —
-        // otherwise the statement/ledger has no way to trace the entry back to its voucher.
-        var description = string.IsNullOrWhiteSpace(request.Description)
-            ? $"{request.VoucherType} {voucher.VoucherNo}"
-            : $"{request.Description} ({voucher.VoucherNo})";
+        // The voucher number itself is surfaced separately (LedgerRowDto.ReferenceNo, resolved from
+        // SourceId), so the description here is just the human-readable text.
+        var description = request.Description ?? request.VoucherType.ToString();
 
         // Convention: Dr the "To" side, Cr the "From" side, for both Payment and Receipt.
         await PostRefAsync(request.ToType, voucher.ToPartyId, voucher.ToAccountId, voucher.Date, request.Amount, 0m, sourceType, voucher.Id, description, ct);
@@ -107,8 +105,8 @@ public class VoucherService : IVoucherService
         _db.Vouchers.Add(voucher);
         await _db.SaveChangesAsync(ct);
 
-        await _ledger.PostAccountEntryAsync(request.DebitAccountId, voucher.Date, request.Amount, 0, LedgerSourceType.Journal, voucher.Id, request.DebitDescription ?? voucher.VoucherNo, ct);
-        await _ledger.PostAccountEntryAsync(request.CreditAccountId, voucher.Date, 0, request.Amount, LedgerSourceType.Journal, voucher.Id, request.CreditDescription ?? voucher.VoucherNo, ct);
+        await _ledger.PostAccountEntryAsync(request.DebitAccountId, voucher.Date, request.Amount, 0, LedgerSourceType.Journal, voucher.Id, request.DebitDescription ?? "Journal Entry", ct);
+        await _ledger.PostAccountEntryAsync(request.CreditAccountId, voucher.Date, 0, request.Amount, LedgerSourceType.Journal, voucher.Id, request.CreditDescription ?? "Journal Entry", ct);
 
         await _db.SaveChangesAsync(ct);
         return await GetByIdAsync(voucher.Id, ct);

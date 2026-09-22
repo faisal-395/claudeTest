@@ -1,5 +1,6 @@
 using GrainMarket.Application.Common.Exceptions;
 using GrainMarket.Application.Common.Interfaces;
+using GrainMarket.Domain.Common;
 using GrainMarket.Domain.Entities;
 using GrainMarket.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -60,29 +61,43 @@ public class LedgerQueryService : ILedgerQueryService
         return new AccountLedgerDto(accountId, account.Code, account.Name, closing, await ToRowDtosAsync(rows, ct));
     }
 
-    // Payment/Receipt vouchers let the operator type a free-text description that replaces the
-    // default "Payment PV-000123" — silently dropping the voucher number the statement/ledger needs
-    // to trace the entry back to its voucher. Backfill it here for display so this works for every
-    // entry already posted, not just ones created after VoucherService started keeping the number.
+    // Description is free text (or an auto-generated label); ReferenceNo is the actual
+    // invoice/voucher number, kept separate so the statement/ledger can show and trace each entry
+    // to its source document without depending on what ended up in the description.
     private async Task<List<LedgerRowDto>> ToRowDtosAsync(List<LedgerEntry> rows, CancellationToken ct)
     {
-        var voucherIds = rows.Where(r => r.SourceType is LedgerSourceType.Payment or LedgerSourceType.Receipt)
-            .Select(r => r.SourceId).Distinct().ToList();
+        async Task<Dictionary<int, string>> LookupAsync<TEntity>(LedgerSourceType sourceType, IQueryable<TEntity> source, Func<TEntity, string> numberSelector) where TEntity : BaseEntity
+        {
+            var ids = rows.Where(r => r.SourceType == sourceType).Select(r => r.SourceId).Distinct().ToList();
+            if (ids.Count == 0) return new Dictionary<int, string>();
 
+            var entities = await source.Where(x => ids.Contains(x.Id)).ToListAsync(ct);
+            return entities.ToDictionary(x => x.Id, numberSelector);
+        }
+
+        var kachiNumbers = await LookupAsync(LedgerSourceType.Kachi, _db.Kachis, k => k.InvoiceNo);
+        var pakkiNumbers = await LookupAsync(LedgerSourceType.Pakki, _db.Pakkis, p => p.InvoiceNo);
+        var purchaseNumbers = await LookupAsync(LedgerSourceType.Purchase, _db.Purchases, p => p.InvoiceNo);
+        var saleNumbers = await LookupAsync(LedgerSourceType.Sale, _db.SaleInvoices, s => s.InvoiceNo);
+        var expenseNumbers = await LookupAsync(LedgerSourceType.Expense, _db.Expenses, e => e.ExpenseNo);
+
+        var voucherIds = rows.Where(r => r.SourceType is LedgerSourceType.Payment or LedgerSourceType.Receipt or LedgerSourceType.Journal)
+            .Select(r => r.SourceId).Distinct().ToList();
         var voucherNumbers = voucherIds.Count == 0
             ? new Dictionary<int, string>()
             : await _db.Vouchers.Where(v => voucherIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id, v => v.VoucherNo, ct);
 
-        return rows.Select(e =>
+        string? ReferenceFor(LedgerEntry e) => e.SourceType switch
         {
-            var description = e.Description;
-            if (e.SourceType is LedgerSourceType.Payment or LedgerSourceType.Receipt
-                && voucherNumbers.TryGetValue(e.SourceId, out var voucherNo)
-                && !(description ?? string.Empty).Contains(voucherNo))
-            {
-                description = string.IsNullOrWhiteSpace(description) ? voucherNo : $"{description} ({voucherNo})";
-            }
-            return new LedgerRowDto(e.Id, e.Date, e.Debit, e.Credit, e.RunningBalance, e.SourceType, e.SourceId, description);
-        }).ToList();
+            LedgerSourceType.Kachi => kachiNumbers.GetValueOrDefault(e.SourceId),
+            LedgerSourceType.Pakki => pakkiNumbers.GetValueOrDefault(e.SourceId),
+            LedgerSourceType.Purchase => purchaseNumbers.GetValueOrDefault(e.SourceId),
+            LedgerSourceType.Sale => saleNumbers.GetValueOrDefault(e.SourceId),
+            LedgerSourceType.Expense => expenseNumbers.GetValueOrDefault(e.SourceId),
+            LedgerSourceType.Payment or LedgerSourceType.Receipt or LedgerSourceType.Journal => voucherNumbers.GetValueOrDefault(e.SourceId),
+            _ => null
+        };
+
+        return rows.Select(e => new LedgerRowDto(e.Id, e.Date, e.Debit, e.Credit, e.RunningBalance, e.SourceType, e.SourceId, e.Description, ReferenceFor(e))).ToList();
     }
 }

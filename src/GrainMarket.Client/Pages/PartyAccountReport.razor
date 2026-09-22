@@ -25,7 +25,7 @@
             </button>
             @if (_ledger is not null)
             {
-                <button class="btn secondary" @onclick="PrintAsync">Print</button>
+                <button class="btn" @onclick="PrintAsync">Print</button>
             }
         </div>
 
@@ -86,12 +86,13 @@
             else
             {
                 <table class="data-grid" style="width:100%;">
-                    <thead><tr><th>Date</th><th>Description</th><th style="text-align:right;">Debit</th><th style="text-align:right;">Credit</th><th style="text-align:right;">Balance</th></tr></thead>
+                    <thead><tr><th>Date</th><th>Invoice / Voucher #</th><th>Description</th><th style="text-align:right;">Debit</th><th style="text-align:right;">Credit</th><th style="text-align:right;">Balance</th></tr></thead>
                     <tbody>
                         @foreach (var r in _ledger.Rows)
                         {
                             <tr>
                                 <td>@r.Date.ToString("yyyy-MM-dd")</td>
+                                <td>@(r.ReferenceNo ?? "—")</td>
                                 <td>@r.Description</td>
                                 <td style="text-align:right;">@(r.Debit > 0 ? r.Debit.ToString("N2") : "")</td>
                                 <td style="text-align:right;">@(r.Credit > 0 ? r.Credit.ToString("N2") : "")</td>
