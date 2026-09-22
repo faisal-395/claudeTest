@@ -678,17 +678,37 @@ table.batch-results-grid th, table.batch-results-grid td {
     margin: 0 auto;
 }
 
-/* On screen (not printing), a wide multi-farmer table can exceed the fixed A4 width above; let it
-   scroll within its own box instead of overflowing past main-content into the sidebar. Scoped to
-   screen only — printing must keep overflow visible so nothing gets clipped off the page. */
+/* On screen (not printing), a wide table can exceed the fixed A4 width above; let it scroll within
+   its own box instead of overflowing past main-content into the sidebar. Scoped to screen only —
+   printing must keep overflow visible so nothing gets clipped off the page. */
 @media screen {
     .print-a4 {
         overflow-x: auto;
     }
 }
 
-/* Kachi/Pakki multi-farmer print tables (one row per farmer, 10-13 columns) — tighter than the
-   default data-grid sizing so the whole table has a realistic chance of fitting the print-a4 width. */
+/* Kachi/Pakki multi-farmer print/details tables (one row per farmer, 11-14 columns) don't fit a
+   portrait A4 width at all, even tightened — that's what was forcing a screen scrollbar and
+   cramming the print output. Don't cap their width on screen (main-content has plenty of room),
+   and print them landscape via a named @page so the extra columns get real space instead of being
+   squeezed or spilling onto extra pages. */
+.print-a4-wide {
+    width: auto;
+    max-width: 100%;
+    overflow-x: visible;
+}
+
+@media print {
+    .print-a4-wide {
+        page: multiPrintLandscape;
+        width: 277mm;
+    }
+}
+
+@page multiPrintLandscape {
+    size: landscape;
+}
+
 .multi-print-grid th, .multi-print-grid td {
     padding: 5px 6px;
     font-size: 0.8rem;
