@@ -22,6 +22,7 @@
             <label>Customer (Farmer)</label>
             <SearchSelect TItem="PartyDto" Items="_customers" IdSelector="@(c => c.Id)" TextSelector="@DisplayText.Party" @bind-Value="_customerId" Placeholder="Search farmer…" />
         </div>
+        <div><label>Balance</label><div class="total-figure" style="padding-top:6px;">Rs @SelectedCustomerBalance.ToString("N2")</div></div>
         <div>
             <label>Print Format</label>
             <select @bind="_printFormat">
@@ -38,30 +39,56 @@
         </div>
     </div>
 
+    <h3 style="margin-top:20px;">Add Product</h3>
+    <div class="form-grid" style="max-width:1100px;">
+        <div>
+            <label>Product</label>
+            <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@_stagingProductId" ValueChanged="OnStagingProductChangedAsync" Placeholder="Search product…" />
+        </div>
+        <div>
+            <label>In Stock</label>
+            <div class="@(_stagingQuantity > AvailableFor(_stagingProductId) ? "invalid-total" : "total-figure")" style="padding-top:6px;">@AvailableFor(_stagingProductId).ToString("N2")</div>
+        </div>
+        <div><label>Quantity</label><input type="number" step="0.01" @bind="_stagingQuantity" /></div>
+        <div>
+            <label>Price</label>
+            <input type="number" step="0.01" value="@_stagingPrice" @onchange="e => { _stagingPrice = ParseDecimal(e.Value); _stagingManuallyPriced = true; }" title="Auto-filled from the product's sale price/markup setting — edit to override" />
+        </div>
+        <div><label>Discount %</label><input type="number" step="0.01" @bind="_stagingDiscountPercent" /></div>
+        <div><label>Net</label><div class="total-figure" style="padding-top:6px;">Rs @StagingNet.ToString("N2")</div></div>
+        <div style="grid-column: span 2;">
+            <button class="btn secondary" disabled="@(!CanAddStagedLine)" @onclick="AddStagedLineAsync">+ Add to Invoice</button>
+        </div>
+    </div>
+
     <table class="data-grid" style="max-width:1100px;margin-top:14px;">
-        <thead><tr><th>Product</th><th>Qty</th><th>In Stock</th><th>Price</th><th>Discount %</th><th>Net</th><th></th></tr></thead>
+        <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Discount %</th><th>Net</th><th></th></tr></thead>
         <tbody>
             @for (var i = 0; i < _lines.Count; i++)
             {
                 var index = i;
                 var line = _lines[index];
                 <tr>
+                    <td>@ProductName(line.ProductId)</td>
                     <td>
-                        <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@line.ProductId" ValueChanged="@(v => OnProductChanged(line, v))" Placeholder="Search product…" />
+                        @line.Quantity.ToString("N2")
+                        @if (IsOverStock(line))
+                        {
+                            <span class="invalid-total"> (over stock)</span>
+                        }
                     </td>
-                    <td><input type="number" step="0.01" value="@line.Quantity" @onchange="e => OnQuantityChanged(line, ParseDecimal(e.Value))" /></td>
-                    <td class="@(IsOverStock(line) ? "invalid-total" : "")">@AvailableFor(line.ProductId).ToString("N2")</td>
-                    <td>
-                        <input type="number" step="0.01" value="@line.Price" @onchange="e => { line.Price = ParseDecimal(e.Value); line.ManuallyPriced = true; }" title="Auto-filled from the product's sale price/markup setting — edit to override for this line only" />
-                    </td>
-                    <td><input type="number" step="0.01" value="@line.DiscountPercent" @onchange="e => line.DiscountPercent = ParseDecimal(e.Value)" /></td>
+                    <td>@line.Price.ToString("N2")</td>
+                    <td>@line.DiscountPercent.ToString("N2")</td>
                     <td>@LineNet(line).ToString("N2")</td>
                     <td><button class="btn danger" @onclick="() => _lines.RemoveAt(index)">Remove</button></td>
                 </tr>
             }
+            @if (_lines.Count == 0)
+            {
+                <tr><td colspan="6" style="text-align:center;color:#999;">No lines added yet.</td></tr>
+            }
         </tbody>
     </table>
-    <button class="btn secondary" style="margin-top:8px;" @onclick="AddLine">+ Add Line</button>
 
     <div class="form-grid" style="max-width:1100px;margin-top:14px;">
         <div class="total-figure">Total Bill: Rs @TotalBill.ToString("N2")</div>
@@ -95,7 +122,19 @@
     private decimal _receivedCash;
     private readonly List<LineModel> _lines = new();
 
+    private int _stagingProductId;
+    private decimal _stagingQuantity = 1;
+    private decimal _stagingPrice;
+    private decimal _stagingDiscountPercent;
+    private bool _stagingManuallyPriced;
+
     private decimal TotalBill => _lines.Sum(LineNet);
+
+    private decimal SelectedCustomerBalance => _customers?.FirstOrDefault(c => c.Id == _customerId)?.CurrentBalance ?? 0;
+
+    private bool CanAddStagedLine => _stagingProductId > 0 && _stagingQuantity > 0;
+
+    private decimal StagingNet => LineNet(_stagingQuantity, _stagingPrice, _stagingDiscountPercent);
 
     private Dictionary<int, decimal> RequestedByProduct =>
         _lines.GroupBy(l => l.ProductId).ToDictionary(g => g.Key, g => g.Sum(l => l.Quantity));
@@ -106,6 +145,8 @@
 
     private bool HasStockIssue => _lines.Any(IsOverStock);
 
+    private string ProductName(int productId) => _products?.FirstOrDefault(p => p.Id == productId) is { } p ? DisplayText.Product(p) : "—";
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -114,50 +155,52 @@
             _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryInput);
             _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
             if (_customers.Count > 0) _customerId = _customers[0].Id;
+            if (_products.Count > 0) _stagingProductId = _products[0].Id;
         }
-        catch (Models.ApiException ex) { _error = ex.Message; }
+        catch (Models.ApiException ex) { _error = ex.Message; return; }
+        await RefreshStagingSuggestedPriceAsync();
     }
 
-    private async Task AddLine()
+    private async Task OnStagingProductChangedAsync(int productId)
     {
-        var line = new LineModel { ProductId = _products?.FirstOrDefault()?.Id ?? 0, Quantity = 1 };
-        _lines.Add(line);
-        await RefreshSuggestedPriceAsync(line);
-    }
-
-    private async Task OnProductChanged(LineModel line, int productId)
-    {
-        line.ProductId = productId;
-        line.ManuallyPriced = false;
-        await RefreshSuggestedPriceAsync(line);
-    }
-
-    private void OnQuantityChanged(LineModel line, decimal quantity)
-    {
-        // Price is priced on the latest purchase cost, not this line's quantity, so changing the
-        // quantity alone never needs to re-fetch a new suggestion.
-        line.Quantity = quantity;
+        _stagingProductId = productId;
+        _stagingManuallyPriced = false;
+        await RefreshStagingSuggestedPriceAsync();
     }
 
     /// <summary>Auto-fills Price from the product's SalePrice/SaleMarkupPercent setting, based on the
     /// single most recent purchase price for the product (LIFO — a new purchase immediately becomes
-    /// the pricing basis) so the operator doesn't have to type one on every line — but never
+    /// the pricing basis) so the operator doesn't have to type one for every line — but never
     /// overwrites a price they've edited by hand.</summary>
-    private async Task RefreshSuggestedPriceAsync(LineModel line)
+    private async Task RefreshStagingSuggestedPriceAsync()
     {
-        if (line.ProductId <= 0 || line.ManuallyPriced) return;
+        if (_stagingProductId <= 0 || _stagingManuallyPriced) return;
         try
         {
-            var suggestion = await Api.GetSuggestedSalePriceAsync(line.ProductId);
-            line.Price = suggestion.SuggestedPrice;
+            var suggestion = await Api.GetSuggestedSalePriceAsync(_stagingProductId);
+            _stagingPrice = suggestion.SuggestedPrice;
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private static decimal LineNet(LineModel l)
+    private async Task AddStagedLineAsync()
     {
-        var gross = l.Quantity * l.Price;
-        return gross - gross * (l.DiscountPercent / 100m);
+        _lines.Add(new LineModel { ProductId = _stagingProductId, Quantity = _stagingQuantity, Price = _stagingPrice, DiscountPercent = _stagingDiscountPercent });
+
+        _stagingProductId = _products?.FirstOrDefault()?.Id ?? 0;
+        _stagingQuantity = 1;
+        _stagingPrice = 0;
+        _stagingDiscountPercent = 0;
+        _stagingManuallyPriced = false;
+        await RefreshStagingSuggestedPriceAsync();
+    }
+
+    private static decimal LineNet(LineModel l) => LineNet(l.Quantity, l.Price, l.DiscountPercent);
+
+    private static decimal LineNet(decimal quantity, decimal price, decimal discountPercent)
+    {
+        var gross = quantity * price;
+        return gross - gross * (discountPercent / 100m);
     }
 
     private static decimal ParseDecimal(object? value) => decimal.TryParse(value?.ToString(), out var d) ? d : 0;
@@ -188,8 +231,5 @@
         public decimal Quantity { get; set; }
         public decimal Price { get; set; }
         public decimal DiscountPercent { get; set; }
-
-        /// <summary>Once the operator edits Price by hand, auto-fill stops touching this line.</summary>
-        public bool ManuallyPriced { get; set; }
     }
 }

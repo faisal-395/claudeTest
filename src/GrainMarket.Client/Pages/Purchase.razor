@@ -22,6 +22,23 @@
             <label>Supplier</label>
             <SearchSelect TItem="PartyDto" Items="_suppliers" IdSelector="@(s => s.Id)" TextSelector="@DisplayText.Party" @bind-Value="_supplierId" Placeholder="Search supplier…" />
         </div>
+        <div><label>Balance</label><div class="total-figure" style="padding-top:6px;">Rs @SelectedSupplierBalance.ToString("N2")</div></div>
+    </div>
+
+    <h3 style="margin-top:20px;">Add Product</h3>
+    <div class="form-grid" style="max-width:1100px;">
+        <div>
+            <label>Product</label>
+            <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_stagingProductId" Placeholder="Search product…" />
+        </div>
+        <div><label>Quantity</label><input type="number" step="0.01" @bind="_stagingQuantity" /></div>
+        <div><label>Price</label><input type="number" step="0.01" @bind="_stagingPrice" /></div>
+        <div><label>Discount %</label><input type="number" step="0.01" @bind="_stagingDiscountPercent" /></div>
+        <div><label>Expiry Date</label><input type="date" @bind="_stagingExpiryDate" title="Optional — only for products with a shelf life" /></div>
+        <div><label>Net</label><div class="total-figure" style="padding-top:6px;">Rs @StagingNet.ToString("N2")</div></div>
+        <div style="grid-column: span 2;">
+            <button class="btn secondary" disabled="@(!CanAddStagedLine)" @onclick="AddStagedLine">+ Add to Purchase</button>
+        </div>
     </div>
 
     <table class="data-grid" style="max-width:1100px;margin-top:14px;">
@@ -32,20 +49,21 @@
                 var index = i;
                 var line = _lines[index];
                 <tr>
-                    <td>
-                        <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@line.ProductId" ValueChanged="@(v => line.ProductId = v)" Placeholder="Search product…" />
-                    </td>
-                    <td><input type="number" step="0.01" value="@line.Quantity" @onchange="e => line.Quantity = ParseDecimal(e.Value)" /></td>
-                    <td><input type="number" step="0.01" value="@line.Price" @onchange="e => line.Price = ParseDecimal(e.Value)" /></td>
-                    <td><input type="number" step="0.01" value="@line.DiscountPercent" @onchange="e => line.DiscountPercent = ParseDecimal(e.Value)" /></td>
+                    <td>@ProductName(line.ProductId)</td>
+                    <td>@line.Quantity.ToString("N2")</td>
+                    <td>@line.Price.ToString("N2")</td>
+                    <td>@line.DiscountPercent.ToString("N2")</td>
                     <td>@LineNet(line).ToString("N2")</td>
-                    <td><input type="date" value="@line.ExpiryDate?.ToString("yyyy-MM-dd")" @onchange="e => line.ExpiryDate = ParseDate(e.Value)" title="Optional — only for products with a shelf life" /></td>
+                    <td>@(line.ExpiryDate is { } ed ? ed.ToString("yyyy-MM-dd") : "—")</td>
                     <td><button class="btn danger" @onclick="() => _lines.RemoveAt(index)">Remove</button></td>
                 </tr>
             }
+            @if (_lines.Count == 0)
+            {
+                <tr><td colspan="7" style="text-align:center;color:#999;">No lines added yet.</td></tr>
+            }
         </tbody>
     </table>
-    <button class="btn secondary" style="margin-top:8px;" @onclick="AddLine">+ Add Line</button>
 
     <div class="form-grid" style="max-width:1100px;margin-top:14px;">
         <div class="total-figure">Total Bill: Rs @TotalBill.ToString("N2")</div>
@@ -72,7 +90,21 @@
     private decimal _paidCash;
     private readonly List<LineModel> _lines = new();
 
+    private int _stagingProductId;
+    private decimal _stagingQuantity = 1;
+    private decimal _stagingPrice;
+    private decimal _stagingDiscountPercent;
+    private DateTime? _stagingExpiryDate;
+
     private decimal TotalBill => _lines.Sum(LineNet);
+
+    private decimal SelectedSupplierBalance => _suppliers?.FirstOrDefault(s => s.Id == _supplierId)?.CurrentBalance ?? 0;
+
+    private bool CanAddStagedLine => _stagingProductId > 0 && _stagingQuantity > 0;
+
+    private decimal StagingNet => LineNet(_stagingQuantity, _stagingPrice, _stagingDiscountPercent);
+
+    private string ProductName(int productId) => _products?.FirstOrDefault(p => p.Id == productId) is { } p ? DisplayText.Product(p) : "—";
 
     protected override async Task OnInitializedAsync()
     {
@@ -81,21 +113,29 @@
             _suppliers = await Api.GetPartiesAsync(PartyType.Supplier);
             _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryInput);
             if (_suppliers.Count > 0) _supplierId = _suppliers[0].Id;
+            if (_products.Count > 0) _stagingProductId = _products[0].Id;
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private void AddLine() => _lines.Add(new LineModel { ProductId = _products?.FirstOrDefault()?.Id ?? 0, Quantity = 1 });
-
-    private static decimal LineNet(LineModel l)
+    private void AddStagedLine()
     {
-        var gross = l.Quantity * l.Price;
-        return gross - gross * (l.DiscountPercent / 100m);
+        _lines.Add(new LineModel { ProductId = _stagingProductId, Quantity = _stagingQuantity, Price = _stagingPrice, DiscountPercent = _stagingDiscountPercent, ExpiryDate = _stagingExpiryDate });
+
+        _stagingProductId = _products?.FirstOrDefault()?.Id ?? 0;
+        _stagingQuantity = 1;
+        _stagingPrice = 0;
+        _stagingDiscountPercent = 0;
+        _stagingExpiryDate = null;
     }
 
-    private static decimal ParseDecimal(object? value) => decimal.TryParse(value?.ToString(), out var d) ? d : 0;
+    private static decimal LineNet(LineModel l) => LineNet(l.Quantity, l.Price, l.DiscountPercent);
 
-    private static DateTime? ParseDate(object? value) => DateTime.TryParse(value?.ToString(), out var d) ? d : null;
+    private static decimal LineNet(decimal quantity, decimal price, decimal discountPercent)
+    {
+        var gross = quantity * price;
+        return gross - gross * (discountPercent / 100m);
+    }
 
     private async Task SaveAsync()
     {
