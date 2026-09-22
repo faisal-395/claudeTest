@@ -61,6 +61,7 @@ else
                         @if (AuthState.CanView(ModuleName.Receipt)) { <li><NavLink href="receipt" title="Receipt">@Icon("receipt")<span class="nav-text">Receipt</span></NavLink></li> }
                         @if (AuthState.CanView(ModuleName.Journal)) { <li><NavLink href="journal" title="Journal">@Icon("journal")<span class="nav-text">Journal</span></NavLink></li> }
                         @if (AuthState.CanView(ModuleName.Expense)) { <li><NavLink href="expense" title="Expense">@Icon("expense")<span class="nav-text">Expense</span></NavLink></li> }
+                        @if (AuthState.CanView(ModuleName.Payment)) { <li><NavLink href="vouchers" title="Voucher Records">@Icon("chart-of-accounts")<span class="nav-text">Voucher Records</span></NavLink></li> }
                     </ul>
                 }
 
