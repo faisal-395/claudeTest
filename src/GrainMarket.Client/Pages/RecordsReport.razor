@@ -39,7 +39,7 @@
             <table class="data-grid kachi-records-grid">
                 <thead>
                     <tr>
-                        <th>Type</th><th>Invoice</th><th>Date</th><th>Party</th><th>Buyer</th>
+                        <th>Type</th><th>Invoice</th><th>Date</th><th>Party</th><th>Farmer(s)</th>
                         <th>Product(s)</th><th>Weight</th><th>Gross</th><th>Deductions / Discount</th>
                         <th>Net Amount</th><th>Cash</th><th>Status</th><th></th>
                     </tr>
@@ -52,7 +52,7 @@
                             <td>@row.InvoiceNo</td>
                             <td>@row.Date.ToString("yyyy-MM-dd")</td>
                             <td>@row.PartyName</td>
-                            <td>@(row.BuyerName ?? "—")</td>
+                            <td>@(row.SecondaryPartyName ?? "—")</td>
                             <td>@row.ProductSummary</td>
                             <td>@(row.WeightKg is { } w ? $"{w:N2} kg" : "—")</td>
                             <td>@row.GrossAmount.ToString("N2")</td>
@@ -76,8 +76,11 @@
 </RequireAuth>
 
 @code {
+    // For Kachi/Pakki, Party is the Buyer (the whole batch's invoice belongs to them) and
+    // SecondaryPartyName lists the farmer(s) in that invoice group; for Purchase/Sale, Party is the
+    // Supplier/Customer and there's no secondary party.
     private record CombinedRow(
-        string Type, int Id, string InvoiceNo, DateTime Date, int PartyId, string PartyName, string? BuyerName,
+        string Type, int Id, string InvoiceNo, DateTime Date, int PartyId, string PartyName, string? SecondaryPartyName,
         string ProductSummary, decimal? WeightKg, decimal GrossAmount, decimal Deductions,
         decimal NetAmount, decimal? Cash, string Status, string DetailsUrl);
 
@@ -107,13 +110,39 @@
             var purchases = await Api.GetPurchasesAsync();
             var sales = await Api.GetSaleInvoicesAsync();
 
-            var kachiRows = kachis.Select(k => new CombinedRow(
-                "Kachi", k.Id, k.InvoiceNo, k.Date, k.FarmerId, k.FarmerName, k.BuyerName, k.ProductName,
-                k.NetWeightKg, k.GrossAmount, k.TotalDeductions, k.Total, null, k.Status.ToString(), $"print/kachi/{k.Id}"));
+            // A multi-farmer batch (MultiPurchaseService/MultiSaleService) shares one InvoiceNo across
+            // several Kachi/Pakki rows — one buyer, several farmers. Group by InvoiceNo so the buyer
+            // sees a single record instead of one per farmer, summing the numeric columns and listing
+            // every farmer in the group.
+            var kachiRows = kachis
+                .GroupBy(k => k.InvoiceNo)
+                .Select(g =>
+                {
+                    var first = g.OrderBy(k => k.Id).First();
+                    var ids = g.Select(k => k.Id).ToList();
+                    return new CombinedRow(
+                        "Kachi", first.Id, first.InvoiceNo, first.Date, first.BuyerId ?? 0, first.BuyerName ?? "—",
+                        string.Join(", ", g.Select(k => k.FarmerName).Distinct()),
+                        string.Join(", ", g.Select(k => k.ProductName).Distinct()),
+                        g.Sum(k => k.NetWeightKg), g.Sum(k => k.GrossAmount), g.Sum(k => k.TotalDeductions),
+                        g.Sum(k => k.Total), null, StatusSummary(g.Select(k => k.Status.ToString())),
+                        $"print/multi-purchase?Ids={string.Join(",", ids)}");
+                });
 
-            var pakkiRows = pakkis.Select(p => new CombinedRow(
-                "Pakki", p.Id, p.InvoiceNo, p.Date, p.FarmerId, p.FarmerName, p.BuyerName, p.ProductName,
-                p.NetWeightKg, p.GrossAmount, p.TotalDeductions, p.NetPayableToFarmer, null, p.Status.ToString(), $"print/pakki/{p.Id}"));
+            var pakkiRows = pakkis
+                .GroupBy(p => p.InvoiceNo)
+                .Select(g =>
+                {
+                    var first = g.OrderBy(p => p.Id).First();
+                    var ids = g.Select(p => p.Id).ToList();
+                    return new CombinedRow(
+                        "Pakki", first.Id, first.InvoiceNo, first.Date, first.BuyerId, first.BuyerName,
+                        string.Join(", ", g.Select(p => p.FarmerName).Distinct()),
+                        string.Join(", ", g.Select(p => p.ProductName).Distinct()),
+                        g.Sum(p => p.NetWeightKg), g.Sum(p => p.GrossAmount), g.Sum(p => p.TotalDeductions),
+                        g.Sum(p => p.NetPayableToFarmer), null, StatusSummary(g.Select(p => p.Status.ToString())),
+                        $"print/multi-sale?Ids={string.Join(",", ids)}");
+                });
 
             // Purchase/Sale Invoice can hold several different products per line, so — unlike
             // Kachi/Pakki — there's no single weight figure; the Product(s) summary shows each
@@ -132,6 +161,20 @@
                 .OrderByDescending(r => r.Date).ThenByDescending(r => r.Id).ToList();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    // Rows within one invoice group can diverge over time (e.g. one farmer's Kachi gets converted to
+    // Pakki while a sibling row in the same batch stays Open), so show every distinct status present,
+    // with counts once there's more than one.
+    private static string StatusSummary(IEnumerable<string> statuses)
+    {
+        var counts = statuses.GroupBy(s => s).ToList();
+        return counts.Count switch
+        {
+            0 => "—",
+            1 => counts[0].Key,
+            _ => string.Join(", ", counts.Select(c => $"{c.Key} ({c.Count()})"))
+        };
     }
 
     private static string LineSummary(IEnumerable<(string Name, decimal Qty, decimal Price)> lines)
