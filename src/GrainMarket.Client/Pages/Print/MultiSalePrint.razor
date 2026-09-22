@@ -44,6 +44,7 @@
                         <th class="rtl-urdu">کٹوتی کی تفصیل</th>
                         <th class="rtl-urdu">کل کٹوتی</th>
                         <th class="rtl-urdu">کسان کو ادائیگی</th>
+                        <th class="rtl-urdu">خریدار کٹوتی کی تفصیل</th>
                         <th class="rtl-urdu">خریدار چارجز</th>
                     </tr>
                 </thead>
@@ -65,6 +66,12 @@
                             </td>
                             <td><span class="ltr-inline"><b>@p.TotalDeductions.ToString("N2")</b></span></td>
                             <td><span class="ltr-inline"><b>@p.NetPayableToFarmer.ToString("N2")</b></span></td>
+                            <td>
+                                @foreach (var line in p.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer))
+                                {
+                                    <div>@line.NameUrdu: <span class="ltr-inline">@line.Amount.ToString("N2")</span></div>
+                                }
+                            </td>
                             <td><span class="ltr-inline">@(p.BuyerChargesTotal > 0 ? p.BuyerChargesTotal.ToString("N2") : "-")</span></td>
                         </tr>
                     }
@@ -79,6 +86,7 @@
                         <td></td>
                         <td><span class="ltr-inline"><b>@_pakkis.Sum(p => p.TotalDeductions).ToString("N2")</b></span></td>
                         <td><span class="ltr-inline"><b>@_pakkis.Sum(p => p.NetPayableToFarmer).ToString("N2")</b></span></td>
+                        <td></td>
                         <td><span class="ltr-inline"><b>@_pakkis.Sum(p => p.BuyerChargesTotal).ToString("N2")</b></span></td>
                     </tr>
                 </tfoot>

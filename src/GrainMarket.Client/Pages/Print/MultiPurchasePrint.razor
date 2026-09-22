@@ -60,6 +60,7 @@
                         <th class="rtl-urdu">کٹوتی کی تفصیل</th>
                         <th class="rtl-urdu">کل کٹوتی</th>
                         <th class="rtl-urdu">کل رقم (کسان)</th>
+                        <th class="rtl-urdu">خریدار کٹوتی کی تفصیل</th>
                         <th class="rtl-urdu">خریدار چارجز</th>
                     </tr>
                 </thead>
@@ -84,6 +85,12 @@
                             </td>
                             <td><span class="ltr-inline"><b>@k.TotalDeductions.ToString("N2")</b></span></td>
                             <td><span class="ltr-inline"><b>@k.Total.ToString("N2")</b></span></td>
+                            <td>
+                                @foreach (var line in k.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer))
+                                {
+                                    <div>@line.NameUrdu: <span class="ltr-inline">@line.Amount.ToString("N2")</span></div>
+                                }
+                            </td>
                             <td><span class="ltr-inline">@(k.BuyerChargesTotal > 0 ? k.BuyerChargesTotal.ToString("N2") : "-")</span></td>
                         </tr>
                     }
@@ -98,6 +105,7 @@
                         <td></td>
                         <td><span class="ltr-inline"><b>@_kachis.Sum(k => k.TotalDeductions).ToString("N2")</b></span></td>
                         <td><span class="ltr-inline"><b>@_kachis.Sum(k => k.Total).ToString("N2")</b></span></td>
+                        <td></td>
                         <td><span class="ltr-inline"><b>@_kachis.Sum(k => k.BuyerChargesTotal).ToString("N2")</b></span></td>
                     </tr>
                 </tfoot>
