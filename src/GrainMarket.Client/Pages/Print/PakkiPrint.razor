@@ -19,7 +19,7 @@
     else
     {
         <div class="print-a4 rtl-urdu" style="background:white;padding:20px;border:1px solid #ccc;">
-            <div style="text-align:center;font-size:1.3rem;font-weight:700;">عمر فاروق اینڈ برادرز</div>
+            <div style="text-align:center;font-size:1.3rem;font-weight:700;">@(_companyInfo?.NameUrdu ?? _companyInfo?.NameEnglish)</div>
             <div style="text-align:center;">پکی رسید</div>
             <hr />
             <table style="width:100%;">
@@ -70,11 +70,16 @@
 @code {
     [Parameter] public int Id { get; set; }
     private PakkiDto? _pakki;
+    private CompanyInfoDto? _companyInfo;
     private string? _error;
 
     protected override async Task OnInitializedAsync()
     {
-        try { _pakki = await Api.GetPakkiAsync(Id); }
+        try
+        {
+            _pakki = await Api.GetPakkiAsync(Id);
+            _companyInfo = await Api.GetCompanyInfoAsync();
+        }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 

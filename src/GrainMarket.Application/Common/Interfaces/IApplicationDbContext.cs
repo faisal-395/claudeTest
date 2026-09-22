@@ -34,6 +34,7 @@ public interface IApplicationDbContext
     DbSet<Expense> Expenses { get; }
     DbSet<RecoveryNote> RecoveryNotes { get; }
     DbSet<NumberSequence> NumberSequences { get; }
+    DbSet<CompanyInfo> CompanyInfos { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

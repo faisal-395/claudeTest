@@ -84,6 +84,7 @@ else
                     @if (AuthState.CanView(ModuleName.SetupDeductionRules)) { <li><NavLink href="setup/deduction-rules" title="Format (Deductions)">@Icon("format")<span class="nav-text">Format (Deductions)</span></NavLink></li> }
                     @if (AuthState.CanView(ModuleName.SetupUnitConversions)) { <li><NavLink href="setup/unit-conversions" title="Unit Conversions">@Icon("unit-conversions")<span class="nav-text">Unit Conversions</span></NavLink></li> }
                     @if (AuthState.CanView(ModuleName.SetupSeasons)) { <li><NavLink href="setup/seasons" title="Seasons">@Icon("seasons")<span class="nav-text">Seasons</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupCompanyInfo)) { <li><NavLink href="setup/company-info" title="Company Info">@Icon("party")<span class="nav-text">Company Info</span></NavLink></li> }
                     @if (AuthState.CanView(ModuleName.SetupUsersRoles)) { <li><NavLink href="setup/users" title="User Account">@Icon("user-account")<span class="nav-text">User Account</span></NavLink></li> }
                     @if (AuthState.CanView(ModuleName.Backup)) { <li><NavLink href="backup" title="Backup">@Icon("backup")<span class="nav-text">Backup</span></NavLink></li> }
                 </ul>

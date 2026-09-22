@@ -1,0 +1,85 @@
+@page "/setup/company-info"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Company Info</h1>
+    <p style="color:#777;">Shown on printed receipts and reports — the letterhead, contact details and NTN.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+    @if (_successMessage is not null)
+    {
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+    }
+
+    @if (_info is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div class="form-grid" style="max-width:900px;">
+            <div><label>Company Name (English)</label><input @bind="_nameEnglish" /></div>
+            <div><label>Company Name (Urdu)</label><input class="rtl-urdu" @bind="_nameUrdu" /></div>
+            <div><label>Market / Address</label><input @bind="_marketName" /></div>
+            <div><label>Proprietor</label><input @bind="_proprietorName" /></div>
+            <div><label>Phone</label><input @bind="_phone" /></div>
+            <div><label>Mobile</label><input @bind="_mobile" /></div>
+            <div><label>Email</label><input @bind="_email" /></div>
+            <div><label>NTN No.</label><input @bind="_ntnNumber" /></div>
+            <div style="grid-column: span 2;">
+                <button class="btn" disabled="@_saving" @onclick="SaveAsync">@(_saving ? "Saving…" : "Save")</button>
+            </div>
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    private CompanyInfoDto? _info;
+    private string? _error;
+    private string? _successMessage;
+    private bool _saving;
+
+    private string _nameEnglish = "";
+    private string? _nameUrdu;
+    private string? _marketName;
+    private string? _proprietorName;
+    private string? _phone;
+    private string? _mobile;
+    private string? _email;
+    private string? _ntnNumber;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _info = await Api.GetCompanyInfoAsync();
+            _nameEnglish = _info.NameEnglish;
+            _nameUrdu = _info.NameUrdu;
+            _marketName = _info.MarketName;
+            _proprietorName = _info.ProprietorName;
+            _phone = _info.Phone;
+            _mobile = _info.Mobile;
+            _email = _info.Email;
+            _ntnNumber = _info.NtnNumber;
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        _successMessage = null;
+        _saving = true;
+        try
+        {
+            var request = new UpdateCompanyInfoRequest(_nameEnglish, _nameUrdu, _marketName, _phone, _mobile, _email, _ntnNumber, _proprietorName);
+            _info = await Api.UpdateCompanyInfoAsync(request);
+            _successMessage = "Saved.";
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

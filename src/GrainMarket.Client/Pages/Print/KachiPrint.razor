@@ -20,7 +20,7 @@
     else
     {
         <div class="print-a4 rtl-urdu" style="background:white;padding:20px;border:1px solid #ccc;">
-            <div style="text-align:center;font-size:1.3rem;font-weight:700;">عمر فاروق اینڈ برادرز</div>
+            <div style="text-align:center;font-size:1.3rem;font-weight:700;">@(_companyInfo?.NameUrdu ?? _companyInfo?.NameEnglish)</div>
             <div style="text-align:center;">کچی رسید</div>
             <hr />
             <table style="width:100%;">
@@ -84,6 +84,7 @@
 @code {
     [Parameter] public int Id { get; set; }
     private KachiDto? _kachi;
+    private CompanyInfoDto? _companyInfo;
     private List<UnitConversion>? _unitConversionEntities;
     private string? _error;
 
@@ -92,6 +93,7 @@
         try
         {
             _kachi = await Api.GetKachiAsync(Id);
+            _companyInfo = await Api.GetCompanyInfoAsync();
             var conversions = await Api.GetUnitConversionsAsync();
             _unitConversionEntities = conversions.Select(c => new UnitConversion
             {

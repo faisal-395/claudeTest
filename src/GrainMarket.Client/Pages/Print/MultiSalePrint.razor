@@ -23,10 +23,19 @@
 
         <div class="print-a4 print-a4-wide" style="background:white;padding:20px;border:1px solid #ccc;">
             <div style="border:1px solid #000;padding:8px 10px;">
-                <div style="text-align:center;font-family:Georgia,'Times New Roman',serif;font-size:1.5rem;font-weight:700;">Umer Farooq &amp; Brothers</div>
-                <div style="text-align:center;font-size:0.95rem;">Grain Market Chishtian</div>
-                <div style="text-align:center;font-size:0.8rem;">Phone: 03026914604&nbsp;&nbsp;Mobile: 03347064086&nbsp;&nbsp;Email: umerfarooq.8088@@gmail.com</div>
-                <div style="text-align:center;font-size:0.85rem;">Proprietor: Hafiz Umer Farooq&nbsp;&nbsp;|&nbsp;&nbsp;NTN No: 7306513-7</div>
+                <div style="text-align:center;font-family:Georgia,'Times New Roman',serif;font-size:1.5rem;font-weight:700;">@_companyInfo?.NameEnglish</div>
+                @if (!string.IsNullOrWhiteSpace(_companyInfo?.MarketName))
+                {
+                    <div style="text-align:center;font-size:0.95rem;">@_companyInfo.MarketName</div>
+                }
+                @if (ContactLine is { Length: > 0 })
+                {
+                    <div style="text-align:center;font-size:0.8rem;">@ContactLine</div>
+                }
+                @if (ProprietorLine is { Length: > 0 })
+                {
+                    <div style="text-align:center;font-size:0.85rem;">@ProprietorLine</div>
+                }
             </div>
             <div style="text-align:center;font-size:1.1rem;font-weight:700;text-decoration:underline;margin-top:10px;">Pakki Maal</div>
             <div style="text-align:center;font-size:0.85rem;margin-bottom:8px;">Date: @_pakkis[0].Date.ToString("dd-MMM-yy")</div>
@@ -116,7 +125,21 @@
     [SupplyParameterFromQuery] public string? Ids { get; set; }
 
     private List<PakkiDto>? _pakkis;
+    private CompanyInfoDto? _companyInfo;
     private string? _error;
+
+    private string ContactLine => string.Join("  ", new[]
+    {
+        string.IsNullOrWhiteSpace(_companyInfo?.Phone) ? null : $"Phone: {_companyInfo.Phone}",
+        string.IsNullOrWhiteSpace(_companyInfo?.Mobile) ? null : $"Mobile: {_companyInfo.Mobile}",
+        string.IsNullOrWhiteSpace(_companyInfo?.Email) ? null : $"Email: {_companyInfo.Email}"
+    }.Where(s => s is not null));
+
+    private string ProprietorLine => string.Join("  |  ", new[]
+    {
+        string.IsNullOrWhiteSpace(_companyInfo?.ProprietorName) ? null : $"Proprietor: {_companyInfo.ProprietorName}",
+        string.IsNullOrWhiteSpace(_companyInfo?.NtnNumber) ? null : $"NTN No: {_companyInfo.NtnNumber}"
+    }.Where(s => s is not null));
 
     // One column per distinct deduction rule actually charged to the seller (farmer) across this
     // batch — whatever's configured in Setup > Format, not a fixed set — so the table always
@@ -164,6 +187,7 @@
                 pakkis.Add(await Api.GetPakkiAsync(id));
             }
             _pakkis = pakkis;
+            _companyInfo = await Api.GetCompanyInfoAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }

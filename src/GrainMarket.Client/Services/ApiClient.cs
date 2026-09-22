@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using GrainMarket.Application.Auth;
 using GrainMarket.Application.ChartOfAccounts;
+using GrainMarket.Application.Company;
 using GrainMarket.Application.Dashboard;
 using GrainMarket.Application.DeductionRules;
 using GrainMarket.Application.Expenses;
@@ -88,6 +89,9 @@ public class ApiClient
     public Task<List<SeasonDto>> GetSeasonsAsync() => GetAsync<List<SeasonDto>>("api/seasons");
     public Task<SeasonDto> CreateSeasonAsync(UpsertSeasonRequest request) => PostAsync<UpsertSeasonRequest, SeasonDto>("api/seasons", request);
     public Task<SeasonDto> UpdateSeasonAsync(int id, UpsertSeasonRequest request) => PutAsync<UpsertSeasonRequest, SeasonDto>($"api/seasons/{id}", request);
+
+    public Task<CompanyInfoDto> GetCompanyInfoAsync() => GetAsync<CompanyInfoDto>("api/company-info");
+    public Task<CompanyInfoDto> UpdateCompanyInfoAsync(UpdateCompanyInfoRequest request) => PutAsync<UpdateCompanyInfoRequest, CompanyInfoDto>("api/company-info", request);
 
     // --- Kachi / Pakki / Dual Invoice -----------------------------------------------------------
     public Task<List<KachiDto>> GetKachisAsync(int? seasonId = null) => GetAsync<List<KachiDto>>($"api/kachis{(seasonId.HasValue ? $"?seasonId={seasonId}" : "")}");

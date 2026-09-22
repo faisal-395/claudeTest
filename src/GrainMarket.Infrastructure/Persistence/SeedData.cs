@@ -30,6 +30,7 @@ public static class SeedData
         await SeedDeductionRulesAsync(db, accounts, ct);
         await SeedUnitConversionsAsync(db, ct);
         await SeedSeasonAsync(db, ct);
+        await SeedCompanyInfoAsync(db, ct);
         await SeedSampleProductsAsync(db, ct);
 
         await db.SaveChangesAsync(ct);
@@ -285,6 +286,26 @@ public static class SeedData
         if (await db.Seasons.AnyAsync(s => s.Name == name, ct)) return;
 
         db.Seasons.Add(new Season { Name = name, StartDate = new DateTime(2026, 7, 1), IsActive = true });
+        await db.SaveChangesAsync(ct);
+    }
+
+    private static async Task SeedCompanyInfoAsync(AppDbContext db, CancellationToken ct)
+    {
+        // The AddCompanyInfo migration may already have inserted this row directly — same overlap
+        // as Seasons above.
+        if (await db.CompanyInfos.AnyAsync(ct)) return;
+
+        db.CompanyInfos.Add(new CompanyInfo
+        {
+            NameEnglish = "Umer Farooq & Brothers",
+            NameUrdu = "عمر فاروق اینڈ برادرز",
+            MarketName = "Grain Market Chishtian",
+            Phone = "03026914604",
+            Mobile = "03347064086",
+            Email = "umerfarooq.8088@gmail.com",
+            NtnNumber = "7306513-7",
+            ProprietorName = "Hafiz Umer Farooq"
+        });
         await db.SaveChangesAsync(ct);
     }
 

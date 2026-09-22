@@ -3,6 +3,7 @@ using GrainMarket.Application.Auth;
 using GrainMarket.Application.ChartOfAccounts;
 using GrainMarket.Application.Common.Interfaces;
 using GrainMarket.Application.Common.Services;
+using GrainMarket.Application.Company;
 using GrainMarket.Application.Dashboard;
 using GrainMarket.Application.DeductionRules;
 using GrainMarket.Application.Expenses;
@@ -43,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<IChartOfAccountService, ChartOfAccountService>();
         services.AddScoped<IDeductionRuleService, DeductionRuleService>();
         services.AddScoped<ISeasonService, SeasonService>();
+        services.AddScoped<ICompanyInfoService, CompanyInfoService>();
         services.AddScoped<IKachiService, KachiService>();
         services.AddScoped<IPakkiService, PakkiService>();
         services.AddScoped<IMultiPurchaseService, MultiPurchaseService>();
