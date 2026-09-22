@@ -675,6 +675,24 @@ table.batch-results-grid th, table.batch-results-grid td {
 .print-a4 {
     width: 190mm;
     font-size: 13px;
+    margin: 0 auto;
+}
+
+/* On screen (not printing), a wide multi-farmer table can exceed the fixed A4 width above; let it
+   scroll within its own box instead of overflowing past main-content into the sidebar. Scoped to
+   screen only — printing must keep overflow visible so nothing gets clipped off the page. */
+@media screen {
+    .print-a4 {
+        overflow-x: auto;
+    }
+}
+
+/* Kachi/Pakki multi-farmer print tables (one row per farmer, 10-13 columns) — tighter than the
+   default data-grid sizing so the whole table has a realistic chance of fitting the print-a4 width. */
+.multi-print-grid th, .multi-print-grid td {
+    padding: 5px 6px;
+    font-size: 0.8rem;
+    line-height: 1.5;
 }
 
 #blazor-error-ui {
