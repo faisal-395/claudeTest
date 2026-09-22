@@ -69,36 +69,36 @@
                         <tr>
                             <td>@k.FarmerName</td>
                             <td>@k.ProductName</td>
-                            <td class="ltr-inline">@(k.BhartiKgPerBag?.ToString("N2") ?? "-")</td>
-                            <td class="ltr-inline">@(k.TotalWeightKg?.ToString("N2") ?? "-")</td>
-                            <td class="ltr-inline">@(ManDhrnKgBreakdown(k) is { } b ? $"{b.ManCount}/{b.DhrnCount}/{b.KgRemainder:N2}" : "-")</td>
-                            <td class="ltr-inline">@k.NetWeightKg.ToString("N2")</td>
-                            <td class="ltr-inline">@(k.BoriQty?.ToString("N2") ?? "-")</td>
-                            <td class="ltr-inline">@(k.RatePerUnit?.ToString("N2") ?? "طے نہیں")</td>
-                            <td class="ltr-inline">@k.GrossAmount.ToString("N2")</td>
+                            <td><span class="ltr-inline">@(k.BhartiKgPerBag?.ToString("N2") ?? "-")</span></td>
+                            <td><span class="ltr-inline">@(k.TotalWeightKg?.ToString("N2") ?? "-")</span></td>
+                            <td><span class="ltr-inline">@(ManDhrnKgBreakdown(k) is { } b ? $"{b.ManCount}/{b.DhrnCount}/{b.KgRemainder:N2}" : "-")</span></td>
+                            <td><span class="ltr-inline">@k.NetWeightKg.ToString("N2")</span></td>
+                            <td><span class="ltr-inline">@(k.BoriQty?.ToString("N2") ?? "-")</span></td>
+                            <td><span class="ltr-inline">@(k.RatePerUnit?.ToString("N2") ?? "طے نہیں")</span></td>
+                            <td><span class="ltr-inline">@k.GrossAmount.ToString("N2")</span></td>
                             <td>
                                 @foreach (var line in k.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Seller))
                                 {
                                     <div>@line.NameUrdu: <span class="ltr-inline">@line.Amount.ToString("N2")</span></div>
                                 }
                             </td>
-                            <td class="ltr-inline"><b>@k.TotalDeductions.ToString("N2")</b></td>
-                            <td class="ltr-inline"><b>@k.Total.ToString("N2")</b></td>
-                            <td class="ltr-inline">@(k.BuyerChargesTotal > 0 ? k.BuyerChargesTotal.ToString("N2") : "-")</td>
+                            <td><span class="ltr-inline"><b>@k.TotalDeductions.ToString("N2")</b></span></td>
+                            <td><span class="ltr-inline"><b>@k.Total.ToString("N2")</b></span></td>
+                            <td><span class="ltr-inline">@(k.BuyerChargesTotal > 0 ? k.BuyerChargesTotal.ToString("N2") : "-")</span></td>
                         </tr>
                     }
                 </tbody>
                 <tfoot>
                     <tr>
                         <td colspan="5"><b class="rtl-urdu">کل</b></td>
-                        <td class="ltr-inline"><b>@_kachis.Sum(k => k.NetWeightKg).ToString("N2")</b></td>
+                        <td><span class="ltr-inline"><b>@_kachis.Sum(k => k.NetWeightKg).ToString("N2")</b></span></td>
                         <td></td>
                         <td></td>
-                        <td class="ltr-inline"><b>@_kachis.Sum(k => k.GrossAmount).ToString("N2")</b></td>
+                        <td><span class="ltr-inline"><b>@_kachis.Sum(k => k.GrossAmount).ToString("N2")</b></span></td>
                         <td></td>
-                        <td class="ltr-inline"><b>@_kachis.Sum(k => k.TotalDeductions).ToString("N2")</b></td>
-                        <td class="ltr-inline"><b>@_kachis.Sum(k => k.Total).ToString("N2")</b></td>
-                        <td class="ltr-inline"><b>@_kachis.Sum(k => k.BuyerChargesTotal).ToString("N2")</b></td>
+                        <td><span class="ltr-inline"><b>@_kachis.Sum(k => k.TotalDeductions).ToString("N2")</b></span></td>
+                        <td><span class="ltr-inline"><b>@_kachis.Sum(k => k.Total).ToString("N2")</b></span></td>
+                        <td><span class="ltr-inline"><b>@_kachis.Sum(k => k.BuyerChargesTotal).ToString("N2")</b></span></td>
                     </tr>
                 </tfoot>
             </table>
