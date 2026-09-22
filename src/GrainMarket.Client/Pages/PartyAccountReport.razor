@@ -6,7 +6,6 @@
     <div class="no-print" style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <h1 class="page-title">Party Account Statement</h1>
     </div>
-    <p class="no-print" style="color:#777;">A farmer's, grain buyer's, or supplier's complete account — every transaction posted to their ledger, with a running balance. Same data as Ledger, filtered and laid out as a printable statement.</p>
 
     @if (_error is not null)
     {
@@ -14,15 +13,21 @@
     }
 
     <div class="no-print" style="max-width:900px;margin-bottom:16px;">
-        <button class="btn secondary" style="margin-bottom:12px;" @onclick="() => _filtersExpanded = !_filtersExpanded">
-            @(_filtersExpanded ? "▾" : "▸") Filters
-            @if (!_filtersExpanded && _ledger is not null)
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <button class="btn secondary" @onclick="() => _filtersExpanded = !_filtersExpanded">
+                @(_filtersExpanded ? "▾" : "▸") Filters
+                @if (!_filtersExpanded && _ledger is not null)
+                {
+                    <span style="font-weight:400;color:#666;">
+                        &nbsp;— @AccountTypeLabel: @_ledger.PartyName, @(_from?.ToString("yyyy-MM-dd") ?? "Start") to @(_to?.ToString("yyyy-MM-dd") ?? "Today")
+                    </span>
+                }
+            </button>
+            @if (_ledger is not null)
             {
-                <span style="font-weight:400;color:#666;">
-                    &nbsp;— @AccountTypeLabel: @_ledger.PartyName, @(_from?.ToString("yyyy-MM-dd") ?? "Start") to @(_to?.ToString("yyyy-MM-dd") ?? "Today")
-                </span>
+                <button class="btn secondary" @onclick="PrintAsync">Print</button>
             }
-        </button>
+        </div>
 
         @if (_filtersExpanded)
         {
@@ -39,10 +44,6 @@
                 <div><label>To</label><input type="date" @bind="_to" /></div>
                 <div style="grid-column: span 2;">
                     <button class="btn" @onclick="LoadAsync">Show Account</button>
-                    @if (_ledger is not null)
-                    {
-                        <button class="btn secondary" @onclick="PrintAsync">Print</button>
-                    }
                 </div>
             </div>
         }
