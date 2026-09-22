@@ -21,31 +21,58 @@
             Each row below is its own Pakki. <a href="pakki-records">View / edit all Pakki records</a>.
         </div>
 
-        <div class="print-a4 print-a4-wide rtl-urdu" style="background:white;padding:20px;border:1px solid #ccc;">
-            <div style="text-align:center;font-size:1.3rem;font-weight:700;">عمر فاروق اینڈ برادرز</div>
-            <div style="text-align:center;">پکی رسید — کئی کسان</div>
-            <hr />
+        <div class="print-a4 print-a4-wide" style="background:white;padding:20px;border:1px solid #ccc;">
+            <div style="border:1px solid #000;padding:8px 10px;">
+                <div style="text-align:center;font-family:Georgia,'Times New Roman',serif;font-size:1.5rem;font-weight:700;">Umer Farooq &amp; Brothers</div>
+                <div style="text-align:center;font-size:0.95rem;">Grain Market Chishtian</div>
+                <div style="text-align:center;font-size:0.8rem;">Phone: 03026914604&nbsp;&nbsp;Mobile: 03347064086&nbsp;&nbsp;Email: umerfarooq.8088@@gmail.com</div>
+                <div style="text-align:center;font-size:0.85rem;">Proprietor: Hafiz Umer Farooq&nbsp;&nbsp;|&nbsp;&nbsp;NTN No: 7306513-7</div>
+            </div>
+            <div style="text-align:center;font-size:1.1rem;font-weight:700;text-decoration:underline;margin-top:10px;">Pakki Maal</div>
+            <div style="text-align:center;font-size:0.85rem;margin-bottom:8px;">Date: @_pakkis[0].Date.ToString("dd-MMM-yy")</div>
+
             <table style="width:100%;">
                 <tr>
-                    <td>خریدار: @(_pakkis[0].BuyerName ?? "—")</td>
-                    <td>تاریخ: <span class="ltr-inline">@_pakkis[0].Date.ToString("yyyy-MM-dd")</span></td>
+                    <td>Bill #: @_pakkis[0].InvoiceNo</td>
+                    <td>Buyer: @_pakkis[0].BuyerName</td>
+                    <td>Product: @string.Join(", ", _pakkis.Select(p => p.ProductName).Distinct())</td>
                 </tr>
             </table>
             <hr />
+            <table style="width:100%;">
+                <tr>
+                    <td>Weight (Kg): <b>@_pakkis.Sum(p => p.NetWeightKg).ToString("N2")</b></td>
+                    <td>Gross Amount: <b>@_pakkis.Sum(p => p.GrossAmount).ToString("N2")</b></td>
+                    <td>Deductions: <b>@_pakkis.Sum(p => p.TotalDeductions).ToString("N2")</b></td>
+                    <td>Net Bill: <b>@_pakkis.Sum(p => p.NetPayableToFarmer).ToString("N2")</b></td>
+                </tr>
+                @if (BuyerChargeSummary.Count > 0)
+                {
+                    <tr>
+                        <td colspan="4">
+                            Buyer Charges: @string.Join(", ", BuyerChargeSummary.Select(x => $"{x.Name}: {x.Amount:N2}"))
+                            — Total: <b>@_pakkis.Sum(p => p.BuyerChargesTotal).ToString("N2")</b>
+                        </td>
+                    </tr>
+                }
+            </table>
+            <hr />
+
             <table class="data-grid multi-print-grid" style="width:100%;">
                 <thead>
                     <tr>
-                        <th class="rtl-urdu">کسان</th>
-                        <th class="rtl-urdu">جنس</th>
-                        <th class="rtl-urdu">صافی وزن</th>
-                        <th class="rtl-urdu">بوری</th>
-                        <th class="rtl-urdu">ریٹ</th>
-                        <th class="rtl-urdu">مجموعی رقم</th>
-                        <th class="rtl-urdu">کٹوتی کی تفصیل</th>
-                        <th class="rtl-urdu">کل کٹوتی</th>
-                        <th class="rtl-urdu">کسان کو ادائیگی</th>
-                        <th class="rtl-urdu">خریدار کٹوتی کی تفصیل</th>
-                        <th class="rtl-urdu">خریدار چارجز</th>
+                        <th>Farmer</th>
+                        <th>Rate</th>
+                        <th>Bharti</th>
+                        <th>Total Weight</th>
+                        <th>Bori</th>
+                        <th>Weight</th>
+                        <th>Price</th>
+                        @foreach (var col in SellerDeductionColumns)
+                        {
+                            <th>@col.Name</th>
+                        }
+                        <th>Net Bill</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -53,41 +80,31 @@
                     {
                         <tr>
                             <td>@p.FarmerName</td>
-                            <td>@p.ProductName</td>
-                            <td><span class="ltr-inline">@p.NetWeightKg.ToString("N2")</span></td>
-                            <td><span class="ltr-inline">@(p.BoriQty?.ToString("N2") ?? "-")</span></td>
-                            <td><span class="ltr-inline">@p.RatePerUnit.ToString("N2")</span></td>
-                            <td><span class="ltr-inline">@p.GrossAmount.ToString("N2")</span></td>
-                            <td>
-                                @foreach (var line in p.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Seller))
-                                {
-                                    <div>@line.NameUrdu: <span class="ltr-inline">@line.Amount.ToString("N2")</span></div>
-                                }
-                            </td>
-                            <td><span class="ltr-inline"><b>@p.TotalDeductions.ToString("N2")</b></span></td>
-                            <td><span class="ltr-inline"><b>@p.NetPayableToFarmer.ToString("N2")</b></span></td>
-                            <td>
-                                @foreach (var line in p.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer))
-                                {
-                                    <div>@line.NameUrdu: <span class="ltr-inline">@line.Amount.ToString("N2")</span></div>
-                                }
-                            </td>
-                            <td><span class="ltr-inline">@(p.BuyerChargesTotal > 0 ? p.BuyerChargesTotal.ToString("N2") : "-")</span></td>
+                            <td>@p.RatePerUnit.ToString("N2")</td>
+                            <td>@(p.BhartiKgPerBag?.ToString("N2") ?? "-")</td>
+                            <td>@(p.TotalWeightKg?.ToString("N2") ?? "-")</td>
+                            <td>@(p.BoriQty?.ToString("N2") ?? "-")</td>
+                            <td>@p.NetWeightKg.ToString("N2")</td>
+                            <td>@p.GrossAmount.ToString("N2")</td>
+                            @foreach (var col in SellerDeductionColumns)
+                            {
+                                var amount = p.DeductionLines.FirstOrDefault(l => l.DeductionRuleId == col.RuleId)?.Amount;
+                                <td>@(amount is { } a && a != 0 ? a.ToString("N2") : "-")</td>
+                            }
+                            <td><b>@p.NetPayableToFarmer.ToString("N2")</b></td>
                         </tr>
                     }
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="2"><b class="rtl-urdu">کل</b></td>
-                        <td><span class="ltr-inline"><b>@_pakkis.Sum(p => p.NetWeightKg).ToString("N2")</b></span></td>
-                        <td></td>
-                        <td></td>
-                        <td><span class="ltr-inline"><b>@_pakkis.Sum(p => p.GrossAmount).ToString("N2")</b></span></td>
-                        <td></td>
-                        <td><span class="ltr-inline"><b>@_pakkis.Sum(p => p.TotalDeductions).ToString("N2")</b></span></td>
-                        <td><span class="ltr-inline"><b>@_pakkis.Sum(p => p.NetPayableToFarmer).ToString("N2")</b></span></td>
-                        <td></td>
-                        <td><span class="ltr-inline"><b>@_pakkis.Sum(p => p.BuyerChargesTotal).ToString("N2")</b></span></td>
+                        <td colspan="5"><b>Total</b></td>
+                        <td><b>@_pakkis.Sum(p => p.NetWeightKg).ToString("N2")</b></td>
+                        <td><b>@_pakkis.Sum(p => p.GrossAmount).ToString("N2")</b></td>
+                        @foreach (var col in SellerDeductionColumns)
+                        {
+                            <td><b>@_pakkis.Sum(p => p.DeductionLines.FirstOrDefault(l => l.DeductionRuleId == col.RuleId)?.Amount ?? 0).ToString("N2")</b></td>
+                        }
+                        <td><b>@_pakkis.Sum(p => p.NetPayableToFarmer).ToString("N2")</b></td>
                     </tr>
                 </tfoot>
             </table>
@@ -100,6 +117,29 @@
 
     private List<PakkiDto>? _pakkis;
     private string? _error;
+
+    // One column per distinct deduction rule actually charged to the seller (farmer) across this
+    // batch — whatever's configured in Setup > Format, not a fixed set — so the table always
+    // matches what's really being deducted.
+    private List<(int RuleId, string Name)> SellerDeductionColumns =>
+        (_pakkis ?? new())
+            .SelectMany(p => p.DeductionLines)
+            .Where(l => l.ChargedTo == DeductionChargedTo.Seller)
+            .GroupBy(l => l.DeductionRuleId)
+            .Select(g => (g.Key, g.First().Name))
+            .OrderBy(x => x.Key)
+            .ToList();
+
+    // Buyer-charged deductions are invoice-level (one collection from the buyer, not per farmer),
+    // so they're itemized in the summary block above rather than as extra table columns.
+    private List<(string Name, decimal Amount)> BuyerChargeSummary =>
+        (_pakkis ?? new())
+            .SelectMany(p => p.DeductionLines)
+            .Where(l => l.ChargedTo == DeductionChargedTo.Buyer)
+            .GroupBy(l => l.DeductionRuleId)
+            .Select(g => (g.First().Name, g.Sum(l => l.Amount)))
+            .OrderBy(x => x.Name)
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {

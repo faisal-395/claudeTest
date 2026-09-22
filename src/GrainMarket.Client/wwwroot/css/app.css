@@ -695,13 +695,13 @@ table.batch-results-grid th, table.batch-results-grid td {
 .print-a4-wide {
     width: auto;
     max-width: 100%;
-    overflow-x: visible;
 }
 
 @media print {
     .print-a4-wide {
         page: multiPrintLandscape;
         width: 277mm;
+        overflow-x: visible;
     }
 }
 
