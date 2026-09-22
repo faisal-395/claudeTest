@@ -32,37 +32,56 @@
                 </tr>
             </table>
             <hr />
-            @foreach (var p in _pakkis)
-            {
-                <table style="width:100%;margin-bottom:10px;">
+            <table class="data-grid" style="width:100%;">
+                <thead>
                     <tr>
-                        <td>نمبر: <span class="ltr-inline">@p.InvoiceNo</span></td>
-                        <td>فروخت کنندہ: @p.FarmerName</td>
-                        <td>جنس: @p.ProductName</td>
+                        <th class="rtl-urdu">کسان</th>
+                        <th class="rtl-urdu">جنس</th>
+                        <th class="rtl-urdu">صافی وزن</th>
+                        <th class="rtl-urdu">بوری</th>
+                        <th class="rtl-urdu">ریٹ</th>
+                        <th class="rtl-urdu">مجموعی رقم</th>
+                        <th class="rtl-urdu">کٹوتی کی تفصیل</th>
+                        <th class="rtl-urdu">کل کٹوتی</th>
+                        <th class="rtl-urdu">کسان کو ادائیگی</th>
+                        <th class="rtl-urdu">خریدار چارجز</th>
                     </tr>
-                    <tr>
-                        <td>صافی وزن (کلو): <span class="ltr-inline">@p.NetWeightKg.ToString("N2")</span></td>
-                        <td>بوری: <span class="ltr-inline">@(p.BoriQty?.ToString("N2") ?? "-")</span></td>
-                        <td>ریٹ فی مَن: <span class="ltr-inline">@p.RatePerUnit.ToString("N2")</span></td>
-                    </tr>
-                    <tr>
-                        <td>مجموعی رقم: <span class="ltr-inline">@p.GrossAmount.ToString("N2")</span></td>
-                    </tr>
-                </table>
-                <table style="width:100%;margin-bottom:6px;">
-                    @foreach (var line in p.DeductionLines)
+                </thead>
+                <tbody>
+                    @foreach (var p in _pakkis)
                     {
-                        <tr><td>@line.NameUrdu</td><td class="ltr-inline">@line.Amount.ToString("N2")</td></tr>
+                        <tr>
+                            <td>@p.FarmerName</td>
+                            <td>@p.ProductName</td>
+                            <td class="ltr-inline">@p.NetWeightKg.ToString("N2")</td>
+                            <td class="ltr-inline">@(p.BoriQty?.ToString("N2") ?? "-")</td>
+                            <td class="ltr-inline">@p.RatePerUnit.ToString("N2")</td>
+                            <td class="ltr-inline">@p.GrossAmount.ToString("N2")</td>
+                            <td>
+                                @foreach (var line in p.DeductionLines.Where(l => l.ChargedTo == DeductionChargedTo.Seller))
+                                {
+                                    <div>@line.NameUrdu: <span class="ltr-inline">@line.Amount.ToString("N2")</span></div>
+                                }
+                            </td>
+                            <td class="ltr-inline"><b>@p.TotalDeductions.ToString("N2")</b></td>
+                            <td class="ltr-inline"><b>@p.NetPayableToFarmer.ToString("N2")</b></td>
+                            <td class="ltr-inline">@(p.BuyerChargesTotal > 0 ? p.BuyerChargesTotal.ToString("N2") : "-")</td>
+                        </tr>
                     }
-                    <tr><td><b>مجموعی کٹوتی</b></td><td class="ltr-inline"><b>@p.TotalDeductions.ToString("N2")</b></td></tr>
-                    <tr><td><b>کسان کو ادائیگی</b></td><td class="ltr-inline"><b>@p.NetPayableToFarmer.ToString("N2")</b></td></tr>
-                </table>
-                <hr />
-            }
-            <table style="width:100%;">
-                <tr><td><b>مجموعی رقم (کل)</b></td><td class="ltr-inline"><b>@_pakkis.Sum(p => p.GrossAmount).ToString("N2")</b></td></tr>
-                <tr><td><b>مجموعی کٹوتی (کل)</b></td><td class="ltr-inline"><b>@_pakkis.Sum(p => p.TotalDeductions).ToString("N2")</b></td></tr>
-                <tr><td><b>مجموعی کل رقم (کسان)</b></td><td class="ltr-inline"><b>@_pakkis.Sum(p => p.NetPayableToFarmer).ToString("N2")</b></td></tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><b class="rtl-urdu">کل</b></td>
+                        <td class="ltr-inline"><b>@_pakkis.Sum(p => p.NetWeightKg).ToString("N2")</b></td>
+                        <td></td>
+                        <td></td>
+                        <td class="ltr-inline"><b>@_pakkis.Sum(p => p.GrossAmount).ToString("N2")</b></td>
+                        <td></td>
+                        <td class="ltr-inline"><b>@_pakkis.Sum(p => p.TotalDeductions).ToString("N2")</b></td>
+                        <td class="ltr-inline"><b>@_pakkis.Sum(p => p.NetPayableToFarmer).ToString("N2")</b></td>
+                        <td class="ltr-inline"><b>@_pakkis.Sum(p => p.BuyerChargesTotal).ToString("N2")</b></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     }
