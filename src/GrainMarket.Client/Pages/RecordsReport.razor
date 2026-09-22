@@ -52,15 +52,18 @@
             <table class="data-grid kachi-records-grid">
                 <thead>
                     <tr>
-                        <th>Type</th><th>Invoice</th><th>Date</th><th>Party</th><th>Farmer(s)</th>
+                        <th></th><th>Type</th><th>Invoice</th><th>Date</th><th>Party</th><th>Farmer(s)</th>
                         <th>Product(s)</th><th>Weight</th><th>Gross</th><th>Deductions / Discount</th>
-                        <th>Net Amount</th><th>Cash</th><th>Status</th><th></th>
+                        <th>Net Amount</th><th>Cash</th><th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var row in FilteredRows)
                     {
                         <tr>
+                            <td>
+                                <a href="@row.DetailsUrl">Details</a>
+                            </td>
                             <td>@row.Type</td>
                             <td>@row.InvoiceNo</td>
                             <td>@row.Date.ToString("yyyy-MM-dd")</td>
@@ -73,9 +76,6 @@
                             <td>@row.NetAmount.ToString("N2")</td>
                             <td>@(row.Cash is { } c ? c.ToString("N2") : "—")</td>
                             <td>@row.Status</td>
-                            <td>
-                                <a href="@row.DetailsUrl">Details</a>
-                            </td>
                         </tr>
                     }
                     @if (FilteredRows.Count == 0)
