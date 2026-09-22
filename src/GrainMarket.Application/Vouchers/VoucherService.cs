@@ -69,7 +69,11 @@ public class VoucherService : IVoucherService
         await _db.SaveChangesAsync(ct);
 
         var sourceType = request.VoucherType == VoucherType.Payment ? LedgerSourceType.Payment : LedgerSourceType.Receipt;
-        var description = request.Description ?? $"{request.VoucherType} {voucher.VoucherNo}";
+        // Always keep the voucher number in the ledger description, even with a custom one entered —
+        // otherwise the statement/ledger has no way to trace the entry back to its voucher.
+        var description = string.IsNullOrWhiteSpace(request.Description)
+            ? $"{request.VoucherType} {voucher.VoucherNo}"
+            : $"{request.Description} ({voucher.VoucherNo})";
 
         // Convention: Dr the "To" side, Cr the "From" side, for both Payment and Receipt.
         await PostRefAsync(request.ToType, voucher.ToPartyId, voucher.ToAccountId, voucher.Date, request.Amount, 0m, sourceType, voucher.Id, description, ct);

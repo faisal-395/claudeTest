@@ -13,31 +13,60 @@
         <div class="error-banner">@_error</div>
     }
 
-    <div class="form-grid no-print" style="max-width:900px;">
-        <div>
-            <label>Account Type</label>
-            <SearchSelect TItem="AccountTypeOption" Items="AccountTypeOptions" IdSelector="@(o => o.Id)" TextSelector="@(o => o.Label)" Value="@_accountTypeId" ValueChanged="@OnAccountTypeChangedAsync" Placeholder="Select…" />
-        </div>
-        <div>
-            <label>@AccountTypeLabel</label>
-            <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" @bind-Value="_partyId" Placeholder="Search…" />
-        </div>
-        <div><label>From</label><input type="date" @bind="_from" /></div>
-        <div><label>To</label><input type="date" @bind="_to" /></div>
-        <div style="grid-column: span 2;">
-            <button class="btn" @onclick="LoadAsync">Show Account</button>
-            @if (_ledger is not null)
+    <div class="no-print" style="max-width:900px;margin-bottom:16px;">
+        <button class="btn secondary" style="margin-bottom:12px;" @onclick="() => _filtersExpanded = !_filtersExpanded">
+            @(_filtersExpanded ? "▾" : "▸") Filters
+            @if (!_filtersExpanded && _ledger is not null)
             {
-                <button class="btn secondary" @onclick="PrintAsync">Print</button>
+                <span style="font-weight:400;color:#666;">
+                    &nbsp;— @AccountTypeLabel: @_ledger.PartyName, @(_from?.ToString("yyyy-MM-dd") ?? "Start") to @(_to?.ToString("yyyy-MM-dd") ?? "Today")
+                </span>
             }
-        </div>
+        </button>
+
+        @if (_filtersExpanded)
+        {
+            <div class="form-grid">
+                <div>
+                    <label>Account Type</label>
+                    <SearchSelect TItem="AccountTypeOption" Items="AccountTypeOptions" IdSelector="@(o => o.Id)" TextSelector="@(o => o.Label)" Value="@_accountTypeId" ValueChanged="@OnAccountTypeChangedAsync" Placeholder="Select…" />
+                </div>
+                <div>
+                    <label>@AccountTypeLabel</label>
+                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" @bind-Value="_partyId" Placeholder="Search…" />
+                </div>
+                <div><label>From</label><input type="date" @bind="_from" /></div>
+                <div><label>To</label><input type="date" @bind="_to" /></div>
+                <div style="grid-column: span 2;">
+                    <button class="btn" @onclick="LoadAsync">Show Account</button>
+                    @if (_ledger is not null)
+                    {
+                        <button class="btn secondary" @onclick="PrintAsync">Print</button>
+                    }
+                </div>
+            </div>
+        }
     </div>
 
     @if (_ledger is not null)
     {
         <div class="print-a4" style="background:white;padding:20px;border:1px solid #ccc;margin-top:16px;">
-            <div style="text-align:center;font-size:1.2rem;font-weight:700;">Umer Farooq &amp; Brothers</div>
-            <div style="text-align:center;color:#666;">@AccountTypeLabel Account Statement</div>
+            <div style="border:1px solid #000;padding:8px 10px;">
+                <div style="text-align:center;font-family:Georgia,'Times New Roman',serif;font-size:1.3rem;font-weight:700;">@_companyInfo?.NameEnglish</div>
+                @if (!string.IsNullOrWhiteSpace(_companyInfo?.MarketName))
+                {
+                    <div style="text-align:center;font-size:0.9rem;">@_companyInfo.MarketName</div>
+                }
+                @if (ContactLine is { Length: > 0 })
+                {
+                    <div style="text-align:center;font-size:0.75rem;">@ContactLine</div>
+                }
+                @if (ProprietorLine is { Length: > 0 })
+                {
+                    <div style="text-align:center;font-size:0.8rem;">@ProprietorLine</div>
+                }
+            </div>
+            <div style="text-align:center;color:#666;margin-top:6px;">@AccountTypeLabel Account Statement</div>
             <hr />
             <table style="width:100%;margin-bottom:10px;">
                 <tr>
@@ -78,7 +107,9 @@
 @code {
     private List<PartyDto>? _parties;
     private PartyLedgerDto? _ledger;
+    private CompanyInfoDto? _companyInfo;
     private string? _error;
+    private bool _filtersExpanded = true;
 
     private record AccountTypeOption(int Id, PartyType Type, string Label);
     private static readonly List<AccountTypeOption> AccountTypeOptions = new()
@@ -96,7 +127,25 @@
 
     private string AccountTypeLabel => AccountTypeOptions[_accountTypeId].Label;
 
-    protected override async Task OnInitializedAsync() => await LoadPartiesAsync();
+    private string ContactLine => string.Join("  ", new[]
+    {
+        string.IsNullOrWhiteSpace(_companyInfo?.Phone) ? null : $"Phone: {_companyInfo.Phone}",
+        string.IsNullOrWhiteSpace(_companyInfo?.Mobile) ? null : $"Mobile: {_companyInfo.Mobile}",
+        string.IsNullOrWhiteSpace(_companyInfo?.Email) ? null : $"Email: {_companyInfo.Email}"
+    }.Where(s => s is not null));
+
+    private string ProprietorLine => string.Join("  |  ", new[]
+    {
+        string.IsNullOrWhiteSpace(_companyInfo?.ProprietorName) ? null : $"Proprietor: {_companyInfo.ProprietorName}",
+        string.IsNullOrWhiteSpace(_companyInfo?.NtnNumber) ? null : $"NTN No: {_companyInfo.NtnNumber}"
+    }.Where(s => s is not null));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPartiesAsync();
+        try { _companyInfo = await Api.GetCompanyInfoAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
 
     private async Task LoadPartiesAsync()
     {
@@ -121,7 +170,11 @@
         _error = null;
         _ledger = null;
         if (_partyId == 0) { _error = $"Pick a {AccountTypeLabel.ToLowerInvariant()} first."; return; }
-        try { _ledger = await Api.GetPartyLedgerAsync(_partyId, _from, _to); }
+        try
+        {
+            _ledger = await Api.GetPartyLedgerAsync(_partyId, _from, _to);
+            _filtersExpanded = false;
+        }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
