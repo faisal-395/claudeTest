@@ -146,7 +146,7 @@ public class PakkiService : IPakkiService
 
         var pakki = new Pakki
         {
-            InvoiceNo = await _numberGenerator.NextAsync("P", ct),
+            InvoiceNo = request.InvoiceNo ?? await _numberGenerator.NextAsync("P", ct),
             BillNumber = request.BillNumber,
             Date = request.Date,
             SeasonId = request.SeasonId,

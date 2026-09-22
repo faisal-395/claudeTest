@@ -21,7 +21,11 @@ public record CreateStandalonePakkiRequest(
     DateTime Date, int SeasonId, int BuyerId, int FarmerId, int ProductId,
     decimal? BhartiKgPerBag, decimal? TotalWeightKg,
     decimal RatePerUnit, string? VehicleNumber, string? Notes, string? BillNumber = null,
-    List<DeductionOverrideRequest>? DeductionOverrides = null);
+    List<DeductionOverrideRequest>? DeductionOverrides = null,
+    // Set only by MultiSaleService, which generates one InvoiceNo per batch (one buyer, several
+    // farmer rows) and passes it to every row so the whole batch shares a single invoice number —
+    // left null everywhere else, which self-generates a fresh one as before.
+    string? InvoiceNo = null);
 
 /// <summary>Edits an open Pakki's buyer/rate/vehicle/notes. Weight, product, farmer and season stay
 /// fixed (they carry the Kachi's identity forward, or fix the standalone sale's own identity) —

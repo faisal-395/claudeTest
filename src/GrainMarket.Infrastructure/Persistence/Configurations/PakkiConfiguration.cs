@@ -9,7 +9,9 @@ public class PakkiConfiguration : IEntityTypeConfiguration<Pakki>
     public void Configure(EntityTypeBuilder<Pakki> builder)
     {
         builder.Property(p => p.InvoiceNo).IsRequired().HasMaxLength(30);
-        builder.HasIndex(p => p.InvoiceNo).IsUnique();
+        // Not unique: a multi-farmer batch (MultiSaleService) shares one InvoiceNo across all its
+        // rows — one buyer's invoice, several farmers' Pakki rows underneath.
+        builder.HasIndex(p => p.InvoiceNo);
         builder.Property(p => p.BillNumber).HasMaxLength(30);
         builder.Property(p => p.VehicleNumber).HasMaxLength(30);
 

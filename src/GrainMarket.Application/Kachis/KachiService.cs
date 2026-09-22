@@ -60,7 +60,7 @@ public class KachiService : IKachiService
 
         var kachi = new Kachi
         {
-            InvoiceNo = await _numberGenerator.NextAsync("K", ct),
+            InvoiceNo = request.InvoiceNo ?? await _numberGenerator.NextAsync("K", ct),
             ReceiptNumber = await _numberGenerator.NextAsync("KR", ct),
             BillNumber = request.BillNumber,
             Date = request.Date,

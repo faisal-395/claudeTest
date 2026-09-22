@@ -11,11 +11,13 @@ public class MultiSaleService : IMultiSaleService
 {
     private readonly IApplicationDbContext _db;
     private readonly IPakkiService _pakkiService;
+    private readonly IInvoiceNumberGenerator _numberGenerator;
 
-    public MultiSaleService(IApplicationDbContext db, IPakkiService pakkiService)
+    public MultiSaleService(IApplicationDbContext db, IPakkiService pakkiService, IInvoiceNumberGenerator numberGenerator)
     {
         _db = db;
         _pakkiService = pakkiService;
+        _numberGenerator = numberGenerator;
     }
 
     public async Task<MultiSaleResultDto> CreateAsync(CreateMultiSaleRequest request, CancellationToken ct = default)
@@ -23,17 +25,20 @@ public class MultiSaleService : IMultiSaleService
         var buyer = await _db.Parties.FirstOrDefaultAsync(p => p.Id == request.BuyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct)
             ?? throw new NotFoundException(nameof(Party), request.BuyerId);
 
+        // One invoice number for the whole batch — not one per row — mirroring
+        // MultiPurchaseService's fix: each row is still its own standalone Pakki (one farmer's
+        // settlement, its own deductions/ledger postings), just sharing this one InvoiceNo.
+        var invoiceNo = await _numberGenerator.NextAsync("P", ct);
+
         var rows = new List<MultiSaleRowResultDto>();
         decimal grandGross = 0, grandDeductions = 0, grandTotal = 0;
 
-        // Each row is its own standalone Pakki — one farmer's settlement, with the shared
-        // vendor/buyer already attached. Mirrors MultiPurchaseService's one-row-per-Kachi shape.
         foreach (var row in request.Rows)
         {
             var pakki = await _pakkiService.CreateStandaloneAsync(new CreateStandalonePakkiRequest(
                 request.Date, request.SeasonId, request.BuyerId, row.FarmerId, row.ProductId,
                 row.BhartiKgPerBag, row.TotalWeightKg, row.RatePerUnit!.Value, row.VehicleNumber, row.Notes, request.BillNumber,
-                row.DeductionOverrides), ct);
+                row.DeductionOverrides, InvoiceNo: invoiceNo), ct);
 
             rows.Add(new MultiSaleRowResultDto(pakki.Id, pakki.InvoiceNo));
 
