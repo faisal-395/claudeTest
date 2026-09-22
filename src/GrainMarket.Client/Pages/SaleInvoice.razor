@@ -10,6 +10,10 @@
     {
         <div class="error-banner">@_error</div>
     }
+    @if (_successMessage is not null)
+    {
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+    }
 
     <div class="form-grid" style="max-width:1100px;">
         <div><label>Bill No</label><input @bind="_billNo" /></div>
@@ -74,44 +78,14 @@
             <button class="btn" disabled="@(_lines.Count == 0 || HasStockIssue)" @onclick="SaveAsync">Save Sale Invoice</button>
         </div>
     </div>
-
-    @if (_invoices is not null)
-    {
-        <h3 style="margin-top:24px;">Recent Sale Invoices</h3>
-        <table class="data-grid" style="max-width:1100px;">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Net Bill</th><th>Received</th><th>Status</th><th></th><th></th></tr></thead>
-            <tbody>
-                @foreach (var inv in _invoices)
-                {
-                    <tr>
-                        <td>@inv.InvoiceNo</td>
-                        <td>@inv.Date.ToString("yyyy-MM-dd")</td>
-                        <td>@inv.CustomerName</td>
-                        <td>@inv.NetBill.ToString("N2")</td>
-                        <td>@inv.ReceivedCash.ToString("N2")</td>
-                        <td>@(inv.IsCancelled ? "Cancelled" : "Open")</td>
-                        <td>
-                            <a href="print/sale/@inv.Id">Details</a>
-                        </td>
-                        <td>
-                            @if (!inv.IsCancelled)
-                            {
-                                <a href="#" @onclick="() => CancelAsync(inv.Id)" @onclick:preventDefault="true">Cancel</a>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
 </RequireAuth>
 
 @code {
     private List<PartyDto>? _customers;
     private List<ProductDto>? _products;
-    private List<SaleInvoiceDto>? _invoices;
     private Dictionary<int, decimal> _stock = new();
     private string? _error;
+    private string? _successMessage;
 
     private string? _billNo;
     private DateTime _date = DateTime.Today;
@@ -141,13 +115,6 @@
             _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
             if (_customers.Count > 0) _customerId = _customers[0].Id;
         }
-        catch (Models.ApiException ex) { _error = ex.Message; return; }
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        try { _invoices = await Api.GetSaleInvoicesAsync(); }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
@@ -195,33 +162,22 @@
 
     private static decimal ParseDecimal(object? value) => decimal.TryParse(value?.ToString(), out var d) ? d : 0;
 
-    private async Task CancelAsync(int id)
-    {
-        _error = null;
-        try
-        {
-            await Api.CancelSaleInvoiceAsync(id);
-            _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
-            await LoadAsync();
-        }
-        catch (Models.ApiException ex) { _error = ex.Message; }
-    }
-
     private async Task SaveAsync()
     {
         _error = null;
+        _successMessage = null;
         var request = new CreateSaleInvoiceRequest(
             _date, _billNo, _customerId,
             _lines.Select(l => new SaleInvoiceLineRequest(l.ProductId, l.Quantity, l.Price, l.DiscountPercent)).ToList(),
             _receivedCash, _printFormat, _printLanguage);
         try
         {
-            await Api.CreateSaleInvoiceAsync(request);
+            var result = await Api.CreateSaleInvoiceAsync(request);
+            _successMessage = $"Sale Invoice {result.InvoiceNo} saved. See it under Records Report.";
             _lines.Clear();
             _receivedCash = 0;
             _billNo = null;
             _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
-            await LoadAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }

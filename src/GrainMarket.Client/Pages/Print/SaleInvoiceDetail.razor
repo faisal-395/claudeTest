@@ -6,6 +6,10 @@
     <div class="no-print" style="margin-bottom:12px;">
         <button class="btn secondary" @onclick="GoBackAsync">← Back</button>
         <button class="btn" @onclick="PrintAsync">Print</button>
+        @if (_sale is { IsCancelled: false })
+        {
+            <button class="btn danger" @onclick="CancelAsync">Cancel Sale Invoice</button>
+        }
     </div>
 
     @if (_error is not null)
@@ -19,8 +23,22 @@
     else
     {
         <div class="print-a4" style="background:white;padding:20px;border:1px solid #ccc;">
-            <div style="text-align:center;font-size:1.3rem;font-weight:700;">Umer Farooq &amp; Brothers</div>
-            <div style="text-align:center;color:#666;">Sale Invoice</div>
+            <div style="border:1px solid #000;padding:8px 10px;">
+                <div style="text-align:center;font-family:Georgia,'Times New Roman',serif;font-size:1.3rem;font-weight:700;">@_companyInfo?.NameEnglish</div>
+                @if (!string.IsNullOrWhiteSpace(_companyInfo?.MarketName))
+                {
+                    <div style="text-align:center;font-size:0.9rem;">@_companyInfo.MarketName</div>
+                }
+                @if (ContactLine is { Length: > 0 })
+                {
+                    <div style="text-align:center;font-size:0.75rem;">@ContactLine</div>
+                }
+                @if (ProprietorLine is { Length: > 0 })
+                {
+                    <div style="text-align:center;font-size:0.8rem;">@ProprietorLine</div>
+                }
+            </div>
+            <div style="text-align:center;color:#666;margin-top:6px;">Sale Invoice</div>
             <hr />
             <table style="width:100%;">
                 <tr>
@@ -74,18 +92,46 @@
 @code {
     [Parameter] public int Id { get; set; }
     private SaleInvoiceDto? _sale;
+    private CompanyInfoDto? _companyInfo;
     private string? _error;
+
+    private string ContactLine => string.Join("  ", new[]
+    {
+        string.IsNullOrWhiteSpace(_companyInfo?.Phone) ? null : $"Phone: {_companyInfo.Phone}",
+        string.IsNullOrWhiteSpace(_companyInfo?.Mobile) ? null : $"Mobile: {_companyInfo.Mobile}",
+        string.IsNullOrWhiteSpace(_companyInfo?.Email) ? null : $"Email: {_companyInfo.Email}"
+    }.Where(s => s is not null));
+
+    private string ProprietorLine => string.Join("  |  ", new[]
+    {
+        string.IsNullOrWhiteSpace(_companyInfo?.ProprietorName) ? null : $"Proprietor: {_companyInfo.ProprietorName}",
+        string.IsNullOrWhiteSpace(_companyInfo?.NtnNumber) ? null : $"NTN No: {_companyInfo.NtnNumber}"
+    }.Where(s => s is not null));
 
     protected override async Task OnInitializedAsync()
     {
-        try { _sale = await Api.GetSaleInvoiceAsync(Id); }
+        try
+        {
+            _sale = await Api.GetSaleInvoiceAsync(Id);
+            _companyInfo = await Api.GetCompanyInfoAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task CancelAsync()
+    {
+        _error = null;
+        try
+        {
+            await Api.CancelSaleInvoiceAsync(Id);
+            _sale = await Api.GetSaleInvoiceAsync(Id);
+        }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
     private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
 
-    // Uses real browser history instead of a hardcoded route — this page is reachable from Sale
-    // Invoice's Recent Sale Invoices list and from the combined Records Report, and "Back" should
-    // return to whichever one the operator actually came from.
+    // Uses real browser history instead of a hardcoded route — this page is reachable from the
+    // combined Records Report, and "Back" should return there.
     private Task GoBackAsync() => JS.InvokeVoidAsync("history.back").AsTask();
 }
