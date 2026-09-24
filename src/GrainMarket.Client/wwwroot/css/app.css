@@ -871,6 +871,22 @@ table.batch-results-grid th, table.batch-results-grid td {
     max-width: 100%;
 }
 
+/* Party Account Statement — a report with several columns benefits from the full width
+   .main-content has to give on screen (more rows visible without a horizontal scroll), but should
+   still print at the same standard A4 portrait width as the single-document print pages above. */
+.print-a4-report {
+    width: auto;
+    max-width: 100%;
+    font-size: 13px;
+}
+
+@media print {
+    .print-a4-report {
+        width: 190mm;
+        margin: 0 auto;
+    }
+}
+
 @media print {
     .print-a4-wide {
         page: multiPrintLandscape;

@@ -51,7 +51,7 @@
 
     @if (_ledger is not null)
     {
-        <div class="print-a4" style="background:white;padding:20px;border:1px solid #ccc;margin-top:16px;">
+        <div class="print-a4-report" style="background:white;padding:20px;border:1px solid #ccc;margin-top:16px;">
             <div style="border:1px solid #000;padding:8px 10px;">
                 <div style="text-align:center;font-family:Georgia,'Times New Roman',serif;font-size:1.3rem;font-weight:700;">@_companyInfo?.NameEnglish</div>
                 @if (!string.IsNullOrWhiteSpace(_companyInfo?.MarketName))
@@ -86,12 +86,12 @@
             else
             {
                 <table class="data-grid" style="width:100%;">
-                    <thead><tr><th>Date</th><th>Invoice / Voucher #</th><th>Description</th><th style="text-align:right;">Debit</th><th style="text-align:right;">Credit</th><th style="text-align:right;">Balance</th></tr></thead>
+                    <thead><tr><th>Date &amp; Time</th><th>Invoice / Voucher #</th><th>Description</th><th style="text-align:right;">Debit</th><th style="text-align:right;">Credit</th><th style="text-align:right;">Balance</th></tr></thead>
                     <tbody>
                         @foreach (var r in _ledger.Rows)
                         {
                             <tr>
-                                <td>@r.Date.ToString("yyyy-MM-dd")</td>
+                                <td>@r.Date.ToString("yyyy-MM-dd") <span style="color:#777;">@LocalTime(r.CreatedAtUtc).ToString("HH:mm")</span></td>
                                 <td>@(r.ReferenceNo ?? "—")</td>
                                 <td>@r.Description</td>
                                 <td style="text-align:right;">@(r.Debit > 0 ? r.Debit.ToString("N2") : "")</td>
@@ -128,6 +128,11 @@
     private DateTime? _to;
 
     private string AccountTypeLabel => AccountTypeOptions[_accountTypeId].Label;
+
+    // CreatedAtUtc always comes back Kind-unspecified from EF/Npgsql even though it was stamped
+    // with DateTime.UtcNow at insert time — SpecifyKind makes that explicit before converting, so
+    // this always reflects the device's local time regardless of how the value round-tripped.
+    private static DateTime LocalTime(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime();
 
     private string ContactLine => string.Join("  ", new[]
     {
