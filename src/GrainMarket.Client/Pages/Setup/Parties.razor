@@ -2,7 +2,7 @@
 @inject ApiClient Api
 
 <RequireAuth>
-    <h1 class="page-title">Party (Farmers / Buyers / Agents / Other)</h1>
+    <h1 class="page-title">Party (Farmers / Vendors / Suppliers / Other)</h1>
 
     @if (_error is not null)
     {
@@ -18,14 +18,18 @@
             <label>Name (Urdu)</label>
             <input class="rtl-urdu" @bind="_nameUrdu" />
         </div>
-        <div>
-            <label>Type</label>
-            <select @bind="_partyType">
-                @foreach (var t in Enum.GetValues<PartyType>())
-                {
-                    <option value="@t">@t</option>
-                }
-            </select>
+        <div style="grid-column: span 2;">
+            <label>Roles</label>
+            <div style="display:flex;gap:16px;">
+                <label><input type="checkbox" @bind="_isFarmer" /> Farmer</label>
+                <label><input type="checkbox" @bind="_isVendor" /> Vendor</label>
+                <label><input type="checkbox" @bind="_isSupplier" /> Supplier</label>
+                <label><input type="checkbox" @bind="_isOther" /> Other</label>
+            </div>
+            @if (!_isFarmer && !_isVendor && !_isSupplier && !_isOther)
+            {
+                <div class="invalid-total">Select at least one role.</div>
+            }
         </div>
         <div>
             <label>Phone</label>
@@ -51,7 +55,7 @@
             </select>
         </div>
         <div style="grid-column: span 2;">
-            <button class="btn" @onclick="SaveAsync">@(_editingId is null ? "Add Party" : "Update Party")</button>
+            <button class="btn" disabled="@(!_isFarmer && !_isVendor && !_isSupplier && !_isOther)" @onclick="SaveAsync">@(_editingId is null ? "Add Party" : "Update Party")</button>
             @if (_editingId is not null)
             {
                 <button class="btn secondary" @onclick="ResetForm">Cancel</button>
@@ -107,7 +111,10 @@
 
     private string _name = "";
     private string? _nameUrdu;
-    private PartyType _partyType = PartyType.Farmer;
+    private bool _isFarmer = true;
+    private bool _isVendor;
+    private bool _isSupplier;
+    private bool _isOther;
     private string? _phone;
     private string? _cnic;
     private string? _address;
@@ -131,7 +138,10 @@
         _editingId = p.Id;
         _name = p.Name;
         _nameUrdu = p.NameUrdu;
-        _partyType = p.PartyType;
+        _isFarmer = p.PartyType.HasFlag(PartyType.Farmer);
+        _isVendor = p.PartyType.HasFlag(PartyType.Vendor);
+        _isSupplier = p.PartyType.HasFlag(PartyType.Supplier);
+        _isOther = p.PartyType.HasFlag(PartyType.Other);
         _phone = p.Phone;
         _cnic = p.Cnic;
         _address = p.Address;
@@ -142,14 +152,18 @@
     private void ResetForm()
     {
         _editingId = null;
-        _name = ""; _nameUrdu = null; _partyType = PartyType.Farmer;
+        _name = ""; _nameUrdu = null; _isFarmer = true; _isVendor = false; _isSupplier = false; _isOther = false;
         _phone = null; _cnic = null; _address = null; _openingBalance = 0; _openingSide = BalanceSide.Debit;
     }
+
+    private PartyType ComposePartyType() =>
+        (_isFarmer ? PartyType.Farmer : 0) | (_isVendor ? PartyType.Vendor : 0) |
+        (_isSupplier ? PartyType.Supplier : 0) | (_isOther ? PartyType.Other : 0);
 
     private async Task SaveAsync()
     {
         _error = null;
-        var request = new UpsertPartyRequest(_name, _nameUrdu, _partyType, _phone, _cnic, _address, _openingBalance, _openingSide, true);
+        var request = new UpsertPartyRequest(_name, _nameUrdu, ComposePartyType(), _phone, _cnic, _address, _openingBalance, _openingSide, true);
         try
         {
             if (_editingId is null) await Api.CreatePartyAsync(request);

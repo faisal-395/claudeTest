@@ -8,6 +8,10 @@
     {
         <div class="error-banner">@_error</div>
     }
+    @if (_successMessage is not null)
+    {
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+    }
 
     <div class="form-grid">
         <div><label>Date</label><input type="date" @bind="_date" /></div>
@@ -36,32 +40,12 @@
             <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">Save Expense</button>
         </div>
     </div>
-
-    @if (_expenses is not null)
-    {
-        <h3 style="margin-top:24px;">Recent Expenses</h3>
-        <table class="data-grid" style="max-width:1000px;">
-            <thead><tr><th>No</th><th>Date</th><th>Account</th><th>Amount</th><th>Paid From</th></tr></thead>
-            <tbody>
-                @foreach (var e in _expenses)
-                {
-                    <tr>
-                        <td>@e.ExpenseNo</td>
-                        <td>@e.Date.ToString("yyyy-MM-dd")</td>
-                        <td>@e.ExpenseAccountName</td>
-                        <td>@e.Amount.ToString("N2")</td>
-                        <td>@(e.PaidFromAccountName ?? e.PaidFrom.ToString())</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
 </RequireAuth>
 
 @code {
     private List<ChartOfAccountDto>? _accounts;
-    private List<ExpenseDto>? _expenses;
     private string? _error;
+    private string? _successMessage;
 
     private DateTime _date = DateTime.Today;
     private int _expenseAccountId;
@@ -79,25 +63,19 @@
             if (firstExpense is not null) _expenseAccountId = firstExpense.Id;
             if (_accounts.Count > 0) _paidFromAccountId = _accounts[0].Id;
         }
-        catch (Models.ApiException ex) { _error = ex.Message; return; }
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        try { _expenses = await Api.GetExpensesAsync(); }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
     private async Task SaveAsync()
     {
         _error = null;
+        _successMessage = null;
         var request = new CreateExpenseRequest(_date, _expenseAccountId, _amount, _description, _paidFrom, _paidFrom == LedgerPartyRefType.Account ? _paidFromAccountId : null);
         try
         {
-            await Api.CreateExpenseAsync(request);
+            var result = await Api.CreateExpenseAsync(request);
+            _successMessage = $"Expense {result.ExpenseNo} saved.";
             _amount = 0; _description = null;
-            await LoadAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }

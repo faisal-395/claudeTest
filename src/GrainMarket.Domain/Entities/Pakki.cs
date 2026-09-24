@@ -7,6 +7,7 @@ namespace GrainMarket.Domain.Entities;
 public class Pakki : BaseEntity
 {
     public string InvoiceNo { get; set; } = string.Empty;
+    public string? BillNumber { get; set; }
     public DateTime Date { get; set; }
     public int SeasonId { get; set; }
     public Season Season { get; set; } = null!;
@@ -26,15 +27,24 @@ public class Pakki : BaseEntity
     public int ProductId { get; set; }
     public Product Product { get; set; } = null!;
 
-    public decimal? ManQty { get; set; }
-    public decimal? KiloQty { get; set; }
-    public decimal? GramQty { get; set; }
+    public decimal? BhartiKgPerBag { get; set; }
+    public decimal? TotalWeightKg { get; set; }
     public decimal? BoriQty { get; set; }
     public decimal NetWeightKg { get; set; }
 
     public decimal RatePerUnit { get; set; }
     public decimal GrossAmount { get; set; }
+
+    /// <summary>Sum of seller-charged deduction lines only — this is what actually reduces
+    /// NetPayableToFarmer. Buyer-charged lines are excluded here and totalled separately in
+    /// BuyerChargesTotal instead.</summary>
     public decimal TotalDeductions { get; set; }
+
+    /// <summary>Sum of buyer-charged deduction lines — added on top of GrossAmount when posting the
+    /// buyer's ledger entry, but not netted into NetPayableToFarmer.</summary>
+    public decimal BuyerChargesTotal { get; set; }
+
+    /// <summary>Seller's net payable: GrossAmount minus TotalDeductions (seller-charged lines only).</summary>
     public decimal NetPayableToFarmer { get; set; }
 
     public string? VehicleNumber { get; set; }
@@ -56,4 +66,8 @@ public class PakkiDeductionLine : BaseEntity
     public string NameUrdu { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public string? VehicleNumber { get; set; }
+
+    /// <summary>Copied from DeductionRule.ChargedTo at posting time, so historical lines keep
+    /// reading correctly even if the rule's ChargedTo is changed later.</summary>
+    public DeductionChargedTo ChargedTo { get; set; } = DeductionChargedTo.Seller;
 }

@@ -6,6 +6,10 @@
 {
     <div class="error-banner">@_error</div>
 }
+@if (_successMessage is not null)
+{
+    <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+}
 
 <div class="form-grid">
     <div><label>Date</label><input type="date" @bind="_date" /></div>
@@ -72,26 +76,6 @@
     </div>
 </div>
 
-@if (_vouchers is not null)
-{
-    <h3 style="margin-top:24px;">Recent @(Title)s</h3>
-    <table class="data-grid" style="max-width:1000px;">
-        <thead><tr><th>No</th><th>Date</th><th>From</th><th>To</th><th>Amount</th></tr></thead>
-        <tbody>
-            @foreach (var v in _vouchers)
-            {
-                <tr>
-                    <td>@v.VoucherNo</td>
-                    <td>@v.Date.ToString("yyyy-MM-dd")</td>
-                    <td>@(v.FromPartyName ?? v.FromAccountName ?? v.FromType?.ToString())</td>
-                    <td>@(v.ToPartyName ?? v.ToAccountName ?? v.ToType?.ToString())</td>
-                    <td>@v.Amount.ToString("N2")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-
 @code {
     [Parameter, EditorRequired] public VoucherType VoucherKind { get; set; }
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
@@ -99,8 +83,8 @@
     private List<SeasonDto>? _seasons;
     private List<PartyDto>? _parties;
     private List<ChartOfAccountDto>? _accounts;
-    private List<VoucherDto>? _vouchers;
     private string? _error;
+    private string? _successMessage;
 
     private DateTime _date = DateTime.Today;
     private int _seasonId;
@@ -126,29 +110,22 @@
             if (_parties.Count > 0) { _fromPartyId = _parties[0].Id; _toPartyId = _parties[0].Id; }
             if (_accounts.Count > 0) { _fromAccountId = _accounts[0].Id; _toAccountId = _accounts[0].Id; }
         }
-        catch (Models.ApiException ex) { _error = ex.Message; return; }
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        try { _vouchers = await Api.GetVouchersAsync(VoucherKind); }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
     private async Task SaveAsync()
     {
         _error = null;
+        _successMessage = null;
         var request = new CreatePaymentOrReceiptRequest(
             VoucherKind, _date, _seasonId, _amount, _refNo, _description,
             _fromType, _fromPartyId, _fromAccountId,
             _toType, _toPartyId, _toAccountId);
         try
         {
-            if (VoucherKind == VoucherType.Payment) await Api.CreatePaymentAsync(request);
-            else await Api.CreateReceiptAsync(request);
+            var result = VoucherKind == VoucherType.Payment ? await Api.CreatePaymentAsync(request) : await Api.CreateReceiptAsync(request);
+            _successMessage = $"{Title} {result.VoucherNo} saved.";
             _amount = 0; _refNo = null; _description = null;
-            await LoadAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }

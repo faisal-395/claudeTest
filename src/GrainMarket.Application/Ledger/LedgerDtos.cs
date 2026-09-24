@@ -2,7 +2,7 @@ using GrainMarket.Domain.Enums;
 
 namespace GrainMarket.Application.Ledger;
 
-public record LedgerRowDto(int Id, DateTime Date, decimal Debit, decimal Credit, decimal RunningBalance, LedgerSourceType SourceType, int SourceId, string? Description);
+public record LedgerRowDto(int Id, DateTime Date, DateTime CreatedAtUtc, decimal Debit, decimal Credit, decimal RunningBalance, LedgerSourceType SourceType, int SourceId, string? Description, string? ReferenceNo);
 
 public record PartyLedgerDto(int PartyId, string PartyName, decimal OpeningBalance, decimal ClosingBalance, List<LedgerRowDto> Rows);
 

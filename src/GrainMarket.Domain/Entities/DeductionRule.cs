@@ -21,7 +21,7 @@ public class DeductionRule : BaseEntity
 
     /// <summary>Farmer (default, existing behavior — reduces what the farmer receives) or Buyer
     /// (calculated and shown, but never reduces the farmer's payable). See DeductionChargedTo.</summary>
-    public DeductionChargedTo ChargedTo { get; set; } = DeductionChargedTo.Farmer;
+    public DeductionChargedTo ChargedTo { get; set; } = DeductionChargedTo.Seller;
 
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;

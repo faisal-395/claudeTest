@@ -25,6 +25,12 @@ public class PurchasesController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PurchaseDto>> GetById(int id, CancellationToken ct) => Ok(await _service.GetByIdAsync(id, ct));
 
+    // Reserves (consumes) the next invoice number immediately, so the New Purchase screen can show
+    // it before Save — matches the legacy software. Left unsaved, that number is simply skipped.
+    [ModulePermission(ModuleName.Purchase, PermissionAction.Create)]
+    [HttpGet("next-invoice-no")]
+    public async Task<ActionResult<NextPurchaseInvoiceNoDto>> ReserveNextInvoiceNo(CancellationToken ct) => Ok(await _service.ReserveNextInvoiceNoAsync(ct));
+
     [ModulePermission(ModuleName.Purchase, PermissionAction.Create)]
     [HttpPost]
     public async Task<ActionResult<PurchaseDto>> Create(CreatePurchaseRequest request, CancellationToken ct)

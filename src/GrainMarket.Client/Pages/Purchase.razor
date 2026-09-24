@@ -1,148 +1,219 @@
 @page "/purchase"
+@using GrainMarket.Application.Common
 @inject ApiClient Api
+@inject NavigationManager Nav
 
 <RequireAuth>
-    <h1 class="page-title">Purchase</h1>
+    <div class="batch-page-fill">
+    <h1 class="page-title" style="margin-bottom:4px;">Purchase</h1>
 
     @if (_error is not null)
     {
         <div class="error-banner">@_error</div>
     }
-
-    <div class="form-grid" style="max-width:1100px;">
-        <div><label>Bill No</label><input @bind="_billNo" /></div>
-        <div><label>Date</label><input type="date" @bind="_date" /></div>
-        <div>
-            <label>Supplier</label>
-            <SearchSelect TItem="PartyDto" Items="_suppliers" IdSelector="@(s => s.Id)" TextSelector="@DisplayText.Party" @bind-Value="_supplierId" Placeholder="Search supplier…" />
-        </div>
-    </div>
-
-    <table class="data-grid" style="max-width:1100px;margin-top:14px;">
-        <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Discount %</th><th>Net</th><th></th></tr></thead>
-        <tbody>
-            @for (var i = 0; i < _lines.Count; i++)
-            {
-                var index = i;
-                var line = _lines[index];
-                <tr>
-                    <td>
-                        <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@line.ProductId" ValueChanged="@(v => line.ProductId = v)" Placeholder="Search product…" />
-                    </td>
-                    <td><input type="number" step="0.01" value="@line.Quantity" @onchange="e => line.Quantity = ParseDecimal(e.Value)" /></td>
-                    <td><input type="number" step="0.01" value="@line.Price" @onchange="e => line.Price = ParseDecimal(e.Value)" /></td>
-                    <td><input type="number" step="0.01" value="@line.DiscountPercent" @onchange="e => line.DiscountPercent = ParseDecimal(e.Value)" /></td>
-                    <td>@LineNet(line).ToString("N2")</td>
-                    <td><button class="btn danger" @onclick="() => _lines.RemoveAt(index)">Remove</button></td>
-                </tr>
-            }
-        </tbody>
-    </table>
-    <button class="btn secondary" style="margin-top:8px;" @onclick="AddLine">+ Add Line</button>
-
-    <div class="form-grid" style="max-width:1100px;margin-top:14px;">
-        <div class="total-figure">Total Bill: Rs @TotalBill.ToString("N2")</div>
-        <div><label>Paid Cash</label><input type="number" step="0.01" @bind="_paidCash" /></div>
-        <div style="grid-column: span 2;">
-            @if (_lines.Count == 0)
-            {
-                <div class="invalid-total">Add at least one line item.</div>
-            }
-            <button class="btn" disabled="@(_lines.Count == 0)" @onclick="SaveAsync">Save Purchase</button>
-        </div>
-    </div>
-
-    @if (_purchases is not null)
+    @if (_successMessage is not null)
     {
-        <h3 style="margin-top:24px;">Recent Purchases</h3>
-        <table class="data-grid" style="max-width:1100px;">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Supplier</th><th>Net Bill</th><th>Paid</th><th>Status</th><th></th></tr></thead>
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+    }
+
+    <div class="batch-entry-panel">
+        <div class="batch-entry-inputs">
+            <div class="batch-entry-row batch-entry-row-header">
+                <div><label>Invoice #</label><div class="batch-readonly-figure">@(_reservedInvoiceNo ?? "…")</div></div>
+                <div><label>Bill No</label><input @bind="_billNo" /></div>
+                <div><label>Date</label><input type="date" @bind="_date" /></div>
+                <div>
+                    <label>Supplier</label>
+                    <SearchSelect TItem="PartyDto" Items="_suppliers" IdSelector="@(s => s.Id)" TextSelector="@DisplayText.Party" @bind-Value="_supplierId" Placeholder="Search supplier…" />
+                </div>
+                <div><label>Balance</label><div class="batch-readonly-figure">Rs @SelectedSupplierBalance.ToString("N2")</div></div>
+            </div>
+            <div class="batch-entry-section-label">Add Product</div>
+            <div class="batch-entry-row batch-entry-row-product">
+                <div>
+                    <label>Product</label>
+                    <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" @bind-Value="_stagingProductId" Placeholder="Search product…" />
+                </div>
+                <div><label>Quantity</label><input type="number" step="0.01" @bind="_stagingQuantity" /></div>
+                <div><label>Price</label><input type="number" step="0.01" @bind="_stagingPrice" /></div>
+                <div><label>Discount %</label><input type="number" step="0.01" @bind="_stagingDiscountPercent" /></div>
+                <div><label>Expiry Date</label><input type="date" @bind="_stagingExpiryDate" title="Optional — only for products with a shelf life" /></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="batch-add-calc-row batch-add-calc-row-end">
+        <div class="batch-staging-calc">
+            <span>Net Price: <b>Rs @StagingUnitNetPrice.ToString("N2")</b></span>
+            <span>&nbsp;·&nbsp;Line Total: <b>Rs @StagingLineNet.ToString("N2")</b></span>
+        </div>
+        <div class="batch-add-col">
+            <button class="btn secondary" disabled="@(!CanAddStagedLine)" @onclick="AddStagedLine">Add</button>
+        </div>
+    </div>
+
+    <div class="batch-results-grid-wrapper batch-results-grid-wrapper-scroll">
+        <table class="data-grid batch-results-grid">
+            <thead>
+                <tr>
+                    <th>Code</th><th>Product Name</th><th>Quantity</th><th>Price</th>
+                    <th>Discount</th><th>Net Price</th><th>T. Price</th><th>T. Discount</th><th>T. Net Price</th><th>Expiry Date</th><th></th>
+                </tr>
+            </thead>
             <tbody>
-                @foreach (var p in _purchases)
+                @for (var i = 0; i < _lines.Count; i++)
                 {
+                    var index = i;
+                    var line = _lines[index];
                     <tr>
-                        <td>@p.InvoiceNo</td>
-                        <td>@p.Date.ToString("yyyy-MM-dd")</td>
-                        <td>@p.SupplierName</td>
-                        <td>@p.NetBill.ToString("N2")</td>
-                        <td>@p.PaidCash.ToString("N2")</td>
-                        <td>@(p.IsCancelled ? "Cancelled" : "Open")</td>
-                        <td>
-                            @if (!p.IsCancelled)
-                            {
-                                <a href="#" @onclick="() => CancelAsync(p.Id)" @onclick:preventDefault="true">Cancel</a>
-                            }
-                        </td>
+                        <td>@line.ProductId</td>
+                        <td>@ProductName(line.ProductId)</td>
+                        <td>@line.Quantity.ToString("N2")</td>
+                        <td>@line.Price.ToString("N2")</td>
+                        <td>@line.DiscountPercent.ToString("N2")%</td>
+                        <td>@UnitNetPrice(line).ToString("N2")</td>
+                        <td>@LineGross(line).ToString("N2")</td>
+                        <td>@LineDiscountAmount(line).ToString("N2")</td>
+                        <td>@LineNet(line).ToString("N2")</td>
+                        <td>@(line.ExpiryDate is { } ed ? ed.ToString("yyyy-MM-dd") : "—")</td>
+                        <td><a href="#" @onclick="() => _lines.RemoveAt(index)" @onclick:preventDefault="true">Remove</a></td>
                     </tr>
+                }
+                @if (_lines.Count == 0)
+                {
+                    <tr><td colspan="11" style="text-align:center;color:#999;">No lines added yet.</td></tr>
                 }
             </tbody>
         </table>
-    }
+    </div>
+
+    <div class="batch-save-totals-row batch-save-totals-row-end">
+        <div class="batch-grand-totals batch-grand-totals-stacked">
+            <div class="batch-grand-totals-line">
+                <span>Total Items: <b>@_lines.Count</b></span>
+                <span>Total Quantity: <b>@_lines.Sum(l => l.Quantity).ToString("N2")</b></span>
+                <span>Total Bill: <b>Rs @TotalGross.ToString("N2")</b></span>
+                <span>Total Discount: <b>Rs @TotalDiscountAmount.ToString("N2")</b></span>
+                <span>Net Bill: <b>Rs @NetBill.ToString("N2")</b></span>
+            </div>
+            <div class="batch-grand-totals-line">
+                <span class="batch-description-field">Description: <input @bind="_description" /></span>
+                <span>Paid Cash: <input type="number" step="0.01" @bind="_paidCash" style="width:90px;" /></span>
+            </div>
+        </div>
+        <div class="batch-save-col">
+            <button class="btn" disabled="@(_lines.Count == 0)" @onclick="() => SaveAsync(andPrint: false)">Save</button>
+            <button class="btn" disabled="@(_lines.Count == 0)" @onclick="() => SaveAsync(andPrint: true)">Save &amp; Print</button>
+        </div>
+    </div>
+    </div>
 </RequireAuth>
 
 @code {
     private List<PartyDto>? _suppliers;
     private List<ProductDto>? _products;
-    private List<PurchaseDto>? _purchases;
     private string? _error;
+    private string? _successMessage;
+    private string? _reservedInvoiceNo;
 
     private string? _billNo;
     private DateTime _date = DateTime.Today;
+    private string? _description;
     private int _supplierId;
     private decimal _paidCash;
     private readonly List<LineModel> _lines = new();
 
-    private decimal TotalBill => _lines.Sum(LineNet);
+    private int _stagingProductId;
+    private decimal _stagingQuantity = 1;
+    private decimal _stagingPrice;
+    private decimal _stagingDiscountPercent;
+    private DateTime? _stagingExpiryDate;
+
+    private decimal SelectedSupplierBalance => _suppliers?.FirstOrDefault(s => s.Id == _supplierId)?.CurrentBalance ?? 0;
+
+    private bool CanAddStagedLine => _stagingProductId > 0 && _stagingQuantity > 0;
+
+    private decimal StagingUnitNetPrice => UnitNetPrice(_stagingPrice, _stagingDiscountPercent);
+
+    private decimal StagingLineNet => LineNet(_stagingQuantity, _stagingPrice, _stagingDiscountPercent);
+
+    private decimal TotalGross => _lines.Sum(LineGross);
+    private decimal TotalDiscountAmount => _lines.Sum(LineDiscountAmount);
+    private decimal NetBill => TotalGross - TotalDiscountAmount;
+
+    private string ProductName(int productId) => _products?.FirstOrDefault(p => p.Id == productId) is { } p ? DisplayText.Product(p) : "—";
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _suppliers = await Api.GetPartiesAsync();
-            _products = await Api.GetProductsAsync();
+            _suppliers = await Api.GetPartiesAsync(PartyType.Supplier);
+            _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryInput);
+            _reservedInvoiceNo = (await Api.ReserveNextPurchaseInvoiceNoAsync()).InvoiceNo;
             if (_suppliers.Count > 0) _supplierId = _suppliers[0].Id;
+            if (_products.Count > 0) _stagingProductId = _products[0].Id;
         }
-        catch (Models.ApiException ex) { _error = ex.Message; return; }
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        try { _purchases = await Api.GetPurchasesAsync(); }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private void AddLine() => _lines.Add(new LineModel { ProductId = _products?.FirstOrDefault()?.Id ?? 0, Quantity = 1 });
-
-    private static decimal LineNet(LineModel l)
+    private void AddStagedLine()
     {
-        var gross = l.Quantity * l.Price;
-        return gross - gross * (l.DiscountPercent / 100m);
+        var existing = _lines.FirstOrDefault(l => l.ProductId == _stagingProductId);
+        if (existing is not null)
+        {
+            existing.Quantity += _stagingQuantity;
+            existing.Price = _stagingPrice;
+            existing.DiscountPercent = _stagingDiscountPercent;
+            existing.ExpiryDate = _stagingExpiryDate ?? existing.ExpiryDate;
+        }
+        else
+        {
+            _lines.Add(new LineModel { ProductId = _stagingProductId, Quantity = _stagingQuantity, Price = _stagingPrice, DiscountPercent = _stagingDiscountPercent, ExpiryDate = _stagingExpiryDate });
+        }
+
+        _stagingProductId = _products?.FirstOrDefault()?.Id ?? 0;
+        _stagingQuantity = 1;
+        _stagingPrice = 0;
+        _stagingDiscountPercent = 0;
+        _stagingExpiryDate = null;
     }
 
-    private static decimal ParseDecimal(object? value) => decimal.TryParse(value?.ToString(), out var d) ? d : 0;
+    private static decimal UnitNetPrice(decimal price, decimal discountPercent) => price - price * (discountPercent / 100m);
+    private static decimal UnitNetPrice(LineModel l) => UnitNetPrice(l.Price, l.DiscountPercent);
 
-    private async Task CancelAsync(int id)
+    private static decimal LineGross(LineModel l) => Math.Round(l.Quantity * l.Price, 2);
+    private static decimal LineDiscountAmount(LineModel l) => Math.Round(LineGross(l) * (l.DiscountPercent / 100m), 2);
+    private static decimal LineNet(LineModel l) => LineGross(l) - LineDiscountAmount(l);
+
+    private static decimal LineNet(decimal quantity, decimal price, decimal discountPercent)
     {
-        _error = null;
-        try { await Api.CancelPurchaseAsync(id); await LoadAsync(); }
-        catch (Models.ApiException ex) { _error = ex.Message; }
+        var gross = Math.Round(quantity * price, 2);
+        var discount = Math.Round(gross * (discountPercent / 100m), 2);
+        return gross - discount;
     }
 
-    private async Task SaveAsync()
+    private async Task SaveAsync(bool andPrint)
     {
         _error = null;
+        _successMessage = null;
         var request = new CreatePurchaseRequest(
             _date, _billNo, _supplierId,
-            _lines.Select(l => new PurchaseLineRequest(l.ProductId, l.Quantity, l.Price, l.DiscountPercent)).ToList(),
-            _paidCash, PrintFormat.A4, PrintLanguage.English);
+            _lines.Select(l => new PurchaseLineRequest(l.ProductId, l.Quantity, l.Price, l.DiscountPercent, l.ExpiryDate)).ToList(),
+            _paidCash, PrintFormat.A4, PrintLanguage.English, _description, _reservedInvoiceNo);
         try
         {
-            await Api.CreatePurchaseAsync(request);
+            var result = await Api.CreatePurchaseAsync(request);
+            if (andPrint)
+            {
+                Nav.NavigateTo($"print/purchase/{result.Id}");
+                return;
+            }
+            _successMessage = $"Purchase {result.InvoiceNo} saved. See it under Records Report.";
             _lines.Clear();
             _paidCash = 0;
             _billNo = null;
-            await LoadAsync();
+            _description = null;
+            _reservedInvoiceNo = (await Api.ReserveNextPurchaseInvoiceNoAsync()).InvoiceNo;
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
@@ -153,5 +224,6 @@
         public decimal Quantity { get; set; }
         public decimal Price { get; set; }
         public decimal DiscountPercent { get; set; }
+        public DateTime? ExpiryDate { get; set; }
     }
 }

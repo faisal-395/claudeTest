@@ -2,12 +2,14 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using GrainMarket.Application.Auth;
 using GrainMarket.Application.ChartOfAccounts;
+using GrainMarket.Application.Company;
 using GrainMarket.Application.Dashboard;
 using GrainMarket.Application.DeductionRules;
 using GrainMarket.Application.Expenses;
 using GrainMarket.Application.Kachis;
 using GrainMarket.Application.Ledger;
 using GrainMarket.Application.MultiPurchase;
+using GrainMarket.Application.MultiSale;
 using GrainMarket.Application.Pakkis;
 using GrainMarket.Application.Parties;
 using GrainMarket.Application.Products;
@@ -16,6 +18,7 @@ using GrainMarket.Application.Recovery;
 using GrainMarket.Application.Roles;
 using GrainMarket.Application.SaleInvoices;
 using GrainMarket.Application.Seasons;
+using GrainMarket.Application.Stock;
 using GrainMarket.Application.Trading;
 using GrainMarket.Application.UnitConversions;
 using GrainMarket.Application.Users;
@@ -62,7 +65,8 @@ public class ApiClient
     public Task<PartyDto> UpdatePartyAsync(int id, UpsertPartyRequest request) => PutAsync<UpsertPartyRequest, PartyDto>($"api/parties/{id}", request);
     public Task DeletePartyAsync(int id) => DeleteAsync($"api/parties/{id}");
 
-    public Task<List<ProductDto>> GetProductsAsync(bool includeInactive = false) => GetAsync<List<ProductDto>>($"api/products?includeInactive={includeInactive}");
+    public Task<List<ProductDto>> GetProductsAsync(bool includeInactive = false, string? category = null) =>
+        GetAsync<List<ProductDto>>($"api/products?includeInactive={includeInactive}{(category is not null ? $"&category={Uri.EscapeDataString(category)}" : "")}");
     public Task<ProductDto> CreateProductAsync(UpsertProductRequest request) => PostAsync<UpsertProductRequest, ProductDto>("api/products", request);
     public Task<ProductDto> UpdateProductAsync(int id, UpsertProductRequest request) => PutAsync<UpsertProductRequest, ProductDto>($"api/products/{id}", request);
     public Task DeleteProductAsync(int id) => DeleteAsync($"api/products/{id}");
@@ -86,6 +90,9 @@ public class ApiClient
     public Task<SeasonDto> CreateSeasonAsync(UpsertSeasonRequest request) => PostAsync<UpsertSeasonRequest, SeasonDto>("api/seasons", request);
     public Task<SeasonDto> UpdateSeasonAsync(int id, UpsertSeasonRequest request) => PutAsync<UpsertSeasonRequest, SeasonDto>($"api/seasons/{id}", request);
 
+    public Task<CompanyInfoDto> GetCompanyInfoAsync() => GetAsync<CompanyInfoDto>("api/company-info");
+    public Task<CompanyInfoDto> UpdateCompanyInfoAsync(UpdateCompanyInfoRequest request) => PutAsync<UpdateCompanyInfoRequest, CompanyInfoDto>("api/company-info", request);
+
     // --- Kachi / Pakki / Dual Invoice -----------------------------------------------------------
     public Task<List<KachiDto>> GetKachisAsync(int? seasonId = null) => GetAsync<List<KachiDto>>($"api/kachis{(seasonId.HasValue ? $"?seasonId={seasonId}" : "")}");
     public Task<KachiDto> GetKachiAsync(int id) => GetAsync<KachiDto>($"api/kachis/{id}");
@@ -101,21 +108,29 @@ public class ApiClient
     public Task CancelPakkiAsync(int id) => PostAsync($"api/pakkis/{id}/cancel");
 
     public Task<MultiPurchaseResultDto> CreateMultiPurchaseAsync(CreateMultiPurchaseRequest request) => PostAsync<CreateMultiPurchaseRequest, MultiPurchaseResultDto>("api/multi-purchase", request);
+    public Task<MultiSaleResultDto> CreateMultiSaleAsync(CreateMultiSaleRequest request) => PostAsync<CreateMultiSaleRequest, MultiSaleResultDto>("api/multi-sale", request);
 
     // --- Sale Invoice / Purchase -----------------------------------------------------------------
     public Task<List<SaleInvoiceDto>> GetSaleInvoicesAsync() => GetAsync<List<SaleInvoiceDto>>("api/sale-invoices");
     public Task<SaleInvoiceDto> GetSaleInvoiceAsync(int id) => GetAsync<SaleInvoiceDto>($"api/sale-invoices/{id}");
     public Task<SaleInvoiceDto> CreateSaleInvoiceAsync(CreateSaleInvoiceRequest request) => PostAsync<CreateSaleInvoiceRequest, SaleInvoiceDto>("api/sale-invoices", request);
     public Task CancelSaleInvoiceAsync(int id) => PostAsync($"api/sale-invoices/{id}/cancel");
+    public Task<NextSaleInvoiceNoDto> ReserveNextSaleInvoiceNoAsync() => GetAsync<NextSaleInvoiceNoDto>("api/sale-invoices/next-invoice-no");
 
     public Task<List<PurchaseDto>> GetPurchasesAsync() => GetAsync<List<PurchaseDto>>("api/purchases");
     public Task<PurchaseDto> GetPurchaseAsync(int id) => GetAsync<PurchaseDto>($"api/purchases/{id}");
     public Task<PurchaseDto> CreatePurchaseAsync(CreatePurchaseRequest request) => PostAsync<CreatePurchaseRequest, PurchaseDto>("api/purchases", request);
+    public Task<NextPurchaseInvoiceNoDto> ReserveNextPurchaseInvoiceNoAsync() => GetAsync<NextPurchaseInvoiceNoDto>("api/purchases/next-invoice-no");
+
+    public Task<List<StockDto>> GetStockAsync() => GetAsync<List<StockDto>>("api/stock");
+    public Task<SuggestedSalePriceDto> GetSuggestedSalePriceAsync(int productId) =>
+        GetAsync<SuggestedSalePriceDto>($"api/stock/suggested-price?productId={productId}");
     public Task CancelPurchaseAsync(int id) => PostAsync($"api/purchases/{id}/cancel");
 
     // --- Vouchers: Payment / Receipt / Journal -----------------------------------------------------
     public Task<List<VoucherDto>> GetVouchersAsync(VoucherType? type = null, int? seasonId = null) =>
         GetAsync<List<VoucherDto>>($"api/vouchers?{(type.HasValue ? $"type={type}&" : "")}{(seasonId.HasValue ? $"seasonId={seasonId}" : "")}");
+    public Task<VoucherDto> GetVoucherAsync(int id) => GetAsync<VoucherDto>($"api/vouchers/{id}");
     public Task<VoucherDto> CreatePaymentAsync(CreatePaymentOrReceiptRequest request) => PostAsync<CreatePaymentOrReceiptRequest, VoucherDto>("api/vouchers/payment", request);
     public Task<VoucherDto> CreateReceiptAsync(CreatePaymentOrReceiptRequest request) => PostAsync<CreatePaymentOrReceiptRequest, VoucherDto>("api/vouchers/receipt", request);
     public Task<VoucherDto> CreateJournalAsync(CreateJournalRequest request) => PostAsync<CreateJournalRequest, VoucherDto>("api/vouchers/journal", request);

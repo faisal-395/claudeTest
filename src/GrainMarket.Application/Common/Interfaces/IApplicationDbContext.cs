@@ -28,11 +28,13 @@ public interface IApplicationDbContext
     DbSet<SaleInvoiceLine> SaleInvoiceLines { get; }
     DbSet<Purchase> Purchases { get; }
     DbSet<PurchaseLine> PurchaseLines { get; }
+    DbSet<SaleInvoiceLineAllocation> SaleInvoiceLineAllocations { get; }
     DbSet<Voucher> Vouchers { get; }
     DbSet<LedgerEntry> LedgerEntries { get; }
     DbSet<Expense> Expenses { get; }
     DbSet<RecoveryNote> RecoveryNotes { get; }
     DbSet<NumberSequence> NumberSequences { get; }
+    DbSet<CompanyInfo> CompanyInfos { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

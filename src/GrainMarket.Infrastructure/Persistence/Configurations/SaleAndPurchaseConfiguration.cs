@@ -11,6 +11,7 @@ public class SaleInvoiceConfiguration : IEntityTypeConfiguration<SaleInvoice>
         builder.Property(s => s.InvoiceNo).IsRequired().HasMaxLength(30);
         builder.HasIndex(s => s.InvoiceNo).IsUnique();
         builder.Property(s => s.BillNo).HasMaxLength(30);
+        builder.Property(s => s.Description).HasMaxLength(500);
         builder.Property(s => s.TotalBill).HasPrecision(18, 2);
         builder.Property(s => s.TotalDiscount).HasPrecision(18, 2);
         builder.Property(s => s.NetBill).HasPrecision(18, 2);
@@ -41,6 +42,7 @@ public class PurchaseConfiguration : IEntityTypeConfiguration<Purchase>
         builder.Property(p => p.InvoiceNo).IsRequired().HasMaxLength(30);
         builder.HasIndex(p => p.InvoiceNo).IsUnique();
         builder.Property(p => p.BillNo).HasMaxLength(30);
+        builder.Property(p => p.Description).HasMaxLength(500);
         builder.Property(p => p.TotalBill).HasPrecision(18, 2);
         builder.Property(p => p.TotalDiscount).HasPrecision(18, 2);
         builder.Property(p => p.NetBill).HasPrecision(18, 2);
@@ -59,6 +61,18 @@ public class PurchaseLineConfiguration : IEntityTypeConfiguration<PurchaseLine>
         builder.Property(l => l.Price).HasPrecision(18, 2);
         builder.Property(l => l.DiscountPercent).HasPrecision(5, 2);
         builder.Property(l => l.NetPrice).HasPrecision(18, 2);
+        builder.Property(l => l.RemainingQuantity).HasPrecision(18, 4);
         builder.HasOne(l => l.Product).WithMany().HasForeignKey(l => l.ProductId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class SaleInvoiceLineAllocationConfiguration : IEntityTypeConfiguration<SaleInvoiceLineAllocation>
+{
+    public void Configure(EntityTypeBuilder<SaleInvoiceLineAllocation> builder)
+    {
+        builder.Property(a => a.Quantity).HasPrecision(18, 4);
+        builder.Property(a => a.UnitCost).HasPrecision(18, 2);
+        builder.HasOne(a => a.SaleInvoiceLine).WithMany().HasForeignKey(a => a.SaleInvoiceLineId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(a => a.PurchaseLine).WithMany().HasForeignKey(a => a.PurchaseLineId).OnDelete(DeleteBehavior.Restrict);
     }
 }
