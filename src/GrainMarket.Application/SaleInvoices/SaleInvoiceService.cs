@@ -38,6 +38,8 @@ public class SaleInvoiceService : ISaleInvoiceService
         return ToDto(row);
     }
 
+    public Task<string> ReserveNextInvoiceNoAsync(CancellationToken ct = default) => _numberGenerator.NextAsync("S", ct);
+
     public async Task<SaleInvoiceDto> CreateAsync(CreateSaleInvoiceRequest request, CancellationToken ct = default)
     {
         if (!await _db.Parties.AnyAsync(p => p.Id == request.CustomerId && !p.IsDeleted && (p.PartyType & PartyType.Farmer) == PartyType.Farmer, ct))
@@ -56,9 +58,10 @@ public class SaleInvoiceService : ISaleInvoiceService
 
         var sale = new SaleInvoice
         {
-            InvoiceNo = await _numberGenerator.NextAsync("S", ct),
+            InvoiceNo = request.InvoiceNo ?? await _numberGenerator.NextAsync("S", ct),
             BillNo = request.BillNo,
             Date = request.Date,
+            Description = request.Description,
             CustomerId = request.CustomerId,
             PrintFormat = request.PrintFormat,
             PrintLanguage = request.PrintLanguage
@@ -178,7 +181,7 @@ public class SaleInvoiceService : ISaleInvoiceService
     }
 
     private static SaleInvoiceDto ToDto(SaleInvoice s) => new(
-        s.Id, s.InvoiceNo, s.BillNo, s.Date, s.CustomerId, s.Customer.Name,
+        s.Id, s.InvoiceNo, s.BillNo, s.Date, s.Description, s.CustomerId, s.Customer.Name,
         s.TotalBill, s.TotalDiscount, s.NetBill, s.ReceivedCash, s.PayCash, s.PrintFormat, s.PrintLanguage, s.IsCancelled,
         s.Lines.Select(l => new SaleInvoiceLineDto(l.ProductId, l.Product.Name, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice)).ToList());
 }

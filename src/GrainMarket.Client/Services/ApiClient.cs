@@ -115,10 +115,12 @@ public class ApiClient
     public Task<SaleInvoiceDto> GetSaleInvoiceAsync(int id) => GetAsync<SaleInvoiceDto>($"api/sale-invoices/{id}");
     public Task<SaleInvoiceDto> CreateSaleInvoiceAsync(CreateSaleInvoiceRequest request) => PostAsync<CreateSaleInvoiceRequest, SaleInvoiceDto>("api/sale-invoices", request);
     public Task CancelSaleInvoiceAsync(int id) => PostAsync($"api/sale-invoices/{id}/cancel");
+    public Task<string> ReserveNextSaleInvoiceNoAsync() => GetAsync<string>("api/sale-invoices/next-invoice-no");
 
     public Task<List<PurchaseDto>> GetPurchasesAsync() => GetAsync<List<PurchaseDto>>("api/purchases");
     public Task<PurchaseDto> GetPurchaseAsync(int id) => GetAsync<PurchaseDto>($"api/purchases/{id}");
     public Task<PurchaseDto> CreatePurchaseAsync(CreatePurchaseRequest request) => PostAsync<CreatePurchaseRequest, PurchaseDto>("api/purchases", request);
+    public Task<string> ReserveNextPurchaseInvoiceNoAsync() => GetAsync<string>("api/purchases/next-invoice-no");
 
     public Task<List<StockDto>> GetStockAsync() => GetAsync<List<StockDto>>("api/stock");
     public Task<SuggestedSalePriceDto> GetSuggestedSalePriceAsync(int productId) =>

@@ -9,6 +9,7 @@ public class Purchase : BaseEntity
     public string InvoiceNo { get; set; } = string.Empty;
     public string? BillNo { get; set; }
     public DateTime Date { get; set; }
+    public string? Description { get; set; }
 
     public int SupplierId { get; set; }
     public Party Supplier { get; set; } = null!;

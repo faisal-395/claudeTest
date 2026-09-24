@@ -35,6 +35,8 @@ public class PurchaseService : IPurchaseService
         return ToDto(row);
     }
 
+    public Task<string> ReserveNextInvoiceNoAsync(CancellationToken ct = default) => _numberGenerator.NextAsync("PU", ct);
+
     public async Task<PurchaseDto> CreateAsync(CreatePurchaseRequest request, CancellationToken ct = default)
     {
         if (!await _db.Parties.AnyAsync(p => p.Id == request.SupplierId && !p.IsDeleted && (p.PartyType & PartyType.Supplier) == PartyType.Supplier, ct))
@@ -53,9 +55,10 @@ public class PurchaseService : IPurchaseService
 
         var purchase = new Purchase
         {
-            InvoiceNo = await _numberGenerator.NextAsync("PU", ct),
+            InvoiceNo = request.InvoiceNo ?? await _numberGenerator.NextAsync("PU", ct),
             BillNo = request.BillNo,
             Date = request.Date,
+            Description = request.Description,
             SupplierId = request.SupplierId,
             PrintFormat = request.PrintFormat,
             PrintLanguage = request.PrintLanguage
@@ -156,7 +159,7 @@ public class PurchaseService : IPurchaseService
     }
 
     private static PurchaseDto ToDto(Purchase p) => new(
-        p.Id, p.InvoiceNo, p.BillNo, p.Date, p.SupplierId, p.Supplier.Name,
+        p.Id, p.InvoiceNo, p.BillNo, p.Date, p.Description, p.SupplierId, p.Supplier.Name,
         p.TotalBill, p.TotalDiscount, p.NetBill, p.PaidCash, p.PrintFormat, p.PrintLanguage, p.IsCancelled,
         p.Lines.Select(l => new PurchaseLineDto(l.ProductId, l.Product.Name, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice, l.ExpiryDate)).ToList());
 }

@@ -55,6 +55,12 @@
                     <td>Customer: <b>@_sale.CustomerName</b></td>
                     <td style="text-align:right;">Status: <b>@(_sale.IsCancelled ? "Cancelled" : "Open")</b></td>
                 </tr>
+                @if (_sale.Description is { Length: > 0 })
+                {
+                    <tr>
+                        <td colspan="2">Description: @_sale.Description</td>
+                    </tr>
+                }
             </table>
             <hr />
             <table class="data-grid" style="width:100%;">
