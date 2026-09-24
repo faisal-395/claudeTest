@@ -472,6 +472,13 @@ table.data-grid tbody tr.selected-row:hover {
    .batch-save-totals-row order above, which Kachi/Pakki keep as Save-then-totals. */
 .batch-save-totals-row-end {
     grid-template-columns: 10fr 2fr;
+    position: sticky;
+    bottom: 0;
+    background: #f7f9f7;
+    padding: 12px 0 16px;
+    border-top: 1px solid #d8e2da;
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
+    z-index: 5;
 }
 
 .batch-save-totals-row-end .batch-save-col {
@@ -514,6 +521,13 @@ table.data-grid tbody tr.selected-row:hover {
 .batch-results-grid-wrapper {
     overflow-x: auto;
     margin-bottom: 6px;
+}
+
+/* Purchase/Sale-only modifier: cap the results grid's height and let it scroll internally once
+   lines pile up, instead of pushing the sticky totals/Save footer further down the page. */
+.batch-results-grid-wrapper-scroll {
+    max-height: 360px;
+    overflow-y: auto;
 }
 
 /* Batch results grid (Kachi/Pakki) — adds an itemized deduction breakdown column and
