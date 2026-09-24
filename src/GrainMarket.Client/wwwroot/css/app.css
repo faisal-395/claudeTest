@@ -291,12 +291,13 @@ table.data-grid tbody tr.selected-row:hover {
         minmax(140px, 3fr) minmax(140px, 3fr);
 }
 
-/* Purchase/Sale header row: Invoice #/Bill No/Date/Balance are short fixed-width values;
-   Supplier/Customer (Farmer) needs the most room for long picked names. */
+/* Purchase/Sale header row: Invoice #/Bill No/Date stay narrow; Supplier/Customer (Farmer) needs
+   the most room for long picked names; Balance needs enough room for larger Rupee amounts, which
+   .batch-readonly-figure clips with overflow:hidden rather than wrapping. */
 .batch-entry-row-header {
     grid-template-columns:
         minmax(80px, 1fr) minmax(80px, 1fr) minmax(110px, 1fr)
-        minmax(220px, 4fr) minmax(90px, 1fr);
+        minmax(220px, 4fr) minmax(130px, 1.5fr);
 }
 
 /* Purchase/Sale product-staging row: Product needs the most room for long picked names;
