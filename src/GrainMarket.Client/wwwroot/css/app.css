@@ -181,6 +181,7 @@ html, body {
     font-size: 1.4rem;
     font-weight: 600;
     color: #1B4332;
+    margin-top: 0;
     margin-bottom: 16px;
 }
 
@@ -523,6 +524,21 @@ table.data-grid tbody tr.selected-row:hover {
     align-items: center;
     gap: 28px;
     flex-wrap: wrap;
+}
+
+/* Purchase/Sale-only: Description grows to fill whatever width Paid/Received Cash doesn't use on
+   their shared line, instead of leaving empty space to the right of a fixed-width input. */
+.batch-description-field {
+    flex: 1 1 260px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.batch-description-field input {
+    flex: 1;
+    min-width: 0;
 }
 
 /* This grid (unlike the entry area above it, which has SearchSelect dropdowns that would get

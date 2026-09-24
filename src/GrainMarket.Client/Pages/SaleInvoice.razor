@@ -36,7 +36,7 @@
                 </div>
                 <div>
                     <label>In Stock</label>
-                    <div class="batch-readonly-figure @(_stagingQuantity > AvailableFor(_stagingProductId) ? "invalid-total" : "")">@AvailableFor(_stagingProductId).ToString("N2")</div>
+                    <div class="batch-readonly-figure @(StagingExceedsStock ? "invalid-total" : "")">@AvailableFor(_stagingProductId).ToString("N2")</div>
                 </div>
                 <div><label>Quantity</label><input type="number" step="0.01" @bind="_stagingQuantity" /></div>
                 <div>
@@ -109,7 +109,7 @@
                 <span>Net Bill: <b>Rs @NetBill.ToString("N2")</b></span>
             </div>
             <div class="batch-grand-totals-line">
-                <span>Description: <input @bind="_description" style="width:460px;max-width:100%;" /></span>
+                <span class="batch-description-field">Description: <input @bind="_description" /></span>
                 <span>Received Cash: <input type="number" step="0.01" @bind="_receivedCash" style="width:90px;" /></span>
             </div>
         </div>
@@ -148,7 +148,11 @@
 
     private decimal SelectedCustomerBalance => _customers?.FirstOrDefault(c => c.Id == _customerId)?.CurrentBalance ?? 0;
 
-    private bool CanAddStagedLine => _stagingProductId > 0 && _stagingQuantity > 0;
+    private bool CanAddStagedLine => _stagingProductId > 0 && _stagingQuantity > 0 && !StagingExceedsStock;
+
+    private decimal ExistingQuantityForStagingProduct => _lines.FirstOrDefault(l => l.ProductId == _stagingProductId)?.Quantity ?? 0;
+
+    private bool StagingExceedsStock => ExistingQuantityForStagingProduct + _stagingQuantity > AvailableFor(_stagingProductId);
 
     private bool CanSave => _lines.Count > 0 && !HasStockIssue;
 
@@ -212,7 +216,19 @@
 
     private async Task AddStagedLineAsync()
     {
-        _lines.Add(new LineModel { ProductId = _stagingProductId, Quantity = _stagingQuantity, Price = _stagingPrice, DiscountPercent = _stagingDiscountPercent });
+        if (StagingExceedsStock) return;
+
+        var existing = _lines.FirstOrDefault(l => l.ProductId == _stagingProductId);
+        if (existing is not null)
+        {
+            existing.Quantity += _stagingQuantity;
+            existing.Price = _stagingPrice;
+            existing.DiscountPercent = _stagingDiscountPercent;
+        }
+        else
+        {
+            _lines.Add(new LineModel { ProductId = _stagingProductId, Quantity = _stagingQuantity, Price = _stagingPrice, DiscountPercent = _stagingDiscountPercent });
+        }
 
         _stagingProductId = _products?.FirstOrDefault()?.Id ?? 0;
         _stagingQuantity = 1;

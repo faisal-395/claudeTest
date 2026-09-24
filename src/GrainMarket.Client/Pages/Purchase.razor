@@ -97,7 +97,7 @@
                 <span>Net Bill: <b>Rs @NetBill.ToString("N2")</b></span>
             </div>
             <div class="batch-grand-totals-line">
-                <span>Description: <input @bind="_description" style="width:460px;max-width:100%;" /></span>
+                <span class="batch-description-field">Description: <input @bind="_description" /></span>
                 <span>Paid Cash: <input type="number" step="0.01" @bind="_paidCash" style="width:90px;" /></span>
             </div>
         </div>
@@ -158,7 +158,18 @@
 
     private void AddStagedLine()
     {
-        _lines.Add(new LineModel { ProductId = _stagingProductId, Quantity = _stagingQuantity, Price = _stagingPrice, DiscountPercent = _stagingDiscountPercent, ExpiryDate = _stagingExpiryDate });
+        var existing = _lines.FirstOrDefault(l => l.ProductId == _stagingProductId);
+        if (existing is not null)
+        {
+            existing.Quantity += _stagingQuantity;
+            existing.Price = _stagingPrice;
+            existing.DiscountPercent = _stagingDiscountPercent;
+            existing.ExpiryDate = _stagingExpiryDate ?? existing.ExpiryDate;
+        }
+        else
+        {
+            _lines.Add(new LineModel { ProductId = _stagingProductId, Quantity = _stagingQuantity, Price = _stagingPrice, DiscountPercent = _stagingDiscountPercent, ExpiryDate = _stagingExpiryDate });
+        }
 
         _stagingProductId = _products?.FirstOrDefault()?.Id ?? 0;
         _stagingQuantity = 1;
