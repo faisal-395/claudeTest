@@ -291,11 +291,20 @@ table.data-grid tbody tr.selected-row:hover {
         minmax(140px, 3fr) minmax(140px, 3fr);
 }
 
-/* Purchase/Sale Invoice's header and staging rows vary in field count between the two pages (and
-   Sale adds a Stock readout Purchase doesn't have) — auto-fit instead of a fixed column count per
-   row, so one class covers both without a template/child-count mismatch leaving empty grid cells. */
-.batch-entry-row-auto {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+/* Purchase/Sale header row: Invoice #/Bill No/Date/Balance are short fixed-width values;
+   Supplier/Customer (Farmer) needs the most room for long picked names. */
+.batch-entry-row-header {
+    grid-template-columns:
+        minmax(80px, 1fr) minmax(80px, 1fr) minmax(110px, 1fr)
+        minmax(220px, 4fr) minmax(90px, 1fr);
+}
+
+/* Purchase/Sale product-staging row: Product needs the most room for long picked names;
+   Quantity/Price/Discount %/In Stock/Expiry Date are short numbers. */
+.batch-entry-row-product {
+    grid-template-columns:
+        minmax(220px, 4fr) minmax(80px, 1fr) minmax(80px, 1fr)
+        minmax(80px, 1fr) minmax(90px, 1fr);
 }
 
 /* Seller/Farmer needs the most room for long picked names; Bharti/Weight/Rate are short numbers. */

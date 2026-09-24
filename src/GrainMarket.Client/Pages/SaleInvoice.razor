@@ -17,7 +17,7 @@
 
     <div class="batch-entry-panel">
         <div class="batch-entry-inputs">
-            <div class="batch-entry-row batch-entry-row-auto">
+            <div class="batch-entry-row batch-entry-row-header">
                 <div><label>Invoice #</label><div class="batch-readonly-figure">@(_reservedInvoiceNo ?? "…")</div></div>
                 <div><label>Bill No</label><input @bind="_billNo" /></div>
                 <div><label>Date</label><input type="date" @bind="_date" /></div>
@@ -28,7 +28,7 @@
                 <div><label>Balance</label><div class="batch-readonly-figure">Rs @SelectedCustomerBalance.ToString("N2")</div></div>
             </div>
             <div class="batch-entry-section-label">Add Product</div>
-            <div class="batch-entry-row batch-entry-row-auto">
+            <div class="batch-entry-row batch-entry-row-product">
                 <div>
                     <label>Product</label>
                     <SearchSelect TItem="ProductDto" Items="_products" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Product" Value="@_stagingProductId" ValueChanged="OnStagingProductChangedAsync" Placeholder="Search product…" />
