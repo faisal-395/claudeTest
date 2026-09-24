@@ -492,6 +492,22 @@ table.data-grid tbody tr.selected-row:hover {
     flex-wrap: wrap;
 }
 
+/* Purchase/Sale-only modifier: stack the totals figures on their own line, with Description/Cash
+   on a second line below — Kachi/Pakki's totals stay a single row via the plain .batch-grand-totals
+   flex layout above. */
+.batch-grand-totals-stacked {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.batch-grand-totals-line {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    flex-wrap: wrap;
+}
+
 /* This grid (unlike the entry area above it, which has SearchSelect dropdowns that would get
    clipped by overflow) is read-only — safe to scroll horizontally on its own so a wide deduction
    breakdown never pushes the whole page sideways. */
