@@ -523,11 +523,57 @@ table.data-grid tbody tr.selected-row:hover {
     margin-bottom: 6px;
 }
 
-/* Purchase/Sale-only modifier: cap the results grid's height and let it scroll internally once
-   lines pile up, instead of pushing the sticky totals/Save footer further down the page. */
+/* Purchase/Sale-only modifier: inside .batch-page-fill's flex column this grows to fill whatever
+   vertical space the header/entry sections above it don't use, and scrolls internally once lines
+   overflow that space, instead of pushing the totals/Save footer further down the page. The
+   min-height floor (rather than an automatic one) is what lets it actually shrink to fit — flex
+   items otherwise refuse to shrink below their content's height. Outside a flex parent this still
+   degrades sensibly: just a min-height with its own scrollbar. */
 .batch-results-grid-wrapper-scroll {
-    max-height: 360px;
+    flex: 1 1 auto;
+    min-height: 160px;
     overflow-y: auto;
+}
+
+/* Purchase/Sale-only: fills .main-content's full viewport height so the results grid above can
+   claim the remaining space and the totals/Save footer sits at the bottom without the page
+   needing to be scrolled down first. */
+.batch-page-fill {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+/* Tighter spacing than Kachi/Pakki use for the same shared classes — Purchase/Sale's header
+   labels are short, single-line English text (unlike Kachi/Pakki's bilingual Urdu labels, which
+   need room to wrap), so the extra padding/line-height these rules normally reserve is wasted
+   height here. Freeing it gives the results grid more room. Scoped under .batch-page-fill so
+   Kachi/Pakki (which don't use that wrapper) are unaffected. */
+.batch-page-fill .batch-entry-panel {
+    padding: 8px 16px;
+    margin-bottom: 4px;
+}
+
+.batch-page-fill .batch-entry-inputs {
+    gap: 4px;
+}
+
+.batch-page-fill .batch-entry-inputs label {
+    min-height: 0;
+    margin-bottom: 2px;
+}
+
+.batch-page-fill .batch-entry-section-label {
+    margin: 2px 0 1px;
+    padding-top: 6px;
+}
+
+.batch-page-fill .batch-add-calc-row {
+    margin-bottom: 6px;
+}
+
+.batch-page-fill .batch-staging-calc {
+    padding: 6px 14px;
 }
 
 /* Batch results grid (Kachi/Pakki) — adds an itemized deduction breakdown column and

@@ -4,6 +4,7 @@
 @inject NavigationManager Nav
 
 <RequireAuth>
+    <div class="batch-page-fill">
     <h1 class="page-title" style="margin-bottom:4px;">Sale Invoice</h1>
 
     @if (_error is not null)
@@ -124,6 +125,7 @@
         {
             <div class="invalid-total" style="grid-column: 1 / -1;">One or more lines exceed the available stock. Reduce the quantity or check the Stock page.</div>
         }
+    </div>
     </div>
 </RequireAuth>
 
