@@ -42,13 +42,13 @@
         </div>
     </div>
 
-    <div class="batch-add-calc-row">
-        <div class="batch-add-col">
-            <button class="btn secondary" disabled="@(!CanAddStagedLine)" @onclick="AddStagedLine">Add</button>
-        </div>
+    <div class="batch-add-calc-row batch-add-calc-row-end">
         <div class="batch-staging-calc">
             <span>Net Price: <b>Rs @StagingUnitNetPrice.ToString("N2")</b></span>
             <span>&nbsp;·&nbsp;Line Total: <b>Rs @StagingLineNet.ToString("N2")</b></span>
+        </div>
+        <div class="batch-add-col">
+            <button class="btn secondary" disabled="@(!CanAddStagedLine)" @onclick="AddStagedLine">Add</button>
         </div>
     </div>
 
@@ -97,7 +97,7 @@
                 <span>Net Bill: <b>Rs @NetBill.ToString("N2")</b></span>
             </div>
             <div class="batch-grand-totals-line">
-                <span>Description: <input @bind="_description" style="width:320px;" /></span>
+                <span>Description: <input @bind="_description" style="width:460px;max-width:100%;" /></span>
                 <span>Paid Cash: <input type="number" step="0.01" @bind="_paidCash" style="width:90px;" /></span>
             </div>
         </div>

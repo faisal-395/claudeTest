@@ -395,6 +395,13 @@ table.data-grid tbody tr.selected-row:hover {
     margin-bottom: 10px;
 }
 
+/* Purchase/Sale-only modifier: calculation preview takes the wide column on the left and Add
+   sits in the narrow column on the right — same left/right swap as .batch-save-totals-row-end
+   below applies to the Save buttons. */
+.batch-add-calc-row-end {
+    grid-template-columns: 10fr 2fr;
+}
+
 .batch-add-col {
     display: flex;
 }
@@ -467,11 +474,13 @@ table.data-grid tbody tr.selected-row:hover {
     gap: 6px;
 }
 
-/* Purchase/Sale-only modifier: totals (with Description/Cash folded in) take the wide column on
-   the left and Save/Save & Print sit in the narrow column on the right — reversed from the shared
-   .batch-save-totals-row order above, which Kachi/Pakki keep as Save-then-totals. */
+/* Purchase/Sale-only modifier: totals (with Description/Cash folded in) take the full row width,
+   with Save/Save & Print stacked in their own row underneath, right-aligned — replaces the shared
+   .batch-save-totals-row's side-by-side grid (which Kachi/Pakki keep) with a single column. */
 .batch-save-totals-row-end {
-    grid-template-columns: 10fr 2fr;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     position: sticky;
     bottom: 0;
     background: #f7f9f7;
@@ -482,8 +491,9 @@ table.data-grid tbody tr.selected-row:hover {
 }
 
 .batch-save-totals-row-end .batch-save-col {
-    align-items: stretch;
-    justify-content: center;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
 }
 
 /* Grand totals get the same boxed treatment as the calculation preview above, for visual
