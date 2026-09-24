@@ -467,6 +467,18 @@ table.data-grid tbody tr.selected-row:hover {
     gap: 6px;
 }
 
+/* Purchase/Sale-only modifier: totals (with Description/Cash folded in) take the wide column on
+   the left and Save/Save & Print sit in the narrow column on the right — reversed from the shared
+   .batch-save-totals-row order above, which Kachi/Pakki keep as Save-then-totals. */
+.batch-save-totals-row-end {
+    grid-template-columns: 10fr 2fr;
+}
+
+.batch-save-totals-row-end .batch-save-col {
+    align-items: stretch;
+    justify-content: center;
+}
+
 /* Grand totals get the same boxed treatment as the calculation preview above, for visual
    consistency, while keeping the bolder .total-figure typography. */
 .batch-grand-totals {
