@@ -535,13 +535,15 @@ table.data-grid tbody tr.selected-row:hover {
     overflow-y: auto;
 }
 
-/* Purchase/Sale-only: fills .main-content's full viewport height so the results grid above can
-   claim the remaining space and the totals/Save footer sits at the bottom without the page
-   needing to be scrolled down first. */
+/* Purchase/Sale-only: locked to .main-content's exact viewport height (not just a minimum) with
+   overflow hidden, so this container itself never scrolls — the results grid below is the only
+   thing that grows/shrinks and gets its own scrollbar, and the totals/Save footer always stays
+   put at the bottom. */
 .batch-page-fill {
     display: flex;
     flex-direction: column;
-    min-height: 100%;
+    height: 100%;
+    overflow: hidden;
 }
 
 /* Tighter spacing than Kachi/Pakki use for the same shared classes — Purchase/Sale's header

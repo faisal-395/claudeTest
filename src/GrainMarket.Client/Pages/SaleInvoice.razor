@@ -117,11 +117,7 @@
             <button class="btn" disabled="@(!CanSave)" @onclick="() => SaveAsync(andPrint: false)">Save</button>
             <button class="btn" disabled="@(!CanSave)" @onclick="() => SaveAsync(andPrint: true)">Save &amp; Print</button>
         </div>
-        @if (_lines.Count == 0)
-        {
-            <div class="invalid-total" style="grid-column: 1 / -1;">Add at least one line item.</div>
-        }
-        else if (HasStockIssue)
+        @if (HasStockIssue)
         {
             <div class="invalid-total" style="grid-column: 1 / -1;">One or more lines exceed the available stock. Reduce the quantity or check the Stock page.</div>
         }
