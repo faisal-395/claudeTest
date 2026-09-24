@@ -38,7 +38,7 @@ public class SaleInvoiceService : ISaleInvoiceService
         return ToDto(row);
     }
 
-    public Task<string> ReserveNextInvoiceNoAsync(CancellationToken ct = default) => _numberGenerator.NextAsync("S", ct);
+    public async Task<NextSaleInvoiceNoDto> ReserveNextInvoiceNoAsync(CancellationToken ct = default) => new(await _numberGenerator.NextAsync("S", ct));
 
     public async Task<SaleInvoiceDto> CreateAsync(CreateSaleInvoiceRequest request, CancellationToken ct = default)
     {

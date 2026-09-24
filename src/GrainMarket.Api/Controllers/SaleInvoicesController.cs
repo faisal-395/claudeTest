@@ -29,7 +29,7 @@ public class SaleInvoicesController : ControllerBase
     // show it before Save — matches the legacy software. Left unsaved, that number is simply skipped.
     [ModulePermission(ModuleName.SaleInvoice, PermissionAction.Create)]
     [HttpGet("next-invoice-no")]
-    public async Task<ActionResult<string>> ReserveNextInvoiceNo(CancellationToken ct) => Ok(await _service.ReserveNextInvoiceNoAsync(ct));
+    public async Task<ActionResult<NextSaleInvoiceNoDto>> ReserveNextInvoiceNo(CancellationToken ct) => Ok(await _service.ReserveNextInvoiceNoAsync(ct));
 
     [ModulePermission(ModuleName.SaleInvoice, PermissionAction.Create)]
     [HttpPost]

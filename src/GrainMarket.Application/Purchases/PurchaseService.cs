@@ -35,7 +35,7 @@ public class PurchaseService : IPurchaseService
         return ToDto(row);
     }
 
-    public Task<string> ReserveNextInvoiceNoAsync(CancellationToken ct = default) => _numberGenerator.NextAsync("PU", ct);
+    public async Task<NextPurchaseInvoiceNoDto> ReserveNextInvoiceNoAsync(CancellationToken ct = default) => new(await _numberGenerator.NextAsync("PU", ct));
 
     public async Task<PurchaseDto> CreateAsync(CreatePurchaseRequest request, CancellationToken ct = default)
     {

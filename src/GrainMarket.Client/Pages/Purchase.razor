@@ -18,15 +18,16 @@
     <div class="batch-entry-panel">
         <div class="batch-entry-inputs">
             <div class="batch-entry-row batch-entry-row-auto">
-                <div><label>Invoice #</label><div class="total-figure" style="padding-top:6px;">@(_reservedInvoiceNo ?? "…")</div></div>
+                <div><label>Invoice #</label><div class="batch-readonly-figure">@(_reservedInvoiceNo ?? "…")</div></div>
                 <div><label>Bill No</label><input @bind="_billNo" /></div>
                 <div><label>Date</label><input type="date" @bind="_date" /></div>
                 <div>
                     <label>Supplier</label>
                     <SearchSelect TItem="PartyDto" Items="_suppliers" IdSelector="@(s => s.Id)" TextSelector="@DisplayText.Party" @bind-Value="_supplierId" Placeholder="Search supplier…" />
                 </div>
-                <div><label>Balance</label><div class="total-figure" style="padding-top:6px;">Rs @SelectedSupplierBalance.ToString("N2")</div></div>
+                <div><label>Balance</label><div class="batch-readonly-figure">Rs @SelectedSupplierBalance.ToString("N2")</div></div>
             </div>
+            <div class="batch-entry-section-label">Add Product</div>
             <div class="batch-entry-row batch-entry-row-auto">
                 <div>
                     <label>Product</label>
@@ -149,7 +150,7 @@
         {
             _suppliers = await Api.GetPartiesAsync(PartyType.Supplier);
             _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryInput);
-            _reservedInvoiceNo = await Api.ReserveNextPurchaseInvoiceNoAsync();
+            _reservedInvoiceNo = (await Api.ReserveNextPurchaseInvoiceNoAsync()).InvoiceNo;
             if (_suppliers.Count > 0) _supplierId = _suppliers[0].Id;
             if (_products.Count > 0) _stagingProductId = _products[0].Id;
         }
@@ -202,7 +203,7 @@
             _paidCash = 0;
             _billNo = null;
             _description = null;
-            _reservedInvoiceNo = await Api.ReserveNextPurchaseInvoiceNoAsync();
+            _reservedInvoiceNo = (await Api.ReserveNextPurchaseInvoiceNoAsync()).InvoiceNo;
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }

@@ -18,29 +18,16 @@
     <div class="batch-entry-panel">
         <div class="batch-entry-inputs">
             <div class="batch-entry-row batch-entry-row-auto">
-                <div><label>Invoice #</label><div class="total-figure" style="padding-top:6px;">@(_reservedInvoiceNo ?? "…")</div></div>
+                <div><label>Invoice #</label><div class="batch-readonly-figure">@(_reservedInvoiceNo ?? "…")</div></div>
                 <div><label>Bill No</label><input @bind="_billNo" /></div>
                 <div><label>Date</label><input type="date" @bind="_date" /></div>
                 <div>
                     <label>Customer (Farmer)</label>
                     <SearchSelect TItem="PartyDto" Items="_customers" IdSelector="@(c => c.Id)" TextSelector="@DisplayText.Party" @bind-Value="_customerId" Placeholder="Search farmer…" />
                 </div>
-                <div><label>Balance</label><div class="total-figure" style="padding-top:6px;">Rs @SelectedCustomerBalance.ToString("N2")</div></div>
-                <div>
-                    <label>Print Format</label>
-                    <select @bind="_printFormat">
-                        <option value="@PrintFormat.Thermal">Thermal</option>
-                        <option value="@PrintFormat.A4">A4</option>
-                    </select>
-                </div>
-                <div>
-                    <label>Print Language</label>
-                    <select @bind="_printLanguage">
-                        <option value="@PrintLanguage.English">English</option>
-                        <option value="@PrintLanguage.Urdu">Urdu</option>
-                    </select>
-                </div>
+                <div><label>Balance</label><div class="batch-readonly-figure">Rs @SelectedCustomerBalance.ToString("N2")</div></div>
             </div>
+            <div class="batch-entry-section-label">Add Product</div>
             <div class="batch-entry-row batch-entry-row-auto">
                 <div>
                     <label>Product</label>
@@ -48,7 +35,7 @@
                 </div>
                 <div>
                     <label>In Stock</label>
-                    <div class="@(_stagingQuantity > AvailableFor(_stagingProductId) ? "invalid-total" : "total-figure")" style="padding-top:6px;">@AvailableFor(_stagingProductId).ToString("N2")</div>
+                    <div class="batch-readonly-figure @(_stagingQuantity > AvailableFor(_stagingProductId) ? "invalid-total" : "")">@AvailableFor(_stagingProductId).ToString("N2")</div>
                 </div>
                 <div><label>Quantity</label><input type="number" step="0.01" @bind="_stagingQuantity" /></div>
                 <div>
@@ -151,8 +138,6 @@
     private DateTime _date = DateTime.Today;
     private string? _description;
     private int _customerId;
-    private PrintFormat _printFormat = PrintFormat.Thermal;
-    private PrintLanguage _printLanguage = PrintLanguage.English;
     private decimal _receivedCash;
     private readonly List<LineModel> _lines = new();
 
@@ -196,7 +181,7 @@
             _customers = await Api.GetPartiesAsync(PartyType.Farmer);
             _products = await Api.GetProductsAsync(category: DomainConstants.ProductCategoryInput);
             _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
-            _reservedInvoiceNo = await Api.ReserveNextSaleInvoiceNoAsync();
+            _reservedInvoiceNo = (await Api.ReserveNextSaleInvoiceNoAsync()).InvoiceNo;
             if (_customers.Count > 0) _customerId = _customers[0].Id;
             if (_products.Count > 0) _stagingProductId = _products[0].Id;
         }
@@ -261,7 +246,7 @@
         var request = new CreateSaleInvoiceRequest(
             _date, _billNo, _customerId,
             _lines.Select(l => new SaleInvoiceLineRequest(l.ProductId, l.Quantity, l.Price, l.DiscountPercent)).ToList(),
-            _receivedCash, _printFormat, _printLanguage, _description, _reservedInvoiceNo);
+            _receivedCash, PrintFormat.Thermal, PrintLanguage.English, _description, _reservedInvoiceNo);
         try
         {
             var result = await Api.CreateSaleInvoiceAsync(request);
@@ -276,7 +261,7 @@
             _billNo = null;
             _description = null;
             _stock = (await Api.GetStockAsync()).ToDictionary(s => s.ProductId, s => s.OnHandQty);
-            _reservedInvoiceNo = await Api.ReserveNextSaleInvoiceNoAsync();
+            _reservedInvoiceNo = (await Api.ReserveNextSaleInvoiceNoAsync()).InvoiceNo;
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
