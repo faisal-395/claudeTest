@@ -391,7 +391,7 @@ table.data-grid {
 
 table.data-grid th, table.data-grid td {
     padding: 8px 12px;
-    border-bottom: 1px solid #e5e5e5;
+    border-bottom: 1px solid #bfbfbf;
     text-align: left;
     font-size: 0.9rem;
 }
@@ -400,9 +400,9 @@ table.data-grid th, table.data-grid td {
    above, rather than replacing it, so turning this off (the default, --brand-grid-border-width: 0)
    never has to re-declare border-bottom. */
 table.data-grid th, table.data-grid td {
-    border-left: var(--brand-grid-border-width, 0) solid #e5e5e5;
-    border-right: var(--brand-grid-border-width, 0) solid #e5e5e5;
-    border-top: var(--brand-grid-border-width, 0) solid #e5e5e5;
+    border-left: var(--brand-grid-border-width, 0) solid #bfbfbf;
+    border-right: var(--brand-grid-border-width, 0) solid #bfbfbf;
+    border-top: var(--brand-grid-border-width, 0) solid #bfbfbf;
 }
 
 table.data-grid th {
