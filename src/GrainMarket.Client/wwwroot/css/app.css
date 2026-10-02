@@ -108,10 +108,11 @@ html, body {
 .topbar {
     display: flex;
     align-items: center;
-    gap: 20px;
-    height: 56px;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    min-height: 56px;
     flex-shrink: 0;
-    padding: 0 20px;
+    padding: 8px 20px;
     background: var(--brand-primary);
     color: var(--brand-primary-text);
     box-shadow: 0 1px 4px rgba(0,0,0,0.15);
@@ -131,25 +132,28 @@ html, body {
     opacity: 0.85;
 }
 
+/* No overflow/scroll handling here on purpose — clipping or scrolling this row would also clip
+   the dropdown menus below it (they're positioned relative to it). flex-wrap lets items that don't
+   fit drop to a second line instead, so .topbar's own min-height (not a fixed height) is what grows
+   to fit, rather than anything inside ever needing to scroll. */
 .topbar-nav {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 2px;
-    height: 100%;
     margin-left: auto;
-    overflow-x: auto;
 }
 
 .topbar-link {
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 100%;
-    padding: 0 12px;
+    padding: 8px 12px;
     color: var(--brand-primary-text);
     text-decoration: none;
     font-size: 0.9rem;
     white-space: nowrap;
+    border-radius: 3px;
 }
 
 .topbar-link:hover, .topbar-link.active {
@@ -159,17 +163,16 @@ html, body {
 
 .topbar-dropdown {
     position: relative;
-    height: 100%;
 }
 
 .topbar-dropdown-trigger {
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 100%;
-    padding: 0 12px;
+    padding: 8px 12px;
     background: none;
     border: none;
+    border-radius: 3px;
     color: var(--brand-primary-text);
     font-size: 0.9rem;
     font-family: inherit;
