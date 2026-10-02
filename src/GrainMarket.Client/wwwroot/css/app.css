@@ -180,11 +180,14 @@ html, body {
     white-space: nowrap;
 }
 
-.topbar-dropdown:hover .topbar-dropdown-trigger, .topbar-dropdown-trigger:focus {
+.topbar-dropdown-trigger:hover, .topbar-dropdown-trigger.open {
     background: var(--brand-accent);
     color: var(--brand-accent-text);
 }
 
+/* Opens/closes on click (MainLayout.razor's _openDropdownLabel), not :hover — a hover-driven
+   dropdown can't close itself after a Blazor navigation, since the mouse is still sitting over the
+   same spot once the link underneath it has been clicked. */
 .topbar-dropdown-menu {
     display: none;
     flex-direction: column;
@@ -197,8 +200,16 @@ html, body {
     z-index: 100;
 }
 
-.topbar-dropdown:hover .topbar-dropdown-menu {
+.topbar-dropdown-menu.open {
     display: flex;
+}
+
+/* The right-most dropdown (closest to the viewport edge) opens hugging its trigger's right edge
+   instead of the left — left-aligned, it would extend further right and get clipped by (or spill
+   off) the browser window. */
+.topbar-dropdown-menu.align-right {
+    left: auto;
+    right: 0;
 }
 
 .topbar-dropdown-menu a {
