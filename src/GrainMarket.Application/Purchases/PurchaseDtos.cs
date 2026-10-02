@@ -13,7 +13,9 @@ public record NextPurchaseInvoiceNoDto(string InvoiceNo);
 public record PurchaseDto(
     int Id, string InvoiceNo, string? BillNo, DateTime Date, string? Description, int SupplierId, string SupplierName,
     decimal TotalBill, decimal TotalDiscount, decimal NetBill, decimal PaidCash,
-    PrintFormat PrintFormat, PrintLanguage PrintLanguage, bool IsCancelled, List<PurchaseLineDto> Lines);
+    PrintFormat PrintFormat, PrintLanguage PrintLanguage, bool IsCancelled,
+    ApprovalStatus ApprovalStatus, int? SubmittedByUserId, string? RejectionReason,
+    List<PurchaseLineDto> Lines);
 
 public record CreatePurchaseRequest(
     DateTime Date, string? BillNo, int SupplierId, List<PurchaseLineRequest> Lines,

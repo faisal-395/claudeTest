@@ -15,14 +15,16 @@ public class PakkiService : IPakkiService
     private readonly Kachis.IKachiService _kachiService;
     private readonly IInvoiceNumberGenerator _numberGenerator;
     private readonly IDateTimeProvider _clock;
+    private readonly ICurrentUser _currentUser;
 
-    public PakkiService(IApplicationDbContext db, ILedgerPostingService ledger, Kachis.IKachiService kachiService, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock)
+    public PakkiService(IApplicationDbContext db, ILedgerPostingService ledger, Kachis.IKachiService kachiService, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock, ICurrentUser currentUser)
     {
         _db = db;
         _ledger = ledger;
         _kachiService = kachiService;
         _numberGenerator = numberGenerator;
         _clock = clock;
+        _currentUser = currentUser;
     }
 
     public async Task<List<PakkiDto>> GetAllAsync(int? seasonId = null, CancellationToken ct = default)
@@ -71,6 +73,7 @@ public class PakkiService : IPakkiService
         var calc = DeductionEngine.Calculate(grossAmount, kachi.NetWeightKg, DeductionAppliesTo.Pakki, kachi.ProductId, kachi.FarmerId, rules);
         var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
         var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
+        var approvalStatus = await DetermineApprovalStatusAsync(ct);
 
         var pakki = new Pakki
         {
@@ -92,7 +95,9 @@ public class PakkiService : IPakkiService
             NetPayableToFarmer = grossAmount - farmerTotal,
             VehicleNumber = request.VehicleNumber,
             Status = InvoiceStatus.Open,
-            Notes = request.Notes
+            Notes = request.Notes,
+            ApprovalStatus = approvalStatus,
+            SubmittedByUserId = _currentUser.UserId
         };
 
         foreach (var line in calc.Lines)
@@ -115,7 +120,10 @@ public class PakkiService : IPakkiService
         kachi.ConvertedToPakkiId = pakki.Id;
         kachi.UpdatedAtUtc = _clock.UtcNow;
 
-        await PostLedgerAsync(pakki, calc, ct);
+        if (pakki.ApprovalStatus == ApprovalStatus.Approved)
+        {
+            await PostLedgerAsync(pakki, calc, ct);
+        }
         await _db.SaveChangesAsync(ct);
 
         return await GetByIdAsync(pakki.Id, ct);
@@ -143,6 +151,7 @@ public class PakkiService : IPakkiService
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Pakki, request.ProductId, request.FarmerId, rules, rateOverrides);
         var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
         var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
+        var approvalStatus = await DetermineApprovalStatusAsync(ct);
 
         var pakki = new Pakki
         {
@@ -165,7 +174,9 @@ public class PakkiService : IPakkiService
             NetPayableToFarmer = grossAmount - farmerTotal,
             VehicleNumber = request.VehicleNumber,
             Status = InvoiceStatus.Open,
-            Notes = request.Notes
+            Notes = request.Notes,
+            ApprovalStatus = approvalStatus,
+            SubmittedByUserId = _currentUser.UserId
         };
 
         foreach (var line in calc.Lines)
@@ -184,8 +195,11 @@ public class PakkiService : IPakkiService
         _db.Pakkis.Add(pakki);
         await _db.SaveChangesAsync(ct);
 
-        await PostLedgerAsync(pakki, calc, ct);
-        await _db.SaveChangesAsync(ct);
+        if (pakki.ApprovalStatus == ApprovalStatus.Approved)
+        {
+            await PostLedgerAsync(pakki, calc, ct);
+            await _db.SaveChangesAsync(ct);
+        }
 
         return await GetByIdAsync(pakki.Id, ct);
     }
@@ -197,15 +211,39 @@ public class PakkiService : IPakkiService
         {
             throw new InvalidCalculationException("Only an open Pakki (not yet cancelled) can be edited.");
         }
+
+        // Normally editing a Pakki requires the Pakki module's own Edit permission (checked by
+        // PakkisController). The one exception: the original submitter of a Rejected Pakki may fix
+        // it even without that permission (e.g. a Clerk/Munshi, who otherwise can't edit a Pakki at
+        // all) — see Role.RequiresApproval. Anyone with Approvals edit permission (Manager/Admin)
+        // can always edit it regardless, same as before.
+        var wasRejected = pakki.ApprovalStatus == ApprovalStatus.Rejected;
+        var isApprover = await HasApprovalsEditPermissionAsync(ct);
+        if (!(wasRejected && pakki.SubmittedByUserId == _currentUser.UserId) && !isApprover)
+        {
+            if (!await HasModuleEditPermissionAsync(ModuleName.Pakki, ct))
+            {
+                throw new ForbiddenAccessException("You don't have permission to edit this Pakki.");
+            }
+        }
+
         if (!await _db.Parties.AnyAsync(p => p.Id == request.BuyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
         {
             throw new NotFoundException(nameof(Party), request.BuyerId);
         }
 
+        // Only an Approved Pakki has live ledger entries to reverse — a Pending or Rejected one was
+        // never posted, so reversing it here would fabricate a reversal against postings that don't
+        // exist and corrupt the running balance.
+        var hadLivePostings = pakki.ApprovalStatus == ApprovalStatus.Approved;
+
         // A Pakki is a posted financial document — editing it means reversing exactly what was
         // posted (mirroring CancelAsync's approach), then posting fresh entries for the new terms.
         // Weight/product/farmer/season never change here; only buyer, rate, vehicle and notes do.
-        await ReverseLedgerAsync(pakki, $"Reversal: {pakki.InvoiceNo} edited", ct);
+        if (hadLivePostings)
+        {
+            await ReverseLedgerAsync(pakki, $"Reversal: {pakki.InvoiceNo} edited", ct);
+        }
 
         var conversions = await _db.UnitConversions.Where(c => c.IsActive && !c.IsDeleted).ToListAsync(ct);
         var grossAmount = UnitConversionCalculator.GrossAmountFromRatePerMan(request.RatePerUnit, pakki.NetWeightKg, pakki.ProductId, conversions);
@@ -244,8 +282,28 @@ public class PakkiService : IPakkiService
         }
 
         await _db.SaveChangesAsync(ct);
-        await PostLedgerAsync(pakki, calc, ct);
-        await _db.SaveChangesAsync(ct);
+
+        if (wasRejected)
+        {
+            if (isApprover)
+            {
+                pakki.ApprovalStatus = ApprovalStatus.Approved;
+                pakki.ReviewedByUserId = _currentUser.UserId;
+                pakki.ReviewedAtUtc = _clock.UtcNow;
+            }
+            else
+            {
+                pakki.ApprovalStatus = ApprovalStatus.Pending;
+            }
+            pakki.RejectionReason = null;
+            await _db.SaveChangesAsync(ct);
+        }
+
+        if (pakki.ApprovalStatus == ApprovalStatus.Approved)
+        {
+            await PostLedgerAsync(pakki, calc, ct);
+            await _db.SaveChangesAsync(ct);
+        }
 
         return await GetByIdAsync(id, ct);
     }
@@ -268,7 +326,12 @@ public class PakkiService : IPakkiService
             }
         }
 
-        await ReverseLedgerAsync(pakki, $"Reversal: {pakki.InvoiceNo} cancelled", ct);
+        // Nothing was ever posted for a Pakki still awaiting (or denied) review, so there is nothing
+        // to reverse — only an Approved Pakki has live ledger entries.
+        if (pakki.ApprovalStatus == ApprovalStatus.Approved)
+        {
+            await ReverseLedgerAsync(pakki, $"Reversal: {pakki.InvoiceNo} cancelled", ct);
+        }
         await _db.SaveChangesAsync(ct);
 
         // The Kachi's own ledger postings were reversed when it was converted to this Pakki
@@ -278,6 +341,63 @@ public class PakkiService : IPakkiService
         {
             await _kachiService.RepostLedgerAfterPakkiCancellationAsync(reopenedKachiId.Value, ct);
         }
+    }
+
+    /// <summary>Approves a Pending Pakki, posting the ledger entries that were deferred at creation.</summary>
+    public async Task<PakkiDto> ApproveAsync(int id, CancellationToken ct = default)
+    {
+        var pakki = await LoadAsync(id, ct);
+        if (pakki.ApprovalStatus != ApprovalStatus.Pending)
+        {
+            throw new InvalidCalculationException("Only a Pakki awaiting review can be approved.");
+        }
+
+        pakki.ApprovalStatus = ApprovalStatus.Approved;
+        pakki.ReviewedByUserId = _currentUser.UserId;
+        pakki.ReviewedAtUtc = _clock.UtcNow;
+        pakki.UpdatedAtUtc = _clock.UtcNow;
+
+        await PostLedgerFromStoredLinesAsync(pakki, ct);
+        await _db.SaveChangesAsync(ct);
+
+        return await GetByIdAsync(id, ct);
+    }
+
+    /// <summary>Rejects a Pending Pakki — nothing was ever posted, so there is nothing to reverse.
+    /// The original submitter (or anyone with Approvals edit permission) can then fix it via
+    /// UpdateAsync, which resubmits it.</summary>
+    public async Task<PakkiDto> RejectAsync(int id, string? reason, CancellationToken ct = default)
+    {
+        var pakki = await LoadAsync(id, ct);
+        if (pakki.ApprovalStatus != ApprovalStatus.Pending)
+        {
+            throw new InvalidCalculationException("Only a Pakki awaiting review can be rejected.");
+        }
+
+        pakki.ApprovalStatus = ApprovalStatus.Rejected;
+        pakki.ReviewedByUserId = _currentUser.UserId;
+        pakki.ReviewedAtUtc = _clock.UtcNow;
+        pakki.RejectionReason = reason;
+        pakki.UpdatedAtUtc = _clock.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return await GetByIdAsync(id, ct);
+    }
+
+    private async Task<ApprovalStatus> DetermineApprovalStatusAsync(CancellationToken ct)
+    {
+        if (_currentUser.RoleId is null) return ApprovalStatus.Approved;
+        var requiresApproval = await _db.Roles.Where(r => r.Id == _currentUser.RoleId).Select(r => r.RequiresApproval).FirstOrDefaultAsync(ct);
+        return requiresApproval ? ApprovalStatus.Pending : ApprovalStatus.Approved;
+    }
+
+    private async Task<bool> HasApprovalsEditPermissionAsync(CancellationToken ct) => await HasModuleEditPermissionAsync(ModuleName.Approvals, ct);
+
+    private async Task<bool> HasModuleEditPermissionAsync(ModuleName module, CancellationToken ct)
+    {
+        if (_currentUser.RoleId is null) return false;
+        var permission = await _db.RolePermissions.FirstOrDefaultAsync(p => p.RoleId == _currentUser.RoleId && p.Module == module, ct);
+        return permission is not null && permission.CanEdit;
     }
 
     /// <summary>Posts the mirror image of a Pakki's ledger postings, so the running balance is
@@ -305,6 +425,23 @@ public class PakkiService : IPakkiService
         foreach (var line in calc.Lines)
         {
             var accountId = await ResolveIncomeAccountIdAsync(line.IncomeAccountId, ct);
+            await _ledger.PostAccountEntryAsync(accountId, pakki.Date, 0, line.Amount, LedgerSourceType.Pakki, pakki.Id, $"Pakki {pakki.InvoiceNo}: {line.Name}", ct);
+        }
+    }
+
+    /// <summary>Same posting as PostLedgerAsync, but reading the deduction lines back from the
+    /// Pakki's own stored DeductionLines instead of a freshly computed DeductionCalculationResult —
+    /// used only by ApproveAsync, where there's no fresh calculation to hand it (mirrors
+    /// KachiService.PostLedgerFromStoredLinesAsync).</summary>
+    private async Task PostLedgerFromStoredLinesAsync(Pakki pakki, CancellationToken ct)
+    {
+        await _ledger.PostPartyEntryAsync(pakki.BuyerId, pakki.Date, pakki.GrossAmount + pakki.BuyerChargesTotal, 0, LedgerSourceType.Pakki, pakki.Id, $"Pakki {pakki.InvoiceNo}", ct);
+        await _ledger.PostPartyEntryAsync(pakki.FarmerId, pakki.Date, 0, pakki.NetPayableToFarmer, LedgerSourceType.Pakki, pakki.Id, $"Pakki {pakki.InvoiceNo}", ct);
+
+        foreach (var line in pakki.DeductionLines)
+        {
+            var ruleAccountId = await _db.DeductionRules.Where(r => r.Id == line.DeductionRuleId).Select(r => r.IncomeAccountId).FirstOrDefaultAsync(ct);
+            var accountId = await ResolveIncomeAccountIdAsync(ruleAccountId, ct);
             await _ledger.PostAccountEntryAsync(accountId, pakki.Date, 0, line.Amount, LedgerSourceType.Pakki, pakki.Id, $"Pakki {pakki.InvoiceNo}: {line.Name}", ct);
         }
     }
@@ -347,5 +484,6 @@ public class PakkiService : IPakkiService
         p.BuyerId, p.Buyer.Name, p.FarmerId, p.Farmer.Name, p.ProductId, p.Product.Name,
         p.BhartiKgPerBag, p.TotalWeightKg, p.BoriQty, p.NetWeightKg, p.RatePerUnit, p.GrossAmount,
         p.TotalDeductions, p.BuyerChargesTotal, p.NetPayableToFarmer, p.VehicleNumber, p.Status, p.Notes,
+        p.ApprovalStatus, p.SubmittedByUserId, p.RejectionReason,
         p.DeductionLines.Select(l => new PakkiDeductionLineDto(l.DeductionRuleId, l.Name, l.NameUrdu, l.Amount, l.VehicleNumber, l.ChargedTo)).ToList());
 }

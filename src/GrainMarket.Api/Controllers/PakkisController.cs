@@ -1,4 +1,5 @@
 using GrainMarket.Api.Common;
+using GrainMarket.Application.Common;
 using GrainMarket.Application.Pakkis;
 using GrainMarket.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -43,7 +44,10 @@ public class PakkisController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
-    [ModulePermission(ModuleName.Pakki, PermissionAction.Edit)]
+    // No [ModulePermission(..., Edit)] gate here — PakkiService.UpdateAsync itself decides: the
+    // normal Pakki Edit permission applies, except the original submitter of a Rejected Pakki may
+    // fix it even without that permission (see Role.RequiresApproval), and anyone with Approvals
+    // edit permission (Manager/Admin) may always edit it.
     [HttpPut("{id:int}")]
     public async Task<ActionResult<PakkiDto>> Update(int id, UpdatePakkiRequest request, CancellationToken ct)
         => Ok(await _service.UpdateAsync(id, request, ct));
@@ -55,4 +59,13 @@ public class PakkisController : ControllerBase
         await _service.CancelAsync(id, ct);
         return NoContent();
     }
+
+    [ModulePermission(ModuleName.Approvals, PermissionAction.Edit)]
+    [HttpPost("{id:int}/approve")]
+    public async Task<ActionResult<PakkiDto>> Approve(int id, CancellationToken ct) => Ok(await _service.ApproveAsync(id, ct));
+
+    [ModulePermission(ModuleName.Approvals, PermissionAction.Edit)]
+    [HttpPost("{id:int}/reject")]
+    public async Task<ActionResult<PakkiDto>> Reject(int id, [FromBody] RejectRequest request, CancellationToken ct)
+        => Ok(await _service.RejectAsync(id, request.Reason, ct));
 }

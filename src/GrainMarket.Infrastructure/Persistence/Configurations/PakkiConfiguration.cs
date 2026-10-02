@@ -14,6 +14,7 @@ public class PakkiConfiguration : IEntityTypeConfiguration<Pakki>
         builder.HasIndex(p => p.InvoiceNo);
         builder.Property(p => p.BillNumber).HasMaxLength(30);
         builder.Property(p => p.VehicleNumber).HasMaxLength(30);
+        builder.Property(p => p.RejectionReason).HasMaxLength(500);
 
         foreach (var name in new[] { nameof(Pakki.BhartiKgPerBag), nameof(Pakki.TotalWeightKg), nameof(Pakki.BoriQty) })
         {

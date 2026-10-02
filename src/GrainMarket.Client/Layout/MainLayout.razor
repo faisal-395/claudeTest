@@ -174,7 +174,8 @@ else
             // below.
             AddGroup("Accounts",
                 (AuthState.CanView(ModuleName.Ledger), new NavItem("ledger", "ledger", "Ledger")),
-                (AuthState.CanView(ModuleName.Ledger), new NavItem("reports/party-account", "user", "Party Account Statement")));
+                (AuthState.CanView(ModuleName.Ledger), new NavItem("reports/party-account", "user", "Party Account Statement")),
+                (AuthState.CanView(ModuleName.Approvals), new NavItem("approvals", "ledger", "Pending Approvals")));
 
             AddGroup("Setup",
                 (AuthState.CanView(ModuleName.SetupParty), new NavItem("setup/parties", "party", "Party")),
@@ -186,6 +187,7 @@ else
                 (AuthState.CanView(ModuleName.SetupCompanyInfo), new NavItem("setup/company-info", "party", "Company Info")),
                 (AuthState.CanView(ModuleName.SetupAppearance), new NavItem("setup/appearance", "appearance", "Appearance")),
                 (AuthState.CanView(ModuleName.SetupUsersRoles), new NavItem("setup/users", "user-account", "User Account")),
+                (AuthState.CanView(ModuleName.SetupUsersRoles), new NavItem("setup/roles", "user-account", "Roles")),
                 (AuthState.CanView(ModuleName.Backup), new NavItem("backup", "backup", "Backup")));
 
             return groups;

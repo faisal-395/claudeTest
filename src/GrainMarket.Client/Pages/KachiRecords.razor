@@ -71,7 +71,7 @@
     else
     {
         <table class="data-grid kachi-records-grid">
-            <thead><tr><th>Invoice</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Weight</th><th>Rate/Man</th><th>Total</th><th></th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Date</th><th>Farmer / کسان</th><th>Buyer / خریدار</th><th>Product / جنس</th><th>Weight</th><th>Rate/Man</th><th>Total</th><th>Approval</th><th></th></tr></thead>
             <tbody>
                 @foreach (var k in _kachis)
                 {
@@ -84,6 +84,12 @@
                         <td>@(k.BoriQty?.ToString("N2") ?? "—") Bori (@k.NetWeightKg.ToString("N2") kg)</td>
                         <td>@(k.RatePerUnit?.ToString("N2") ?? "—")</td>
                         <td>@k.Total.ToString("N2")</td>
+                        <td>
+                            @if (k.ApprovalStatus != ApprovalStatus.Approved)
+                            {
+                                <span title="@k.RejectionReason">@k.ApprovalStatus</span>
+                            }
+                        </td>
                         <td>
                             <a href="print/kachi/@k.Id">Details</a>
                             @if (k.Status == InvoiceStatus.Open)

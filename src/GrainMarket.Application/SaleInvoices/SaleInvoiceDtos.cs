@@ -13,7 +13,9 @@ public record NextSaleInvoiceNoDto(string InvoiceNo);
 public record SaleInvoiceDto(
     int Id, string InvoiceNo, string? BillNo, DateTime Date, string? Description, int CustomerId, string CustomerName,
     decimal TotalBill, decimal TotalDiscount, decimal NetBill, decimal ReceivedCash, decimal PayCash,
-    PrintFormat PrintFormat, PrintLanguage PrintLanguage, bool IsCancelled, List<SaleInvoiceLineDto> Lines);
+    PrintFormat PrintFormat, PrintLanguage PrintLanguage, bool IsCancelled,
+    ApprovalStatus ApprovalStatus, int? SubmittedByUserId, string? RejectionReason,
+    List<SaleInvoiceLineDto> Lines);
 
 public record CreateSaleInvoiceRequest(
     DateTime Date, string? BillNo, int CustomerId, List<SaleInvoiceLineRequest> Lines,

@@ -1,8 +1,10 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using GrainMarket.Application.Appearance;
+using GrainMarket.Application.Approvals;
 using GrainMarket.Application.Auth;
 using GrainMarket.Application.ChartOfAccounts;
+using GrainMarket.Application.Common;
 using GrainMarket.Application.Company;
 using GrainMarket.Application.Dashboard;
 using GrainMarket.Application.DeductionRules;
@@ -133,6 +135,11 @@ public class ApiClient
         GetAsync<SuggestedSalePriceDto>($"api/stock/suggested-price?productId={productId}");
     public Task CancelPurchaseAsync(int id) => PostAsync($"api/purchases/{id}/cancel");
 
+    // --- Approvals -----------------------------------------------------------------------------
+    public Task<List<PendingApprovalDto>> GetPendingApprovalsAsync() => GetAsync<List<PendingApprovalDto>>("api/approvals/pending");
+    public Task ApproveAsync(string entityType, int id) => PostAsync($"api/approvals/{entityType}/{id}/approve");
+    public Task RejectAsync(string entityType, int id, string? reason) => PostAsync($"api/approvals/{entityType}/{id}/reject", new RejectRequest(reason));
+
     // --- Vouchers: Payment / Receipt / Journal -----------------------------------------------------
     public Task<List<VoucherDto>> GetVouchersAsync(VoucherType? type = null, int? seasonId = null) =>
         GetAsync<List<VoucherDto>>($"api/vouchers?{(type.HasValue ? $"type={type}&" : "")}{(seasonId.HasValue ? $"seasonId={seasonId}" : "")}");
@@ -192,6 +199,12 @@ public class ApiClient
     private Task PostAsync(string url) => GuardAsync(async () =>
     {
         var response = await _http.PostAsync(url, content: null);
+        await EnsureSuccessAsync(response);
+    });
+
+    private Task PostAsync<TRequest>(string url, TRequest body) => GuardAsync(async () =>
+    {
+        var response = await _http.PostAsJsonAsync(url, body, JsonOptions);
         await EnsureSuccessAsync(response);
     });
 

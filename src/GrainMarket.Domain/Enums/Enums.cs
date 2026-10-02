@@ -74,6 +74,17 @@ public enum InvoiceStatus
     Posted = 4
 }
 
+/// <summary>Review state of a transaction raised by a role whose Role.RequiresApproval is set —
+/// see Kachi/Pakki/Purchase/SaleInvoice.ApprovalStatus. Pending transactions are saved immediately
+/// (so the number sequence, stock allocations, etc. all happen as usual) but their ledger postings
+/// are deferred until a Manager/Admin Approves them; Rejecting never posts anything.</summary>
+public enum ApprovalStatus
+{
+    Approved = 0,
+    Pending = 1,
+    Rejected = 2
+}
+
 public enum VoucherType
 {
     Payment = 1,

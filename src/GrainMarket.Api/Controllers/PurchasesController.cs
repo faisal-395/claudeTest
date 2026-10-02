@@ -1,4 +1,5 @@
 using GrainMarket.Api.Common;
+using GrainMarket.Application.Common;
 using GrainMarket.Application.Purchases;
 using GrainMarket.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -46,4 +47,13 @@ public class PurchasesController : ControllerBase
         await _service.CancelAsync(id, ct);
         return NoContent();
     }
+
+    [ModulePermission(ModuleName.Approvals, PermissionAction.Edit)]
+    [HttpPost("{id:int}/approve")]
+    public async Task<ActionResult<PurchaseDto>> Approve(int id, CancellationToken ct) => Ok(await _service.ApproveAsync(id, ct));
+
+    [ModulePermission(ModuleName.Approvals, PermissionAction.Edit)]
+    [HttpPost("{id:int}/reject")]
+    public async Task<ActionResult<PurchaseDto>> Reject(int id, [FromBody] RejectRequest request, CancellationToken ct)
+        => Ok(await _service.RejectAsync(id, request.Reason, ct));
 }

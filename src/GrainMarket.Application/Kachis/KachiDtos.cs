@@ -11,6 +11,7 @@ public record KachiDto(
     decimal? BhartiKgPerBag, decimal? TotalWeightKg, decimal? BoriQty, decimal NetWeightKg,
     decimal? RatePerUnit, decimal GrossAmount, decimal TotalDeductions, decimal BuyerChargesTotal, decimal Total,
     InvoiceStatus Status, int? ConvertedToPakkiId, string? Notes,
+    ApprovalStatus ApprovalStatus, int? SubmittedByUserId, string? RejectionReason,
     List<KachiDeductionLineDto> DeductionLines);
 
 public record CreateKachiRequest(

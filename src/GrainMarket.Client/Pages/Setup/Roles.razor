@@ -1,0 +1,75 @@
+@page "/setup/roles"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Roles</h1>
+    <p style="color:#777;">Turn on <b>Requires Approval</b> for a role to hold every Kachi, Pakki, Purchase and Sale
+        Invoice it raises as Pending until a Manager/Admin reviews it under Pending Approvals — nothing posts to the
+        ledger until then. Off (the default) posts straight through as before.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+    @if (_successMessage is not null)
+    {
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+    }
+
+    @if (_roles is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>Role</th><th>Requires Approval</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var r in _roles)
+                {
+                    <tr>
+                        <td>@r.Name @(r.NameUrdu is null ? "" : $"({r.NameUrdu})")</td>
+                        <td><input type="checkbox" checked="@_pending[r.Id]" @onchange="@(e => _pending[r.Id] = (bool)e.Value!)" /></td>
+                        <td><button class="btn secondary" disabled="@(_savingId == r.Id)" @onclick="() => SaveAsync(r)">@(_savingId == r.Id ? "Saving…" : "Save")</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<RoleDto>? _roles;
+    private Dictionary<int, bool> _pending = new();
+    private int? _savingId;
+    private string? _error;
+    private string? _successMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _roles = await Api.GetRolesAsync();
+            _pending = _roles.ToDictionary(r => r.Id, r => r.RequiresApproval);
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task SaveAsync(RoleDto r)
+    {
+        _error = null;
+        _successMessage = null;
+        _savingId = r.Id;
+        try
+        {
+            var request = new UpsertRoleRequest(r.Name, r.NameUrdu, r.Permissions, _pending[r.Id]);
+            await Api.UpdateRoleAsync(r.Id, request);
+            _successMessage = $"{r.Name} updated.";
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+        finally { _savingId = null; }
+    }
+}

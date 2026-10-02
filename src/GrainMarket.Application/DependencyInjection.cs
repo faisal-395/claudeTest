@@ -1,5 +1,6 @@
 using FluentValidation;
 using GrainMarket.Application.Appearance;
+using GrainMarket.Application.Approvals;
 using GrainMarket.Application.Auth;
 using GrainMarket.Application.ChartOfAccounts;
 using GrainMarket.Application.Common.Interfaces;
@@ -62,6 +63,7 @@ public static class DependencyInjection
         services.AddScoped<ITradingService, TradingService>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IApprovalsService, ApprovalsService>();
 
         return services;
     }

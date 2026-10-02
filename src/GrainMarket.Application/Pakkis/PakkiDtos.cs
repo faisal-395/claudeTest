@@ -10,7 +10,9 @@ public record PakkiDto(
     int BuyerId, string BuyerName, int FarmerId, string FarmerName, int ProductId, string ProductName,
     decimal? BhartiKgPerBag, decimal? TotalWeightKg, decimal? BoriQty, decimal NetWeightKg,
     decimal RatePerUnit, decimal GrossAmount, decimal TotalDeductions, decimal BuyerChargesTotal, decimal NetPayableToFarmer,
-    string? VehicleNumber, InvoiceStatus Status, string? Notes, List<PakkiDeductionLineDto> DeductionLines);
+    string? VehicleNumber, InvoiceStatus Status, string? Notes,
+    ApprovalStatus ApprovalStatus, int? SubmittedByUserId, string? RejectionReason,
+    List<PakkiDeductionLineDto> DeductionLines);
 
 /// <summary>Creates a Pakki from an existing open Kachi, carrying its farmer/product/weight forward.</summary>
 public record CreatePakkiFromKachiRequest(
