@@ -35,7 +35,18 @@
     }
     else
     {
-        @foreach (var r in _roles)
+        <div style="max-width:300px;margin-bottom:16px;">
+            <label>Role</label>
+            <select @bind="_selectedRoleId" style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:3px;">
+                @foreach (var r in SelectableRoles)
+                {
+                    <option value="@r.Id">@r.Name</option>
+                }
+            </select>
+            <p style="color:#777;font-size:0.85rem;margin:4px 0 0;">Owner/Admin always has every permission and isn't listed here — it can't be changed.</p>
+        </div>
+
+        @if (SelectedRole is { } r)
         {
             <div style="max-width:900px;background:white;padding:16px 20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
                 <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
@@ -74,6 +85,7 @@
 
 @code {
     private List<RoleEditModel>? _roles;
+    private int _selectedRoleId;
     private int? _savingId;
     private string? _error;
     private string? _successMessage;
@@ -83,6 +95,11 @@
 
     private static readonly ModuleName[] AllModules = Enum.GetValues<ModuleName>();
 
+    // Owner/Admin always has every permission (see SeedData) and is never meant to be edited —
+    // excluded here so it can't be picked, let alone accidentally narrowed down.
+    private IEnumerable<RoleEditModel> SelectableRoles => _roles?.Where(r => r.Name != "Owner/Admin") ?? Enumerable.Empty<RoleEditModel>();
+    private RoleEditModel? SelectedRole => _roles?.FirstOrDefault(r => r.Id == _selectedRoleId);
+
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
     private async Task LoadAsync()
@@ -91,6 +108,10 @@
         {
             var roles = await Api.GetRolesAsync();
             _roles = roles.Select(RoleEditModel.From).ToList();
+            if (SelectableRoles.All(r => r.Id != _selectedRoleId))
+            {
+                _selectedRoleId = SelectableRoles.FirstOrDefault()?.Id ?? 0;
+            }
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
