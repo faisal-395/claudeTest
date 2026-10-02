@@ -12,6 +12,7 @@ public class SaleInvoiceConfiguration : IEntityTypeConfiguration<SaleInvoice>
         builder.HasIndex(s => s.InvoiceNo).IsUnique();
         builder.Property(s => s.BillNo).HasMaxLength(30);
         builder.Property(s => s.Description).HasMaxLength(500);
+        builder.Property(s => s.RejectionReason).HasMaxLength(500);
         builder.Property(s => s.TotalBill).HasPrecision(18, 2);
         builder.Property(s => s.TotalDiscount).HasPrecision(18, 2);
         builder.Property(s => s.NetBill).HasPrecision(18, 2);
@@ -43,6 +44,7 @@ public class PurchaseConfiguration : IEntityTypeConfiguration<Purchase>
         builder.HasIndex(p => p.InvoiceNo).IsUnique();
         builder.Property(p => p.BillNo).HasMaxLength(30);
         builder.Property(p => p.Description).HasMaxLength(500);
+        builder.Property(p => p.RejectionReason).HasMaxLength(500);
         builder.Property(p => p.TotalBill).HasPrecision(18, 2);
         builder.Property(p => p.TotalDiscount).HasPrecision(18, 2);
         builder.Property(p => p.NetBill).HasPrecision(18, 2);
