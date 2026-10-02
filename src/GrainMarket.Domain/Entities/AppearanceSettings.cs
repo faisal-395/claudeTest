@@ -16,6 +16,15 @@ public enum ThemeScope
     Pakki = 4
 }
 
+/// <summary>Where the app's navigation lives — a single, app-wide choice (there's only ever one
+/// nav, not one per page), stored on the Global row's NavigationLayout and ignored on every other
+/// scope's row.</summary>
+public enum NavigationLayout
+{
+    Sidebar = 0,
+    TopMenu = 1
+}
+
 /// <summary>Per-install, per-scope brand colors — one row per ThemeScope, edited from Setup &gt;
 /// Appearance by Owner/Admin only, never created or deleted through the UI (a migration seeds one
 /// row per scope; see SeedAppearanceSettingsAsync). Stored as "#RRGGBB" hex strings and applied
@@ -48,4 +57,12 @@ public class AppearanceSettings : BaseEntity
 
     /// <summary>Font size (px) of field labels ("Invoice #", "Bill No", etc.) within this scope.</summary>
     public int LabelFontSizePx { get; set; } = 13;
+
+    /// <summary>Whether this scope's data-grid tables show a full cell border (all four sides)
+    /// instead of just a bottom divider between rows.</summary>
+    public bool GridFullBorders { get; set; }
+
+    /// <summary>App-wide sidebar vs. top menu choice. Only meaningful on the Global row — every
+    /// other scope's row carries this column too (same shared table) but it's never read from them.</summary>
+    public NavigationLayout NavigationLayout { get; set; } = NavigationLayout.Sidebar;
 }

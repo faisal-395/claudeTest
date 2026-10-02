@@ -84,6 +84,7 @@
                 if (settings.inputBackgroundColor) {
                     declarations.push('--brand-input-text: ' + contrastTextFor(settings.inputBackgroundColor) + ';');
                 }
+                declarations.push('--brand-grid-border-width: ' + (settings.gridFullBorders ? '1px' : '0') + ';');
 
                 return selector + ' { ' + declarations.join(' ') + ' }';
             }).join('\n');

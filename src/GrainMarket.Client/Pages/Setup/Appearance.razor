@@ -73,7 +73,26 @@
                         <label>Field Label Font Size (px)</label>
                         <input type="number" min="8" max="32" @bind="s.LabelFontSizePx" style="width:80px;" />
                     </div>
+                    <div>
+                        <label>Grid Borders</label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:400;">
+                            <input type="checkbox" @bind="s.GridFullBorders" style="width:auto;" />
+                            Show a full border on every cell (not just a line between rows)
+                        </label>
+                    </div>
                 </div>
+
+                @if (s.Scope == ThemeScope.Global)
+                {
+                    <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e5e5;">
+                        <label>Navigation Layout</label>
+                        <p style="color:#777;margin:2px 0 8px;font-size:0.85rem;">Where the app's menu lives — applies everywhere, not just this screen.</p>
+                        <select @bind="s.NavigationLayout" style="width:220px;padding:6px 8px;border:1px solid #ccc;border-radius:3px;">
+                            <option value="@NavigationLayout.Sidebar">Side Menu</option>
+                            <option value="@NavigationLayout.TopMenu">Top Menu</option>
+                        </select>
+                    </div>
+                }
 
                 <div style="margin-top:12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -118,7 +137,7 @@
             var request = new UpdateAppearanceSettingsRequest(
                 s.PrimaryColor, s.AccentColor, s.SurfaceColor,
                 s.PanelColor, s.HeadingBackgroundColor, s.InputBackgroundColor, s.GridHeaderColor,
-                s.LabelFontSizePx);
+                s.LabelFontSizePx, s.GridFullBorders, s.NavigationLayout);
             var updated = await Api.UpdateAppearanceSettingsAsync(s.Scope, request);
             s.ApplyFrom(updated);
             await JS.InvokeVoidAsync("applyTheme", _scopes!.Select(x => x.ToDto()).ToList());
@@ -139,6 +158,8 @@
         s.InputBackgroundColor = defaults.InputBackgroundColor;
         s.GridHeaderColor = defaults.GridHeaderColor;
         s.LabelFontSizePx = defaults.LabelFontSizePx;
+        s.GridFullBorders = defaults.GridFullBorders;
+        s.NavigationLayout = defaults.NavigationLayout;
         return SaveAsync(s);
     }
 
@@ -160,6 +181,10 @@
         public string InputBackgroundColor { get; set; } = "#FFFFFF";
         public string GridHeaderColor { get; set; } = "#EEF4EE";
         public int LabelFontSizePx { get; set; } = 13;
+        public bool GridFullBorders { get; set; }
+
+        // Only shown/editable on the Global panel — round-trips unchanged for every other scope.
+        public NavigationLayout NavigationLayout { get; set; } = NavigationLayout.Sidebar;
 
         private static string LabelFor(ThemeScope scope) => scope switch
         {
@@ -189,10 +214,13 @@
             InputBackgroundColor = dto.InputBackgroundColor;
             GridHeaderColor = dto.GridHeaderColor;
             LabelFontSizePx = dto.LabelFontSizePx;
+            GridFullBorders = dto.GridFullBorders;
+            NavigationLayout = dto.NavigationLayout;
         }
 
         public AppearanceSettingsDto ToDto() => new(
             0, Scope, PrimaryColor, AccentColor, SurfaceColor,
-            PanelColor, HeadingBackgroundColor, InputBackgroundColor, GridHeaderColor, LabelFontSizePx);
+            PanelColor, HeadingBackgroundColor, InputBackgroundColor, GridHeaderColor, LabelFontSizePx,
+            GridFullBorders, NavigationLayout);
     }
 }

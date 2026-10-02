@@ -42,6 +42,8 @@
     --brand-input-bg: #ffffff;
     --brand-grid-header: #eef4ee;
     --brand-label-font-size: 13px;
+    /* 0 = today's look (bottom divider only); a scope's "Full Grid Borders" toggle sets this to 1px. */
+    --brand-grid-border-width: 0;
 
     /* Readable text color for anything sitting ON a --brand-primary/--brand-accent/--brand-input-bg
        background (sidebar, buttons, the selected day in the date picker, a focused text box).
@@ -92,6 +94,128 @@ html, body {
 .app-shell {
     display: flex;
     height: 100vh;
+}
+
+/* Alternate to .app-shell/.sidebar below — Setup > Appearance's Global "Navigation Layout" choice
+   swaps one for the other in MainLayout.razor. Same .main-content class either way, so every
+   page's own markup/CSS is unaffected by which layout is active. */
+.app-shell-top {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    height: 56px;
+    flex-shrink: 0;
+    padding: 0 20px;
+    background: var(--brand-primary);
+    color: var(--brand-primary-text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    position: relative;
+    z-index: 100;
+}
+
+.topbar-brand {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.topbar-brand small {
+    display: block;
+    font-weight: 400;
+    font-size: 0.75rem;
+    opacity: 0.85;
+}
+
+.topbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 100%;
+    margin-left: auto;
+    overflow-x: auto;
+}
+
+.topbar-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    padding: 0 12px;
+    color: var(--brand-primary-text);
+    text-decoration: none;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.topbar-link:hover, .topbar-link.active {
+    background: var(--brand-accent);
+    color: var(--brand-accent-text);
+}
+
+.topbar-dropdown {
+    position: relative;
+    height: 100%;
+}
+
+.topbar-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    padding: 0 12px;
+    background: none;
+    border: none;
+    color: var(--brand-primary-text);
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.topbar-dropdown:hover .topbar-dropdown-trigger, .topbar-dropdown-trigger:focus {
+    background: var(--brand-accent);
+    color: var(--brand-accent-text);
+}
+
+.topbar-dropdown-menu {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 220px;
+    background: var(--brand-panel);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    z-index: 100;
+}
+
+.topbar-dropdown:hover .topbar-dropdown-menu {
+    display: flex;
+}
+
+.topbar-dropdown-menu a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    color: #333;
+    text-decoration: none;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.topbar-dropdown-menu a:hover, .topbar-dropdown-menu a.active {
+    background: var(--brand-surface);
+    color: var(--brand-primary);
+}
+
+.topbar-logout {
+    margin-left: 8px;
 }
 
 .sidebar {
@@ -250,6 +374,15 @@ table.data-grid th, table.data-grid td {
     border-bottom: 1px solid #e5e5e5;
     text-align: left;
     font-size: 0.9rem;
+}
+
+/* Per-scope "Full Grid Borders" toggle — adds the other three sides on top of the bottom divider
+   above, rather than replacing it, so turning this off (the default, --brand-grid-border-width: 0)
+   never has to re-declare border-bottom. */
+table.data-grid th, table.data-grid td {
+    border-left: var(--brand-grid-border-width, 0) solid #e5e5e5;
+    border-right: var(--brand-grid-border-width, 0) solid #e5e5e5;
+    border-top: var(--brand-grid-border-width, 0) solid #e5e5e5;
 }
 
 table.data-grid th {
@@ -910,6 +1043,8 @@ table.batch-results-grid th, table.batch-results-grid td {
     .sidebar { display: none !important; }
     .app-shell { display: block !important; height: auto !important; }
     .main-content { padding: 0 !important; overflow: visible !important; }
+    .topbar { display: none !important; }
+    .app-shell-top { display: block !important; height: auto !important; }
 }
 
 .print-thermal {
