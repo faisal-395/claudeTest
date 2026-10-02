@@ -36,12 +36,12 @@ else if (_navigationLayout == NavigationLayout.TopMenu)
                     else
                     {
                         var label = group.Label;
-                        <div class="topbar-dropdown">
-                            <button type="button" class="topbar-dropdown-trigger @(_openDropdownLabel == label ? "open" : "")" @onclick="() => ToggleDropdown(label)">@label @Icon("chevron-down")</button>
-                            <div class="topbar-dropdown-menu @(isLastDropdown ? "align-right" : "") @(_openDropdownLabel == label ? "open" : "")">
+                        <div class="topbar-dropdown @(_closingDropdownLabel == label ? "closing" : "")" @onmouseleave="() => ClearClosing(label)">
+                            <button type="button" class="topbar-dropdown-trigger">@label @Icon("chevron-down")</button>
+                            <div class="topbar-dropdown-menu @(isLastDropdown ? "align-right" : "")">
                                 @foreach (var item in group.Items)
                                 {
-                                    <NavLink href="@item.Href" title="@item.Text" @onclick="CloseDropdown">@Icon(item.IconName)<span>@item.Text</span></NavLink>
+                                    <NavLink href="@item.Href" title="@item.Text" @onclick="() => CloseDropdown(label)">@Icon(item.IconName)<span>@item.Text</span></NavLink>
                                 }
                             </div>
                         </div>
@@ -109,16 +109,23 @@ else
     private bool _iconOnly;
     private NavigationLayout _navigationLayout = NavigationLayout.Sidebar;
 
-    // Top-menu dropdowns open/close on click rather than :hover — a hover-driven dropdown has no
-    // way to close itself after a Blazor (no-reload) navigation, since the mouse is still
-    // physically sitting over the same spot once the link underneath it has been clicked. Click
-    // toggles it; CloseDropdown (wired to every dropdown link's own onclick) and OnLocationChanged
-    // below both close it, so it never gets left open over the page it just navigated to.
-    private string? _openDropdownLabel;
+    // Top-menu dropdowns open on :hover (plain CSS, see .topbar-dropdown:hover in app.css) — but a
+    // hover-driven dropdown has no way to close itself after clicking a link inside it, since
+    // Blazor navigation doesn't reload the page and the mouse is still sitting over the same spot
+    // afterward. CloseDropdown forces that one dropdown shut via the .closing class (display:none
+    // !important, overriding the :hover rule) the instant its link is clicked; ClearClosing lifts
+    // the override once the mouse actually leaves, so hovering the same dropdown again later still
+    // opens it normally. Deliberately not cleared from OnLocationChanged — the mouse is still
+    // hovering right after a click, so clearing the override there would let :hover reopen it
+    // immediately.
+    private string? _closingDropdownLabel;
 
-    private void ToggleDropdown(string label) => _openDropdownLabel = _openDropdownLabel == label ? null : label;
+    private void CloseDropdown(string label) => _closingDropdownLabel = label;
 
-    private void CloseDropdown() => _openDropdownLabel = null;
+    private void ClearClosing(string label)
+    {
+        if (_closingDropdownLabel == label) _closingDropdownLabel = null;
+    }
 
     private record NavItem(string Href, string IconName, string Text);
 
@@ -204,7 +211,6 @@ else
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         UpdateIconOnly(e.Location);
-        _openDropdownLabel = null;
         InvokeAsync(StateHasChanged);
     }
 
