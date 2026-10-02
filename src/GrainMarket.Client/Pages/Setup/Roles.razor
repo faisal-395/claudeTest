@@ -38,9 +38,9 @@
         <div style="max-width:300px;margin-bottom:16px;">
             <label>Role</label>
             <select @bind="_selectedRoleId" style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:3px;">
-                @foreach (var r in SelectableRoles)
+                @foreach (var role in SelectableRoles)
                 {
-                    <option value="@r.Id">@r.Name</option>
+                    <option value="@role.Id">@role.Name</option>
                 }
             </select>
             <p style="color:#777;font-size:0.85rem;margin:4px 0 0;">Owner/Admin always has every permission and isn't listed here — it can't be changed.</p>
