@@ -47,6 +47,7 @@ public class ApiClient
 
     // --- Auth ------------------------------------------------------------------------------
     public Task<LoginResponse> LoginAsync(LoginRequest request) => PostAsync<LoginRequest, LoginResponse>("api/auth/login", request);
+    public Task<List<RolePermissionDto>> GetMyPermissionsAsync() => GetAsync<List<RolePermissionDto>>("api/auth/me/permissions");
 
     // --- Dashboard ---------------------------------------------------------------------------
     public Task<DashboardSummaryDto> GetDashboardAsync(DateTime? date = null) =>
