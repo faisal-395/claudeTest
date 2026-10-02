@@ -43,14 +43,16 @@
     --brand-grid-header: #eef4ee;
     --brand-label-font-size: 13px;
 
-    /* Readable text color for anything sitting ON a --brand-primary/--brand-accent background
-       (sidebar, buttons, the selected day in the date picker). index.html's applyTheme computes
-       these per scope from PrimaryColor/AccentColor's brightness and overrides them alongside the
-       rest — so whichever of black/white actually contrasts gets used, instead of the "white text"
-       every one of these elements used to hardcode (which went invisible the moment someone picked
-       a light accent or primary color). Default white here matches the dark default colors above. */
+    /* Readable text color for anything sitting ON a --brand-primary/--brand-accent/--brand-input-bg
+       background (sidebar, buttons, the selected day in the date picker, a focused text box).
+       index.html's applyTheme computes these per scope from the matching color's brightness and
+       overrides them alongside the rest — so whichever of black/white actually contrasts gets used,
+       instead of a hardcoded color that only worked for one specific background. Defaults here
+       match the dark/light default colors above (white text on the dark greens, dark text on the
+       white input background). */
     --brand-primary-text: #ffffff;
     --brand-accent-text: #ffffff;
+    --brand-input-text: #1a1a1a;
 }
 
 html, body {
@@ -306,9 +308,13 @@ table.data-grid tbody tr.selected-row:hover {
 }
 
 /* The one themed textbox state — only the field currently being typed into gets a background,
-   not every textbox at rest (that would make the whole form look like one solid color block). */
+   not every textbox at rest (that would make the whole form look like one solid color block).
+   color uses the computed-contrast --brand-input-text (see :root) so typed text stays readable
+   whatever background color Setup > Appearance picks, instead of a fixed dark color that goes
+   invisible the moment someone picks a dark background. */
 .form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus {
     background: var(--brand-input-bg);
+    color: var(--brand-input-text);
 }
 
 /* Batch entry panel (Kachi/Pakki) — 9 input columns beside a 3-column deduction-rate panel (9:3
@@ -399,9 +405,13 @@ table.data-grid tbody tr.selected-row:hover {
 }
 
 /* The one themed textbox state — only the field currently being typed into gets a background,
-   not every textbox at rest (that would make the whole form look like one solid color block). */
+   not every textbox at rest (that would make the whole form look like one solid color block).
+   color uses the computed-contrast --brand-input-text (see :root) so typed text stays readable
+   whatever background color Setup > Appearance picks, instead of a fixed dark color that goes
+   invisible the moment someone picks a dark background. */
 .batch-entry-inputs input:focus, .batch-entry-inputs select:focus {
     background: var(--brand-input-bg);
+    color: var(--brand-input-text);
 }
 
 /* SearchSelect/DatePicker are components, not bare <input>s — their root .search-select/

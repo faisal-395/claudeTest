@@ -45,9 +45,10 @@
             gridHeaderColor: '--brand-grid-header'
         };
 
-        // Several elements (sidebar, buttons, the date picker's selected day) show text directly on
-        // top of primaryColor/accentColor and used to hardcode that text as white — fine for the
-        // original dark green defaults, but invisible the moment someone picks a lighter color from
+        // Several elements (sidebar, buttons, the date picker's selected day, a focused text box)
+        // show text directly on top of a themed background (primaryColor/accentColor/
+        // inputBackgroundColor) and used to hardcode that text as a fixed color — fine for the
+        // original defaults, but invisible the moment someone picks a background close to it from
         // Setup > Appearance. contrastTextFor picks whichever of near-black/white actually reads
         // against the given background, using the standard perceived-brightness formula, so this
         // self-corrects for any color without the person needing to know why.
@@ -79,6 +80,9 @@
                 }
                 if (settings.accentColor) {
                     declarations.push('--brand-accent-text: ' + contrastTextFor(settings.accentColor) + ';');
+                }
+                if (settings.inputBackgroundColor) {
+                    declarations.push('--brand-input-text: ' + contrastTextFor(settings.inputBackgroundColor) + ';');
                 }
 
                 return selector + ' { ' + declarations.join(' ') + ' }';
