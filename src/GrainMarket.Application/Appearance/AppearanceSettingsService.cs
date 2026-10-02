@@ -28,6 +28,10 @@ public class AppearanceSettingsService : IAppearanceSettingsService
         settings.PrimaryColor = request.PrimaryColor;
         settings.AccentColor = request.AccentColor;
         settings.SurfaceColor = request.SurfaceColor;
+        settings.PanelColor = request.PanelColor;
+        settings.InputBackgroundColor = request.InputBackgroundColor;
+        settings.InputBorderColor = request.InputBorderColor;
+        settings.GridHeaderColor = request.GridHeaderColor;
         settings.UpdatedAtUtc = _clock.UtcNow;
 
         await _db.SaveChangesAsync(ct);
@@ -47,5 +51,7 @@ public class AppearanceSettingsService : IAppearanceSettingsService
         return settings;
     }
 
-    private static AppearanceSettingsDto ToDto(AppearanceSettings s) => new(s.Id, s.PrimaryColor, s.AccentColor, s.SurfaceColor);
+    private static AppearanceSettingsDto ToDto(AppearanceSettings s) => new(
+        s.Id, s.PrimaryColor, s.AccentColor, s.SurfaceColor,
+        s.PanelColor, s.InputBackgroundColor, s.InputBorderColor, s.GridHeaderColor);
 }

@@ -148,7 +148,7 @@ else
         try
         {
             var theme = await Api.GetAppearanceSettingsAsync();
-            await JS.InvokeVoidAsync("applyTheme", theme.PrimaryColor, theme.AccentColor, theme.SurfaceColor);
+            await JS.InvokeVoidAsync("applyTheme", theme);
         }
         catch
         {

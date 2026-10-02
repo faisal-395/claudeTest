@@ -8,19 +8,29 @@
     font-display: swap;
 }
 
-/* Brand theme — these three are the only colors a per-client re-skin needs to touch. Defaults
-   match the original hardcoded green; Setup > Appearance (Owner/Admin only) overwrites them at
-   runtime via JS (see index.html's applyTheme) after loading the saved AppearanceSettings row, so
-   this file only ever supplies the fallback shown before that fetch completes (and on the
-   unauthenticated Login page, which never calls it). --brand-primary is the dark, high-contrast
-   color (sidebar, headings, primary text accents); --brand-accent is the medium/interactive color
-   (buttons, links, hover/active states); --brand-surface is the light panel/page background tint.
+/* Brand theme — the only colors a per-client re-skin needs to touch. Defaults match the original
+   hardcoded look; Setup > Appearance (Owner/Admin only) overwrites them at runtime via JS (see
+   index.html's applyTheme) after loading the saved AppearanceSettings row, so this file only ever
+   supplies the fallback shown before that fetch completes (and on the unauthenticated Login page,
+   which never calls it).
+   --brand-primary: dark, high-contrast color (sidebar, headings, primary text accents).
+   --brand-accent: medium/interactive color (buttons, links, hover/active states).
+   --brand-surface: light page/background tint (.main-content, staging/totals panels).
+   --brand-panel: background of form/entry cards (.batch-entry-panel, .form-grid) and the results
+   grid's own background — i.e. where the actual fields and data sit, as opposed to the page
+   behind them (--brand-surface).
+   --brand-input-bg / --brand-input-border: text box fill and border.
+   --brand-grid-header: results grid's header row background.
    Deliberately not themed: error/success banner colors (#b3261e/#eaf7ee and friends) are semantic
    status colors, not brand identity, and stay fixed regardless of client. */
 :root {
     --brand-primary: #1B4332;
     --brand-accent: #2D6A4F;
     --brand-surface: #f7f9f7;
+    --brand-panel: #ffffff;
+    --brand-input-bg: #ffffff;
+    --brand-input-border: #cccccc;
+    --brand-grid-header: #eef4ee;
 }
 
 html, body {
@@ -205,7 +215,7 @@ html, body {
 table.data-grid {
     width: 100%;
     border-collapse: collapse;
-    background: white;
+    background: var(--brand-panel);
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
@@ -217,7 +227,7 @@ table.data-grid th, table.data-grid td {
 }
 
 table.data-grid th {
-    background: #eef4ee;
+    background: var(--brand-grid-header);
     color: var(--brand-primary);
     font-weight: 600;
 }
@@ -250,7 +260,7 @@ table.data-grid tbody tr.selected-row:hover {
     display: grid;
     grid-template-columns: repeat(2, minmax(220px, 1fr));
     gap: 12px 20px;
-    background: white;
+    background: var(--brand-panel);
     padding: 20px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     max-width: 900px;
@@ -266,7 +276,8 @@ table.data-grid tbody tr.selected-row:hover {
 .form-grid input, .form-grid select, .form-grid textarea {
     width: 100%;
     padding: 6px 8px;
-    border: 1px solid #ccc;
+    background: var(--brand-input-bg);
+    border: 1px solid var(--brand-input-border);
     border-radius: 3px;
     box-sizing: border-box;
 }
@@ -277,7 +288,7 @@ table.data-grid tbody tr.selected-row:hover {
 .batch-entry-panel {
     display: flex;
     gap: 16px;
-    background: white;
+    background: var(--brand-panel);
     padding: 12px 16px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     margin-bottom: 6px;
@@ -353,7 +364,8 @@ table.data-grid tbody tr.selected-row:hover {
     padding: 5px 7px;
     font-size: 0.92rem;
     color: #1a1a1a;
-    border: 1px solid #ccc;
+    background: var(--brand-input-bg);
+    border: 1px solid var(--brand-input-border);
     border-radius: 3px;
     box-sizing: border-box;
 }

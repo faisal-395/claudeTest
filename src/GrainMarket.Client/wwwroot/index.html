@@ -24,12 +24,25 @@
         // Applies the saved AppearanceSettings colors as CSS custom properties on <html>, so every
         // component picks them up immediately without a page reload. Called once after login (see
         // MainLayout.razor) and again right after a Setup > Appearance save, so a color change is
-        // visible instantly for the person making it.
-        window.applyTheme = function (primary, accent, surface) {
+        // visible instantly for the person making it. Takes the AppearanceSettingsDto object as-is
+        // (Blazor's JS interop serializes its C# properties to camelCase) rather than positional
+        // arguments, so adding another themed color later is a one-line change here, not a
+        // signature change everywhere that calls it.
+        window.applyTheme = function (theme) {
+            if (!theme) return;
             var root = document.documentElement.style;
-            if (primary) root.setProperty('--brand-primary', primary);
-            if (accent) root.setProperty('--brand-accent', accent);
-            if (surface) root.setProperty('--brand-surface', surface);
+            var map = {
+                primaryColor: '--brand-primary',
+                accentColor: '--brand-accent',
+                surfaceColor: '--brand-surface',
+                panelColor: '--brand-panel',
+                inputBackgroundColor: '--brand-input-bg',
+                inputBorderColor: '--brand-input-border',
+                gridHeaderColor: '--brand-grid-header'
+            };
+            Object.keys(map).forEach(function (key) {
+                if (theme[key]) root.setProperty(map[key], theme[key]);
+            });
         };
     </script>
 </body>

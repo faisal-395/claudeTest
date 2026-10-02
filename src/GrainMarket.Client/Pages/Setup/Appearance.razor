@@ -4,7 +4,7 @@
 
 <RequireAuth>
     <h1 class="page-title">Appearance</h1>
-    <p style="color:#777;">The brand colors used across the whole app — sidebar, headings, buttons and panels. Changes apply immediately and are remembered for everyone.</p>
+    <p style="color:#777;">The brand colors used across the whole app — sidebar, headings, buttons, panels, text boxes and grid headers. Changes apply immediately and are remembered for everyone.</p>
 
     @if (_error is not null)
     {
@@ -37,10 +37,38 @@
                 </div>
             </div>
             <div>
-                <label>Surface (panel &amp; page backgrounds)</label>
+                <label>Surface (page &amp; staging/totals backgrounds)</label>
                 <div style="display:flex;align-items:center;gap:10px;">
                     <input type="color" @bind="_surfaceColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
                     <input @bind="_surfaceColor" style="width:100px;" />
+                </div>
+            </div>
+            <div>
+                <label>Panel (form &amp; grid card background)</label>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="color" @bind="_panelColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                    <input @bind="_panelColor" style="width:100px;" />
+                </div>
+            </div>
+            <div>
+                <label>Text Box Background</label>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="color" @bind="_inputBackgroundColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                    <input @bind="_inputBackgroundColor" style="width:100px;" />
+                </div>
+            </div>
+            <div>
+                <label>Text Box Border</label>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="color" @bind="_inputBorderColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                    <input @bind="_inputBorderColor" style="width:100px;" />
+                </div>
+            </div>
+            <div>
+                <label>Grid Header Background</label>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="color" @bind="_gridHeaderColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                    <input @bind="_gridHeaderColor" style="width:100px;" />
                 </div>
             </div>
             <div style="grid-column: span 2;">
@@ -55,6 +83,9 @@
                 <div style="background:@_primaryColor;color:white;padding:10px 16px;border-radius:4px;">Primary</div>
                 <div style="background:@_accentColor;color:white;padding:10px 16px;border-radius:4px;">Accent</div>
                 <div style="background:@_surfaceColor;color:#333;padding:10px 16px;border-radius:4px;border:1px solid #e2e2e2;">Surface</div>
+                <div style="background:@_panelColor;color:#333;padding:10px 16px;border-radius:4px;border:1px solid #e2e2e2;">Panel</div>
+                <div style="background:@_inputBackgroundColor;color:#333;padding:10px 16px;border-radius:4px;border:1px solid @_inputBorderColor;">Text Box</div>
+                <div style="background:@_gridHeaderColor;color:@_primaryColor;padding:10px 16px;border-radius:4px;font-weight:600;">Grid Header</div>
             </div>
         </div>
     }
@@ -64,6 +95,10 @@
     private const string DefaultPrimary = "#1B4332";
     private const string DefaultAccent = "#2D6A4F";
     private const string DefaultSurface = "#F7F9F7";
+    private const string DefaultPanel = "#FFFFFF";
+    private const string DefaultInputBackground = "#FFFFFF";
+    private const string DefaultInputBorder = "#CCCCCC";
+    private const string DefaultGridHeader = "#EEF4EE";
 
     private AppearanceSettingsDto? _settings;
     private string? _error;
@@ -73,6 +108,10 @@
     private string _primaryColor = DefaultPrimary;
     private string _accentColor = DefaultAccent;
     private string _surfaceColor = DefaultSurface;
+    private string _panelColor = DefaultPanel;
+    private string _inputBackgroundColor = DefaultInputBackground;
+    private string _inputBorderColor = DefaultInputBorder;
+    private string _gridHeaderColor = DefaultGridHeader;
 
     protected override async Task OnInitializedAsync()
     {
@@ -82,6 +121,10 @@
             _primaryColor = _settings.PrimaryColor;
             _accentColor = _settings.AccentColor;
             _surfaceColor = _settings.SurfaceColor;
+            _panelColor = _settings.PanelColor;
+            _inputBackgroundColor = _settings.InputBackgroundColor;
+            _inputBorderColor = _settings.InputBorderColor;
+            _gridHeaderColor = _settings.GridHeaderColor;
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
@@ -93,9 +136,11 @@
         _saving = true;
         try
         {
-            var request = new UpdateAppearanceSettingsRequest(_primaryColor, _accentColor, _surfaceColor);
+            var request = new UpdateAppearanceSettingsRequest(
+                _primaryColor, _accentColor, _surfaceColor,
+                _panelColor, _inputBackgroundColor, _inputBorderColor, _gridHeaderColor);
             _settings = await Api.UpdateAppearanceSettingsAsync(request);
-            await JS.InvokeVoidAsync("applyTheme", _settings.PrimaryColor, _settings.AccentColor, _settings.SurfaceColor);
+            await JS.InvokeVoidAsync("applyTheme", _settings);
             _successMessage = "Saved. The new colors are live across the app.";
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
@@ -107,6 +152,10 @@
         _primaryColor = DefaultPrimary;
         _accentColor = DefaultAccent;
         _surfaceColor = DefaultSurface;
+        _panelColor = DefaultPanel;
+        _inputBackgroundColor = DefaultInputBackground;
+        _inputBorderColor = DefaultInputBorder;
+        _gridHeaderColor = DefaultGridHeader;
         return SaveAsync();
     }
 }
