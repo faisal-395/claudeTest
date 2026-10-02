@@ -48,8 +48,8 @@ public class AppearanceSettingsService : IAppearanceSettingsService
         settings.AccentColor = request.AccentColor;
         settings.SurfaceColor = request.SurfaceColor;
         settings.PanelColor = request.PanelColor;
+        settings.HeadingBackgroundColor = request.HeadingBackgroundColor;
         settings.InputBackgroundColor = request.InputBackgroundColor;
-        settings.InputBorderColor = request.InputBorderColor;
         settings.GridHeaderColor = request.GridHeaderColor;
         settings.LabelFontSizePx = request.LabelFontSizePx;
         settings.UpdatedAtUtc = _clock.UtcNow;
@@ -60,5 +60,5 @@ public class AppearanceSettingsService : IAppearanceSettingsService
 
     private static AppearanceSettingsDto ToDto(AppearanceSettings s) => new(
         s.Id, s.Scope, s.PrimaryColor, s.AccentColor, s.SurfaceColor,
-        s.PanelColor, s.InputBackgroundColor, s.InputBorderColor, s.GridHeaderColor, s.LabelFontSizePx);
+        s.PanelColor, s.HeadingBackgroundColor, s.InputBackgroundColor, s.GridHeaderColor, s.LabelFontSizePx);
 }

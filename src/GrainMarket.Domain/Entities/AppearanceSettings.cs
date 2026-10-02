@@ -26,16 +26,24 @@ public class AppearanceSettings : BaseEntity
     public ThemeScope Scope { get; set; }
 
     /// <summary>Global scope: sidebar background, page headings. Other scopes: that page's own
-    /// form heading color only — it does not affect the sidebar or any other page.</summary>
+    /// form heading text color only — it does not affect the sidebar or any other page.</summary>
     public string PrimaryColor { get; set; } = "#1B4332";
     public string AccentColor { get; set; } = "#2D6A4F";
+
+    /// <summary>Still backs .main-content/staging-panel backgrounds, but not exposed as an editable
+    /// Setup > Appearance control anymore (kept frozen at whatever it's set to).</summary>
     public string SurfaceColor { get; set; } = "#F7F9F7";
 
     /// <summary>Background of form/entry cards — the Purchase/Sale Invoice entry panel, Setup
     /// forms, and the results grid's own background (not its header row — see GridHeaderColor).</summary>
     public string PanelColor { get; set; } = "#FFFFFF";
+
+    /// <summary>Background behind the page's own &lt;h1&gt; heading text.</summary>
+    public string HeadingBackgroundColor { get; set; } = "#FFFFFF";
+
+    /// <summary>Background shown only while a text box is focused/selected — not applied to every
+    /// text box at rest.</summary>
     public string InputBackgroundColor { get; set; } = "#FFFFFF";
-    public string InputBorderColor { get; set; } = "#CCCCCC";
     public string GridHeaderColor { get; set; } = "#EEF4EE";
 
     /// <summary>Font size (px) of field labels ("Invoice #", "Bill No", etc.) within this scope.</summary>

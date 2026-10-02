@@ -19,13 +19,16 @@
    overrides just the variables Setup > Appearance actually changed for it; anything left alone
    still falls through to the Global value in effect on <html>.
    --brand-primary: dark, high-contrast color (sidebar/Global headings; a page's own form heading
-   when scoped).
+   text when scoped).
    --brand-accent: medium/interactive color (buttons, links, hover/active states).
-   --brand-surface: light page/background tint (.main-content, staging/totals panels).
+   --brand-surface: light page/background tint (.main-content, staging/totals panels) — still
+   applied, but no longer an editable Setup > Appearance control.
    --brand-panel: background of form/entry cards (.batch-entry-panel, .form-grid) and the results
    grid's own background — i.e. where the actual fields and data sit, as opposed to the page
    behind them (--brand-surface).
-   --brand-input-bg / --brand-input-border: text box fill and border.
+   --brand-heading-bg: background behind the page's own <h1> heading text.
+   --brand-input-bg: background shown only on a focused/selected text box — not applied to every
+   text box at rest (those keep a plain, un-themed border/background).
    --brand-grid-header: results grid's header row background.
    --brand-label-font-size: font size of field labels ("Invoice #", "Bill No", etc.).
    Deliberately not themed: error/success banner colors (#b3261e/#eaf7ee and friends) are semantic
@@ -35,8 +38,8 @@
     --brand-accent: #2D6A4F;
     --brand-surface: #f7f9f7;
     --brand-panel: #ffffff;
+    --brand-heading-bg: #ffffff;
     --brand-input-bg: #ffffff;
-    --brand-input-border: #cccccc;
     --brand-grid-header: #eef4ee;
     --brand-label-font-size: 13px;
 }
@@ -213,9 +216,13 @@ html, body {
 }
 
 .page-title {
+    display: inline-block;
     font-size: 1.4rem;
     font-weight: 600;
     color: var(--brand-primary);
+    background: var(--brand-heading-bg);
+    padding: 4px 10px;
+    border-radius: 4px;
     margin-top: 0;
     margin-bottom: 16px;
 }
@@ -284,10 +291,15 @@ table.data-grid tbody tr.selected-row:hover {
 .form-grid input, .form-grid select, .form-grid textarea {
     width: 100%;
     padding: 6px 8px;
-    background: var(--brand-input-bg);
-    border: 1px solid var(--brand-input-border);
+    border: 1px solid #ccc;
     border-radius: 3px;
     box-sizing: border-box;
+}
+
+/* The one themed textbox state — only the field currently being typed into gets a background,
+   not every textbox at rest (that would make the whole form look like one solid color block). */
+.form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus {
+    background: var(--brand-input-bg);
 }
 
 /* Batch entry panel (Kachi/Pakki) — 9 input columns beside a 3-column deduction-rate panel (9:3
@@ -372,10 +384,15 @@ table.data-grid tbody tr.selected-row:hover {
     padding: 5px 7px;
     font-size: 0.92rem;
     color: #1a1a1a;
-    background: var(--brand-input-bg);
-    border: 1px solid var(--brand-input-border);
+    border: 1px solid #ccc;
     border-radius: 3px;
     box-sizing: border-box;
+}
+
+/* The one themed textbox state — only the field currently being typed into gets a background,
+   not every textbox at rest (that would make the whole form look like one solid color block). */
+.batch-entry-inputs input:focus, .batch-entry-inputs select:focus {
+    background: var(--brand-input-bg);
 }
 
 /* SearchSelect/DatePicker are components, not bare <input>s — their root .search-select/
