@@ -1,6 +1,8 @@
 @inherits LayoutComponentBase
 @inject AuthState AuthState
 @inject NavigationManager Nav
+@inject ApiClient Api
+@inject IJSRuntime JS
 @implements IDisposable
 
 @if (!AuthState.IsAuthenticated)
@@ -86,6 +88,7 @@ else
                     @if (AuthState.CanView(ModuleName.SetupUnitConversions)) { <li><NavLink href="setup/unit-conversions" title="Unit Conversions">@Icon("unit-conversions")<span class="nav-text">Unit Conversions</span></NavLink></li> }
                     @if (AuthState.CanView(ModuleName.SetupSeasons)) { <li><NavLink href="setup/seasons" title="Seasons">@Icon("seasons")<span class="nav-text">Seasons</span></NavLink></li> }
                     @if (AuthState.CanView(ModuleName.SetupCompanyInfo)) { <li><NavLink href="setup/company-info" title="Company Info">@Icon("party")<span class="nav-text">Company Info</span></NavLink></li> }
+                    @if (AuthState.CanView(ModuleName.SetupAppearance)) { <li><NavLink href="setup/appearance" title="Appearance">@Icon("appearance")<span class="nav-text">Appearance</span></NavLink></li> }
                     @if (AuthState.CanView(ModuleName.SetupUsersRoles)) { <li><NavLink href="setup/users" title="User Account">@Icon("user-account")<span class="nav-text">User Account</span></NavLink></li> }
                     @if (AuthState.CanView(ModuleName.Backup)) { <li><NavLink href="backup" title="Backup">@Icon("backup")<span class="nav-text">Backup</span></NavLink></li> }
                 </ul>
@@ -107,16 +110,49 @@ else
 
     private bool _iconOnly;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         UpdateIconOnly(Nav.Uri);
         Nav.LocationChanged += OnLocationChanged;
+        AuthState.Changed += OnAuthChanged;
+
+        // Covers a session restored from a persisted token (already authenticated by the time this
+        // component first initializes). A login that happens later is caught by OnAuthChanged
+        // instead, since this layout — and therefore this method — only ever runs once per app
+        // session, before the user necessarily has a token.
+        if (AuthState.IsAuthenticated)
+        {
+            await ApplyThemeAsync();
+        }
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         UpdateIconOnly(e.Location);
         InvokeAsync(StateHasChanged);
+    }
+
+    private void OnAuthChanged()
+    {
+        if (AuthState.IsAuthenticated)
+        {
+            _ = InvokeAsync(ApplyThemeAsync);
+        }
+    }
+
+    /// <summary>Fetches the saved brand colors and applies them as CSS custom properties on
+    /// &lt;html&gt;, so the whole app re-skins immediately without a reload. Best-effort: a failure
+    /// here just leaves app.css's default green in place rather than blocking login or any page.</summary>
+    private async Task ApplyThemeAsync()
+    {
+        try
+        {
+            var theme = await Api.GetAppearanceSettingsAsync();
+            await JS.InvokeVoidAsync("applyTheme", theme.PrimaryColor, theme.AccentColor, theme.SurfaceColor);
+        }
+        catch
+        {
+        }
     }
 
     private void UpdateIconOnly(string uri)
@@ -133,6 +169,7 @@ else
     public void Dispose()
     {
         Nav.LocationChanged -= OnLocationChanged;
+        AuthState.Changed -= OnAuthChanged;
     }
 
     private void Logout()
@@ -171,6 +208,7 @@ else
             "seasons" => "<rect x='3' y='5' width='18' height='16' rx='2'/><line x1='16' y1='3' x2='16' y2='7'/><line x1='8' y1='3' x2='8' y2='7'/><line x1='3' y1='10' x2='21' y2='10'/>",
             "user-account" => "<path d='M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='8.5' cy='7' r='4'/><polyline points='17,11 19,13 23,9'/>",
             "backup" => "<circle cx='8' cy='14' r='4'/><circle cx='14' cy='11' r='5'/><circle cx='18' cy='15' r='3.5'/><rect x='6' y='14' width='14' height='6' rx='2'/>",
+            "appearance" => "<path d='M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.4-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.3A4.7 4.7 0 0 0 22 10.7C22 5.9 17.5 2 12 2z'/><circle cx='6.5' cy='11.5' r='1.3'/><circle cx='9.5' cy='7.5' r='1.3'/><circle cx='14.5' cy='7.5' r='1.3'/><circle cx='17.5' cy='11.5' r='1.3'/>",
             "logout" => "<path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/><polyline points='16,17 21,12 16,7'/><line x1='21' y1='12' x2='9' y2='12'/>",
             _ => "<circle cx='12' cy='12' r='8'/>"
         };

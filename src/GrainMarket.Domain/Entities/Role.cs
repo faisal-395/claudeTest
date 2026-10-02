@@ -38,7 +38,8 @@ public enum ModuleName
     SetupUsersRoles = 20,
     Backup = 21,
     SetupSeasons = 22,
-    SetupCompanyInfo = 23
+    SetupCompanyInfo = 23,
+    SetupAppearance = 24
 }
 
 public class RolePermission : BaseEntity

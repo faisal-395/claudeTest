@@ -93,6 +93,9 @@ public class ApiClient
     public Task<CompanyInfoDto> GetCompanyInfoAsync() => GetAsync<CompanyInfoDto>("api/company-info");
     public Task<CompanyInfoDto> UpdateCompanyInfoAsync(UpdateCompanyInfoRequest request) => PutAsync<UpdateCompanyInfoRequest, CompanyInfoDto>("api/company-info", request);
 
+    public Task<AppearanceSettingsDto> GetAppearanceSettingsAsync() => GetAsync<AppearanceSettingsDto>("api/appearance-settings");
+    public Task<AppearanceSettingsDto> UpdateAppearanceSettingsAsync(UpdateAppearanceSettingsRequest request) => PutAsync<UpdateAppearanceSettingsRequest, AppearanceSettingsDto>("api/appearance-settings", request);
+
     // --- Kachi / Pakki / Dual Invoice -----------------------------------------------------------
     public Task<List<KachiDto>> GetKachisAsync(int? seasonId = null) => GetAsync<List<KachiDto>>($"api/kachis{(seasonId.HasValue ? $"?seasonId={seasonId}" : "")}");
     public Task<KachiDto> GetKachiAsync(int id) => GetAsync<KachiDto>($"api/kachis/{id}");

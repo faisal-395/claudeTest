@@ -1,4 +1,5 @@
 using FluentValidation;
+using GrainMarket.Application.Appearance;
 using GrainMarket.Application.Auth;
 using GrainMarket.Application.ChartOfAccounts;
 using GrainMarket.Application.Common.Interfaces;
@@ -45,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<IDeductionRuleService, DeductionRuleService>();
         services.AddScoped<ISeasonService, SeasonService>();
         services.AddScoped<ICompanyInfoService, CompanyInfoService>();
+        services.AddScoped<IAppearanceSettingsService, AppearanceSettingsService>();
         services.AddScoped<IKachiService, KachiService>();
         services.AddScoped<IPakkiService, PakkiService>();
         services.AddScoped<IMultiPurchaseService, MultiPurchaseService>();

@@ -38,6 +38,7 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<RecoveryNote> RecoveryNotes => Set<RecoveryNote>();
     public DbSet<NumberSequence> NumberSequences => Set<NumberSequence>();
     public DbSet<CompanyInfo> CompanyInfos => Set<CompanyInfo>();
+    public DbSet<AppearanceSettings> AppearanceSettings => Set<AppearanceSettings>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

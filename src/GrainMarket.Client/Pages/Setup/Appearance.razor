@@ -1,0 +1,112 @@
+@page "/setup/appearance"
+@inject ApiClient Api
+@inject IJSRuntime JS
+
+<RequireAuth>
+    <h1 class="page-title">Appearance</h1>
+    <p style="color:#777;">The brand colors used across the whole app — sidebar, headings, buttons and panels. Changes apply immediately and are remembered for everyone.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+    @if (_successMessage is not null)
+    {
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+    }
+
+    @if (_settings is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div class="form-grid" style="max-width:700px;">
+            <div>
+                <label>Primary (sidebar, headings)</label>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="color" @bind="_primaryColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                    <input @bind="_primaryColor" style="width:100px;" />
+                </div>
+            </div>
+            <div>
+                <label>Accent (buttons, links, hover)</label>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="color" @bind="_accentColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                    <input @bind="_accentColor" style="width:100px;" />
+                </div>
+            </div>
+            <div>
+                <label>Surface (panel &amp; page backgrounds)</label>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="color" @bind="_surfaceColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                    <input @bind="_surfaceColor" style="width:100px;" />
+                </div>
+            </div>
+            <div style="grid-column: span 2;">
+                <button class="btn" disabled="@_saving" @onclick="SaveAsync">@(_saving ? "Saving…" : "Save")</button>
+                <button class="btn secondary" @onclick="ResetToDefaultAsync">Reset to Default</button>
+            </div>
+        </div>
+
+        <div style="max-width:700px;margin-top:20px;background:white;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+            <div style="font-size:0.85rem;color:#777;margin-bottom:8px;">Preview</div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <div style="background:@_primaryColor;color:white;padding:10px 16px;border-radius:4px;">Primary</div>
+                <div style="background:@_accentColor;color:white;padding:10px 16px;border-radius:4px;">Accent</div>
+                <div style="background:@_surfaceColor;color:#333;padding:10px 16px;border-radius:4px;border:1px solid #e2e2e2;">Surface</div>
+            </div>
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    private const string DefaultPrimary = "#1B4332";
+    private const string DefaultAccent = "#2D6A4F";
+    private const string DefaultSurface = "#F7F9F7";
+
+    private AppearanceSettingsDto? _settings;
+    private string? _error;
+    private string? _successMessage;
+    private bool _saving;
+
+    private string _primaryColor = DefaultPrimary;
+    private string _accentColor = DefaultAccent;
+    private string _surfaceColor = DefaultSurface;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _settings = await Api.GetAppearanceSettingsAsync();
+            _primaryColor = _settings.PrimaryColor;
+            _accentColor = _settings.AccentColor;
+            _surfaceColor = _settings.SurfaceColor;
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        _successMessage = null;
+        _saving = true;
+        try
+        {
+            var request = new UpdateAppearanceSettingsRequest(_primaryColor, _accentColor, _surfaceColor);
+            _settings = await Api.UpdateAppearanceSettingsAsync(request);
+            await JS.InvokeVoidAsync("applyTheme", _settings.PrimaryColor, _settings.AccentColor, _settings.SurfaceColor);
+            _successMessage = "Saved. The new colors are live across the app.";
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+
+    private Task ResetToDefaultAsync()
+    {
+        _primaryColor = DefaultPrimary;
+        _accentColor = DefaultAccent;
+        _surfaceColor = DefaultSurface;
+        return SaveAsync();
+    }
+}

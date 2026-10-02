@@ -20,5 +20,17 @@
     </div>
 
     <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script>
+        // Applies the saved AppearanceSettings colors as CSS custom properties on <html>, so every
+        // component picks them up immediately without a page reload. Called once after login (see
+        // MainLayout.razor) and again right after a Setup > Appearance save, so a color change is
+        // visible instantly for the person making it.
+        window.applyTheme = function (primary, accent, surface) {
+            var root = document.documentElement.style;
+            if (primary) root.setProperty('--brand-primary', primary);
+            if (accent) root.setProperty('--brand-accent', accent);
+            if (surface) root.setProperty('--brand-surface', surface);
+        };
+    </script>
 </body>
 </html>

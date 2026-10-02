@@ -31,6 +31,7 @@ public static class SeedData
         await SeedUnitConversionsAsync(db, ct);
         await SeedSeasonAsync(db, ct);
         await SeedCompanyInfoAsync(db, ct);
+        await SeedAppearanceSettingsAsync(db, ct);
         await SeedSampleProductsAsync(db, ct);
 
         await db.SaveChangesAsync(ct);
@@ -58,8 +59,8 @@ public static class SeedData
             {
                 Module = m,
                 CanView = true,
-                CanCreate = m != ModuleName.SetupUsersRoles,
-                CanEdit = m != ModuleName.SetupUsersRoles,
+                CanCreate = m is not (ModuleName.SetupUsersRoles or ModuleName.SetupAppearance),
+                CanEdit = m is not (ModuleName.SetupUsersRoles or ModuleName.SetupAppearance),
                 CanDelete = false
             });
 
@@ -306,6 +307,16 @@ public static class SeedData
             NtnNumber = "7306513-7",
             ProprietorName = "Hafiz Umer Farooq"
         });
+        await db.SaveChangesAsync(ct);
+    }
+
+    private static async Task SeedAppearanceSettingsAsync(AppDbContext db, CancellationToken ct)
+    {
+        // The AddAppearanceSettings migration may already have inserted this row directly — same
+        // overlap as CompanyInfo above.
+        if (await db.AppearanceSettings.AnyAsync(ct)) return;
+
+        db.AppearanceSettings.Add(new AppearanceSettings());
         await db.SaveChangesAsync(ct);
     }
 
