@@ -45,6 +45,21 @@
             gridHeaderColor: '--brand-grid-header'
         };
 
+        // Several elements (sidebar, buttons, the date picker's selected day) show text directly on
+        // top of primaryColor/accentColor and used to hardcode that text as white — fine for the
+        // original dark green defaults, but invisible the moment someone picks a lighter color from
+        // Setup > Appearance. contrastTextFor picks whichever of near-black/white actually reads
+        // against the given background, using the standard perceived-brightness formula, so this
+        // self-corrects for any color without the person needing to know why.
+        function contrastTextFor(hex) {
+            if (!hex || hex.length < 7) return '#ffffff';
+            var r = parseInt(hex.substr(1, 2), 16);
+            var g = parseInt(hex.substr(3, 2), 16);
+            var b = parseInt(hex.substr(5, 2), 16);
+            var brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            return brightness > 160 ? '#1a1a1a' : '#ffffff';
+        }
+
         window.applyTheme = function (scopedSettingsList) {
             if (!scopedSettingsList || !scopedSettingsList.length) return;
 
@@ -58,6 +73,12 @@
 
                 if (settings.labelFontSizePx) {
                     declarations.push('--brand-label-font-size: ' + settings.labelFontSizePx + 'px;');
+                }
+                if (settings.primaryColor) {
+                    declarations.push('--brand-primary-text: ' + contrastTextFor(settings.primaryColor) + ';');
+                }
+                if (settings.accentColor) {
+                    declarations.push('--brand-accent-text: ' + contrastTextFor(settings.accentColor) + ';');
                 }
 
                 return selector + ' { ' + declarations.join(' ') + ' }';
