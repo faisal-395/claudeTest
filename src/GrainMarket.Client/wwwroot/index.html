@@ -21,28 +21,55 @@
 
     <script src="_framework/blazor.webview.js" autostart="false"></script>
     <script>
-        // Applies the saved AppearanceSettings colors as CSS custom properties on <html>, so every
-        // component picks them up immediately without a page reload. Called once after login (see
-        // MainLayout.razor) and again right after a Setup > Appearance save, so a color change is
-        // visible instantly for the person making it. Takes the AppearanceSettingsDto object as-is
-        // (Blazor's JS interop serializes its C# properties to camelCase) rather than positional
-        // arguments, so adding another themed color later is a one-line change here, not a
-        // signature change everywhere that calls it.
-        window.applyTheme = function (theme) {
-            if (!theme) return;
-            var root = document.documentElement.style;
-            var map = {
-                primaryColor: '--brand-primary',
-                accentColor: '--brand-accent',
-                surfaceColor: '--brand-surface',
-                panelColor: '--brand-panel',
-                inputBackgroundColor: '--brand-input-bg',
-                inputBorderColor: '--brand-input-border',
-                gridHeaderColor: '--brand-grid-header'
-            };
-            Object.keys(map).forEach(function (key) {
-                if (theme[key]) root.setProperty(map[key], theme[key]);
-            });
+        // Applies the saved AppearanceSettings — one row per ThemeScope (see Role.cs) — as scoped
+        // CSS custom property overrides, by writing a <style> block instead of setting properties
+        // directly on <html>. Global's colors become plain `:root` rules (the sidebar, and any page
+        // with no more specific scope, use these); every other scope's colors are written under its
+        // own class selector (.theme-sale-invoice, .theme-purchase, .theme-kachi, .theme-pakki) and
+        // CSS cascading automatically confines them to the matching page — see app.css's big
+        // :root comment for how that wrapper-class-per-page wiring works.
+        // Called once after login (see MainLayout.razor) and again right after a Setup > Appearance
+        // save, so a color change is visible instantly for the person making it. Takes the
+        // AppearanceSettingsDto list as-is (Blazor's JS interop serializes C# properties to
+        // camelCase) rather than positional arguments, so adding another themed property later is a
+        // one-line change to PROPERTY_TO_VAR here, not a signature change everywhere this is called.
+        var THEME_STYLE_ELEMENT_ID = 'brand-theme-overrides';
+        var SCOPE_TO_SELECTOR = { 0: ':root', 1: '.theme-sale-invoice', 2: '.theme-purchase', 3: '.theme-kachi', 4: '.theme-pakki' };
+        var PROPERTY_TO_VAR = {
+            primaryColor: '--brand-primary',
+            accentColor: '--brand-accent',
+            surfaceColor: '--brand-surface',
+            panelColor: '--brand-panel',
+            inputBackgroundColor: '--brand-input-bg',
+            inputBorderColor: '--brand-input-border',
+            gridHeaderColor: '--brand-grid-header'
+        };
+
+        window.applyTheme = function (scopedSettingsList) {
+            if (!scopedSettingsList || !scopedSettingsList.length) return;
+
+            var css = scopedSettingsList.map(function (settings) {
+                var selector = SCOPE_TO_SELECTOR[settings.scope];
+                if (!selector) return '';
+
+                var declarations = Object.keys(PROPERTY_TO_VAR)
+                    .filter(function (key) { return !!settings[key]; })
+                    .map(function (key) { return PROPERTY_TO_VAR[key] + ': ' + settings[key] + ';'; });
+
+                if (settings.labelFontSizePx) {
+                    declarations.push('--brand-label-font-size: ' + settings.labelFontSizePx + 'px;');
+                }
+
+                return selector + ' { ' + declarations.join(' ') + ' }';
+            }).join('\n');
+
+            var styleElement = document.getElementById(THEME_STYLE_ELEMENT_ID);
+            if (!styleElement) {
+                styleElement = document.createElement('style');
+                styleElement.id = THEME_STYLE_ELEMENT_ID;
+                document.head.appendChild(styleElement);
+            }
+            styleElement.textContent = css;
         };
     </script>
 </body>

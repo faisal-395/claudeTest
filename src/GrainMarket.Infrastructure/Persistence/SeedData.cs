@@ -312,11 +312,16 @@ public static class SeedData
 
     private static async Task SeedAppearanceSettingsAsync(AppDbContext db, CancellationToken ct)
     {
-        // The AddAppearanceSettings migration may already have inserted this row directly — same
-        // overlap as CompanyInfo above.
-        if (await db.AppearanceSettings.AnyAsync(ct)) return;
-
-        db.AppearanceSettings.Add(new AppearanceSettings());
+        // The AddAppearanceSettings/AddThemeScopes migrations may already have inserted these rows
+        // directly — same overlap as CompanyInfo above. One row per ThemeScope, all starting
+        // identical (the class's own field-initializer defaults) — Setup > Appearance is where each
+        // scope is customized away from Global afterwards.
+        var existingScopes = await db.AppearanceSettings.Select(a => a.Scope).ToListAsync(ct);
+        foreach (var scope in Enum.GetValues<ThemeScope>())
+        {
+            if (existingScopes.Contains(scope)) continue;
+            db.AppearanceSettings.Add(new AppearanceSettings { Scope = scope });
+        }
         await db.SaveChangesAsync(ct);
     }
 

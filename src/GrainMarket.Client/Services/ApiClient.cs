@@ -25,6 +25,7 @@ using GrainMarket.Application.UnitConversions;
 using GrainMarket.Application.Users;
 using GrainMarket.Application.Vouchers;
 using GrainMarket.Client.Models;
+using GrainMarket.Domain.Entities;
 using GrainMarket.Domain.Enums;
 
 namespace GrainMarket.Client.Services;
@@ -94,8 +95,9 @@ public class ApiClient
     public Task<CompanyInfoDto> GetCompanyInfoAsync() => GetAsync<CompanyInfoDto>("api/company-info");
     public Task<CompanyInfoDto> UpdateCompanyInfoAsync(UpdateCompanyInfoRequest request) => PutAsync<UpdateCompanyInfoRequest, CompanyInfoDto>("api/company-info", request);
 
-    public Task<AppearanceSettingsDto> GetAppearanceSettingsAsync() => GetAsync<AppearanceSettingsDto>("api/appearance-settings");
-    public Task<AppearanceSettingsDto> UpdateAppearanceSettingsAsync(UpdateAppearanceSettingsRequest request) => PutAsync<UpdateAppearanceSettingsRequest, AppearanceSettingsDto>("api/appearance-settings", request);
+    public Task<List<AppearanceSettingsDto>> GetAppearanceSettingsAsync() => GetAsync<List<AppearanceSettingsDto>>("api/appearance-settings");
+    public Task<AppearanceSettingsDto> UpdateAppearanceSettingsAsync(ThemeScope scope, UpdateAppearanceSettingsRequest request) =>
+        PutAsync<UpdateAppearanceSettingsRequest, AppearanceSettingsDto>($"api/appearance-settings/{scope}", request);
 
     // --- Kachi / Pakki / Dual Invoice -----------------------------------------------------------
     public Task<List<KachiDto>> GetKachisAsync(int? seasonId = null) => GetAsync<List<KachiDto>>($"api/kachis{(seasonId.HasValue ? $"?seasonId={seasonId}" : "")}");

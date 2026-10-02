@@ -4,7 +4,7 @@
 
 <RequireAuth>
     <h1 class="page-title">Appearance</h1>
-    <p style="color:#777;">The brand colors used across the whole app — sidebar, headings, buttons, panels, text boxes and grid headers. Changes apply immediately and are remembered for everyone.</p>
+    <p style="color:#777;">Brand colors used across the app. <b>Global</b> covers the sidebar and any screen not listed below; Sale Invoice, Purchase, Kachi and Pakki each have their own colors that override Global only on their own screen. Changes apply immediately and are remembered for everyone.</p>
 
     @if (_error is not null)
     {
@@ -15,147 +15,188 @@
         <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
     }
 
-    @if (_settings is null)
+    @if (_scopes is null)
     {
         <p>Loading…</p>
     }
     else
     {
-        <div class="form-grid" style="max-width:700px;">
-            <div>
-                <label>Primary (sidebar, headings)</label>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <input type="color" @bind="_primaryColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
-                    <input @bind="_primaryColor" style="width:100px;" />
-                </div>
-            </div>
-            <div>
-                <label>Accent (buttons, links, hover)</label>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <input type="color" @bind="_accentColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
-                    <input @bind="_accentColor" style="width:100px;" />
-                </div>
-            </div>
-            <div>
-                <label>Surface (page &amp; staging/totals backgrounds)</label>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <input type="color" @bind="_surfaceColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
-                    <input @bind="_surfaceColor" style="width:100px;" />
-                </div>
-            </div>
-            <div>
-                <label>Panel (form &amp; grid card background)</label>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <input type="color" @bind="_panelColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
-                    <input @bind="_panelColor" style="width:100px;" />
-                </div>
-            </div>
-            <div>
-                <label>Text Box Background</label>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <input type="color" @bind="_inputBackgroundColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
-                    <input @bind="_inputBackgroundColor" style="width:100px;" />
-                </div>
-            </div>
-            <div>
-                <label>Text Box Border</label>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <input type="color" @bind="_inputBorderColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
-                    <input @bind="_inputBorderColor" style="width:100px;" />
-                </div>
-            </div>
-            <div>
-                <label>Grid Header Background</label>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <input type="color" @bind="_gridHeaderColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
-                    <input @bind="_gridHeaderColor" style="width:100px;" />
-                </div>
-            </div>
-            <div style="grid-column: span 2;">
-                <button class="btn" disabled="@_saving" @onclick="SaveAsync">@(_saving ? "Saving…" : "Save")</button>
-                <button class="btn secondary" @onclick="ResetToDefaultAsync">Reset to Default</button>
-            </div>
-        </div>
+        @foreach (var s in _scopes)
+        {
+            <div style="max-width:760px;background:white;padding:16px 20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+                <h2 style="font-size:1.05rem;color:var(--brand-primary);margin-top:0;">@s.Label</h2>
 
-        <div style="max-width:700px;margin-top:20px;background:white;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-            <div style="font-size:0.85rem;color:#777;margin-bottom:8px;">Preview</div>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                <div style="background:@_primaryColor;color:white;padding:10px 16px;border-radius:4px;">Primary</div>
-                <div style="background:@_accentColor;color:white;padding:10px 16px;border-radius:4px;">Accent</div>
-                <div style="background:@_surfaceColor;color:#333;padding:10px 16px;border-radius:4px;border:1px solid #e2e2e2;">Surface</div>
-                <div style="background:@_panelColor;color:#333;padding:10px 16px;border-radius:4px;border:1px solid #e2e2e2;">Panel</div>
-                <div style="background:@_inputBackgroundColor;color:#333;padding:10px 16px;border-radius:4px;border:1px solid @_inputBorderColor;">Text Box</div>
-                <div style="background:@_gridHeaderColor;color:@_primaryColor;padding:10px 16px;border-radius:4px;font-weight:600;">Grid Header</div>
+                <div class="form-grid" style="max-width:none;padding:0;box-shadow:none;">
+                    <div>
+                        <label>Form Heading</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.PrimaryColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.PrimaryColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Button</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.AccentColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.AccentColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Page / Section Background</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.SurfaceColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.SurfaceColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Form / Grid Panel Background</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.PanelColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.PanelColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Text Box Background</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.InputBackgroundColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.InputBackgroundColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Text Box Border</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.InputBorderColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.InputBorderColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Grid Header Background</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.GridHeaderColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.GridHeaderColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Field Label Font Size (px)</label>
+                        <input type="number" min="8" max="32" @bind="s.LabelFontSizePx" style="width:80px;" />
+                    </div>
+                </div>
+
+                <div style="margin-top:12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <div style="background:@s.PrimaryColor;color:white;padding:6px 12px;border-radius:4px;font-size:@(s.LabelFontSizePx)px;">Heading</div>
+                        <div style="background:@s.AccentColor;color:white;padding:6px 12px;border-radius:4px;">Button</div>
+                        <div style="background:@s.SurfaceColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Page</div>
+                        <div style="background:@s.PanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Panel</div>
+                        <div style="background:@s.InputBackgroundColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid @s.InputBorderColor;">Text Box</div>
+                        <div style="background:@s.GridHeaderColor;color:@s.PrimaryColor;padding:6px 12px;border-radius:4px;font-weight:600;">Grid Header</div>
+                    </div>
+                    <div style="margin-left:auto;">
+                        <button class="btn" disabled="@s.Saving" @onclick="() => SaveAsync(s)">@(s.Saving ? "Saving…" : "Save")</button>
+                        <button class="btn secondary" disabled="@s.Saving" @onclick="() => ResetToDefaultAsync(s)">Reset to Default</button>
+                    </div>
+                </div>
             </div>
-        </div>
+        }
     }
 </RequireAuth>
 
 @code {
-    private const string DefaultPrimary = "#1B4332";
-    private const string DefaultAccent = "#2D6A4F";
-    private const string DefaultSurface = "#F7F9F7";
-    private const string DefaultPanel = "#FFFFFF";
-    private const string DefaultInputBackground = "#FFFFFF";
-    private const string DefaultInputBorder = "#CCCCCC";
-    private const string DefaultGridHeader = "#EEF4EE";
-
-    private AppearanceSettingsDto? _settings;
+    private List<ScopeEditModel>? _scopes;
     private string? _error;
     private string? _successMessage;
-    private bool _saving;
-
-    private string _primaryColor = DefaultPrimary;
-    private string _accentColor = DefaultAccent;
-    private string _surfaceColor = DefaultSurface;
-    private string _panelColor = DefaultPanel;
-    private string _inputBackgroundColor = DefaultInputBackground;
-    private string _inputBorderColor = DefaultInputBorder;
-    private string _gridHeaderColor = DefaultGridHeader;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _settings = await Api.GetAppearanceSettingsAsync();
-            _primaryColor = _settings.PrimaryColor;
-            _accentColor = _settings.AccentColor;
-            _surfaceColor = _settings.SurfaceColor;
-            _panelColor = _settings.PanelColor;
-            _inputBackgroundColor = _settings.InputBackgroundColor;
-            _inputBorderColor = _settings.InputBorderColor;
-            _gridHeaderColor = _settings.GridHeaderColor;
+            var settings = await Api.GetAppearanceSettingsAsync();
+            _scopes = settings.Select(ScopeEditModel.From).OrderBy(s => s.Scope).ToList();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    private async Task SaveAsync()
+    private async Task SaveAsync(ScopeEditModel s)
     {
         _error = null;
         _successMessage = null;
-        _saving = true;
+        s.Saving = true;
         try
         {
             var request = new UpdateAppearanceSettingsRequest(
-                _primaryColor, _accentColor, _surfaceColor,
-                _panelColor, _inputBackgroundColor, _inputBorderColor, _gridHeaderColor);
-            _settings = await Api.UpdateAppearanceSettingsAsync(request);
-            await JS.InvokeVoidAsync("applyTheme", _settings);
-            _successMessage = "Saved. The new colors are live across the app.";
+                s.PrimaryColor, s.AccentColor, s.SurfaceColor,
+                s.PanelColor, s.InputBackgroundColor, s.InputBorderColor, s.GridHeaderColor,
+                s.LabelFontSizePx);
+            var updated = await Api.UpdateAppearanceSettingsAsync(s.Scope, request);
+            s.ApplyFrom(updated);
+            await JS.InvokeVoidAsync("applyTheme", _scopes!.Select(x => x.ToDto()).ToList());
+            _successMessage = $"{s.Label} saved. The new colors are live across the app.";
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
-        finally { _saving = false; }
+        finally { s.Saving = false; }
     }
 
-    private Task ResetToDefaultAsync()
+    private Task ResetToDefaultAsync(ScopeEditModel s)
     {
-        _primaryColor = DefaultPrimary;
-        _accentColor = DefaultAccent;
-        _surfaceColor = DefaultSurface;
-        _panelColor = DefaultPanel;
-        _inputBackgroundColor = DefaultInputBackground;
-        _inputBorderColor = DefaultInputBorder;
-        _gridHeaderColor = DefaultGridHeader;
-        return SaveAsync();
+        var defaults = ScopeEditModel.Default(s.Scope);
+        s.PrimaryColor = defaults.PrimaryColor;
+        s.AccentColor = defaults.AccentColor;
+        s.SurfaceColor = defaults.SurfaceColor;
+        s.PanelColor = defaults.PanelColor;
+        s.InputBackgroundColor = defaults.InputBackgroundColor;
+        s.InputBorderColor = defaults.InputBorderColor;
+        s.GridHeaderColor = defaults.GridHeaderColor;
+        s.LabelFontSizePx = defaults.LabelFontSizePx;
+        return SaveAsync(s);
+    }
+
+    private class ScopeEditModel
+    {
+        public ThemeScope Scope { get; private init; }
+        public string Label { get; private init; } = "";
+        public bool Saving { get; set; }
+
+        public string PrimaryColor { get; set; } = "#1B4332";
+        public string AccentColor { get; set; } = "#2D6A4F";
+        public string SurfaceColor { get; set; } = "#F7F9F7";
+        public string PanelColor { get; set; } = "#FFFFFF";
+        public string InputBackgroundColor { get; set; } = "#FFFFFF";
+        public string InputBorderColor { get; set; } = "#CCCCCC";
+        public string GridHeaderColor { get; set; } = "#EEF4EE";
+        public int LabelFontSizePx { get; set; } = 13;
+
+        private static string LabelFor(ThemeScope scope) => scope switch
+        {
+            ThemeScope.SaleInvoice => "Sale Invoice",
+            ThemeScope.Purchase => "Purchase",
+            ThemeScope.Kachi => "Kachi",
+            ThemeScope.Pakki => "Pakki",
+            _ => "Global (sidebar & everything else)"
+        };
+
+        public static ScopeEditModel Default(ThemeScope scope) => new() { Scope = scope, Label = LabelFor(scope) };
+
+        public static ScopeEditModel From(AppearanceSettingsDto dto)
+        {
+            var model = new ScopeEditModel { Scope = dto.Scope, Label = LabelFor(dto.Scope) };
+            model.ApplyFrom(dto);
+            return model;
+        }
+
+        public void ApplyFrom(AppearanceSettingsDto dto)
+        {
+            PrimaryColor = dto.PrimaryColor;
+            AccentColor = dto.AccentColor;
+            SurfaceColor = dto.SurfaceColor;
+            PanelColor = dto.PanelColor;
+            InputBackgroundColor = dto.InputBackgroundColor;
+            InputBorderColor = dto.InputBorderColor;
+            GridHeaderColor = dto.GridHeaderColor;
+            LabelFontSizePx = dto.LabelFontSizePx;
+        }
+
+        public AppearanceSettingsDto ToDto() => new(
+            0, Scope, PrimaryColor, AccentColor, SurfaceColor,
+            PanelColor, InputBackgroundColor, InputBorderColor, GridHeaderColor, LabelFontSizePx);
     }
 }

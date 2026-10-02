@@ -15,15 +15,34 @@ public class AppearanceSettingsService : IAppearanceSettingsService
         _clock = clock;
     }
 
-    public async Task<AppearanceSettingsDto> GetAsync(CancellationToken ct = default)
+    public async Task<List<AppearanceSettingsDto>> GetAllAsync(CancellationToken ct = default)
     {
-        var settings = await GetOrCreateAsync(ct);
-        return ToDto(settings);
+        var existing = await _db.AppearanceSettings.ToListAsync(ct);
+
+        // A migration always seeds one row per ThemeScope, but self-heal instead of throwing if any
+        // is ever missing — every authenticated page depends on this never failing, since the theme
+        // is fetched on login.
+        foreach (var scope in Enum.GetValues<ThemeScope>())
+        {
+            if (existing.Any(s => s.Scope == scope)) continue;
+
+            var created = new AppearanceSettings { Scope = scope };
+            _db.AppearanceSettings.Add(created);
+            existing.Add(created);
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return existing.OrderBy(s => s.Scope).Select(ToDto).ToList();
     }
 
-    public async Task<AppearanceSettingsDto> UpdateAsync(UpdateAppearanceSettingsRequest request, CancellationToken ct = default)
+    public async Task<AppearanceSettingsDto> UpdateAsync(ThemeScope scope, UpdateAppearanceSettingsRequest request, CancellationToken ct = default)
     {
-        var settings = await GetOrCreateAsync(ct);
+        var settings = await _db.AppearanceSettings.FirstOrDefaultAsync(s => s.Scope == scope, ct);
+        if (settings is null)
+        {
+            settings = new AppearanceSettings { Scope = scope };
+            _db.AppearanceSettings.Add(settings);
+        }
 
         settings.PrimaryColor = request.PrimaryColor;
         settings.AccentColor = request.AccentColor;
@@ -32,26 +51,14 @@ public class AppearanceSettingsService : IAppearanceSettingsService
         settings.InputBackgroundColor = request.InputBackgroundColor;
         settings.InputBorderColor = request.InputBorderColor;
         settings.GridHeaderColor = request.GridHeaderColor;
+        settings.LabelFontSizePx = request.LabelFontSizePx;
         settings.UpdatedAtUtc = _clock.UtcNow;
 
         await _db.SaveChangesAsync(ct);
         return ToDto(settings);
     }
 
-    // A migration always seeds one row, but self-heal instead of throwing if it's ever missing —
-    // every authenticated page depends on this never failing, since the theme is fetched on login.
-    private async Task<AppearanceSettings> GetOrCreateAsync(CancellationToken ct)
-    {
-        var settings = await _db.AppearanceSettings.FirstOrDefaultAsync(ct);
-        if (settings is not null) return settings;
-
-        settings = new AppearanceSettings();
-        _db.AppearanceSettings.Add(settings);
-        await _db.SaveChangesAsync(ct);
-        return settings;
-    }
-
     private static AppearanceSettingsDto ToDto(AppearanceSettings s) => new(
-        s.Id, s.PrimaryColor, s.AccentColor, s.SurfaceColor,
-        s.PanelColor, s.InputBackgroundColor, s.InputBorderColor, s.GridHeaderColor);
+        s.Id, s.Scope, s.PrimaryColor, s.AccentColor, s.SurfaceColor,
+        s.PanelColor, s.InputBackgroundColor, s.InputBorderColor, s.GridHeaderColor, s.LabelFontSizePx);
 }

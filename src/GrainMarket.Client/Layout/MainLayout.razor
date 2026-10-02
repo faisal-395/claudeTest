@@ -140,15 +140,17 @@ else
         }
     }
 
-    /// <summary>Fetches the saved brand colors and applies them as CSS custom properties on
-    /// &lt;html&gt;, so the whole app re-skins immediately without a reload. Best-effort: a failure
-    /// here just leaves app.css's default green in place rather than blocking login or any page.</summary>
+    /// <summary>Fetches every ThemeScope's saved brand colors and applies them as scoped CSS custom
+    /// property overrides (see index.html's applyTheme), so the whole app — and each of Sale
+    /// Invoice/Purchase/Kachi/Pakki's own colors — re-skins immediately without a reload.
+    /// Best-effort: a failure here just leaves app.css's default colors in place rather than
+    /// blocking login or any page.</summary>
     private async Task ApplyThemeAsync()
     {
         try
         {
-            var theme = await Api.GetAppearanceSettingsAsync();
-            await JS.InvokeVoidAsync("applyTheme", theme);
+            var scopedSettings = await Api.GetAppearanceSettingsAsync();
+            await JS.InvokeVoidAsync("applyTheme", scopedSettings);
         }
         catch
         {

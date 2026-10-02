@@ -18,13 +18,13 @@ public class AppearanceSettingsController : ControllerBase
         _service = service;
     }
 
-    // Deliberately not gated by ModulePermission: every authenticated page needs the current theme
-    // colors to render itself, regardless of the caller's Setup access.
+    // Deliberately not gated by ModulePermission: every authenticated page needs every scope's
+    // current theme colors to render itself, regardless of the caller's Setup access.
     [HttpGet]
-    public async Task<ActionResult<AppearanceSettingsDto>> Get(CancellationToken ct) => Ok(await _service.GetAsync(ct));
+    public async Task<ActionResult<List<AppearanceSettingsDto>>> GetAll(CancellationToken ct) => Ok(await _service.GetAllAsync(ct));
 
     [ModulePermission(ModuleName.SetupAppearance, PermissionAction.Edit)]
-    [HttpPut]
-    public async Task<ActionResult<AppearanceSettingsDto>> Update(UpdateAppearanceSettingsRequest request, CancellationToken ct)
-        => Ok(await _service.UpdateAsync(request, ct));
+    [HttpPut("{scope}")]
+    public async Task<ActionResult<AppearanceSettingsDto>> Update(ThemeScope scope, UpdateAppearanceSettingsRequest request, CancellationToken ct)
+        => Ok(await _service.UpdateAsync(scope, request, ct));
 }
