@@ -18,7 +18,8 @@ public class StockController : ControllerBase
         _service = service;
     }
 
-    [ModulePermission(ModuleName.SetupProducts)]
+    // Deliberately not gated by ModulePermission: Purchase/Sale Invoice entry needs to see stock
+    // on hand regardless of the caller's Setup access, same reasoning as suggested-price below.
     [HttpGet]
     public async Task<ActionResult<List<StockDto>>> GetAll(CancellationToken ct) => Ok(await _service.GetStockAsync(ct));
 
