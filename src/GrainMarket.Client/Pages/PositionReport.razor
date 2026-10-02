@@ -1,0 +1,116 @@
+@page "/reports/position"
+@using GrainMarket.Application.Common
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Position in Hand <span class="rtl-urdu" style="font-size:1rem;">پوزیشن</span></h1>
+    <p style="color:#777;">Everything the business currently holds and owes/is owed, as of right now — cash and bank
+        balances, what every party owes us (Receivable) or we owe them (Payable), and every account's balance.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    @if (_parties is null || _accounts is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;max-width:1300px;margin-bottom:24px;">
+            <StatCard Title="Cash in Hand" Value="@($"Rs {CashBalance:N0}")" />
+            <StatCard Title="Bank" Value="@($"Rs {BankBalance:N0}")" />
+            <StatCard Title="Total Receivable" Value="@($"Rs {TotalReceivable:N0}")" Sub="Owed to us by parties" />
+            <StatCard Title="Total Payable" Value="@($"Rs {TotalPayable:N0}")" Sub="Owed by us to parties" />
+            <StatCard Title="Net Position" Value="@($"Rs {NetPosition:N0}")" Sub="Cash + Bank + Receivable − Payable" />
+        </div>
+
+        <h2 style="font-size:1.1rem;color:var(--brand-primary);">Party Balances</h2>
+        <div style="margin-bottom:10px;">
+            <label style="font-weight:400;">
+                <input type="checkbox" @bind="_showZeroBalanceParties" style="width:auto;" />
+                Show parties with a zero balance
+            </label>
+        </div>
+        <table class="data-grid" style="max-width:900px;margin-bottom:28px;">
+            <thead><tr><th>Party</th><th>Type</th><th style="text-align:right;">Balance</th><th>Position</th></tr></thead>
+            <tbody>
+                @foreach (var p in VisibleParties)
+                {
+                    <tr>
+                        <td>@p.Name @(string.IsNullOrEmpty(p.NameUrdu) ? "" : $"— {p.NameUrdu}")</td>
+                        <td>@p.PartyType</td>
+                        <td style="text-align:right;">@Math.Abs(p.CurrentBalance).ToString("N2")</td>
+                        <td>
+                            @if (p.CurrentBalance > 0)
+                            {
+                                <span style="color:#1a7a3c;">Receivable</span>
+                            }
+                            else if (p.CurrentBalance < 0)
+                            {
+                                <span style="color:#b3261e;">Payable</span>
+                            }
+                            else
+                            {
+                                <span style="color:#999;">—</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr style="font-weight:600;">
+                    <td colspan="2">Total</td>
+                    <td style="text-align:right;">Recv @TotalReceivable.ToString("N2") &nbsp; / &nbsp; Pay @TotalPayable.ToString("N2")</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <h2 style="font-size:1.1rem;color:var(--brand-primary);">Account Balances</h2>
+        <table class="data-grid" style="max-width:900px;">
+            <thead><tr><th>Code</th><th>Account</th><th>Type</th><th style="text-align:right;">Balance</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var a in _accounts.Where(a => a.IsActive).OrderBy(a => a.Code))
+                {
+                    <tr>
+                        <td>@a.Code</td>
+                        <td>@a.Name @(string.IsNullOrEmpty(a.NameUrdu) ? "" : $"— {a.NameUrdu}")</td>
+                        <td>@a.AccountType</td>
+                        <td style="text-align:right;">@Math.Abs(a.CurrentBalance).ToString("N2")</td>
+                        <td>@(a.CurrentBalance >= 0 ? "Dr" : "Cr")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<PartyDto>? _parties;
+    private List<ChartOfAccountDto>? _accounts;
+    private string? _error;
+    private bool _showZeroBalanceParties;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _parties = await Api.GetPartiesAsync();
+            _accounts = await Api.GetChartOfAccountsAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private IEnumerable<PartyDto> VisibleParties =>
+        (_parties ?? new())
+            .Where(p => _showZeroBalanceParties || p.CurrentBalance != 0)
+            .OrderByDescending(p => p.CurrentBalance);
+
+    private decimal CashBalance => _accounts?.FirstOrDefault(a => a.Code == DomainConstants.CashAccountCode)?.CurrentBalance ?? 0m;
+    private decimal BankBalance => _accounts?.FirstOrDefault(a => a.Code == DomainConstants.BankAccountCode)?.CurrentBalance ?? 0m;
+    private decimal TotalReceivable => _parties?.Where(p => p.CurrentBalance > 0).Sum(p => p.CurrentBalance) ?? 0m;
+    private decimal TotalPayable => _parties?.Where(p => p.CurrentBalance < 0).Sum(p => -p.CurrentBalance) ?? 0m;
+    private decimal NetPosition => CashBalance + BankBalance + TotalReceivable - TotalPayable;
+}
