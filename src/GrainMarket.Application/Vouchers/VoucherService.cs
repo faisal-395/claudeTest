@@ -40,16 +40,18 @@ public class VoucherService : IVoucherService
         return ToDto(voucher, balances);
     }
 
+    public async Task<NextVoucherNoDto> ReserveNextVoucherNoAsync(VoucherType type, CancellationToken ct = default) =>
+        new(await _numberGenerator.NextAsync(PrefixFor(type), ct));
+
     public async Task<VoucherDto> CreatePaymentOrReceiptAsync(CreatePaymentOrReceiptRequest request, CancellationToken ct = default)
     {
         await EnsureRefValidAsync(request.FromType, request.FromPartyId, request.FromAccountId, ct);
         await EnsureRefValidAsync(request.ToType, request.ToPartyId, request.ToAccountId, ct);
 
-        var prefix = request.VoucherType == VoucherType.Payment ? "PV" : "RV";
         var voucher = new Voucher
         {
             VoucherType = request.VoucherType,
-            VoucherNo = await _numberGenerator.NextAsync(prefix, ct),
+            VoucherNo = request.VoucherNo ?? await _numberGenerator.NextAsync(PrefixFor(request.VoucherType), ct),
             Date = request.Date,
             SeasonId = request.SeasonId,
             Amount = request.Amount,
@@ -135,6 +137,13 @@ public class VoucherService : IVoucherService
 
         await _db.SaveChangesAsync(ct);
     }
+
+    private static string PrefixFor(VoucherType type) => type switch
+    {
+        VoucherType.Payment => "PV",
+        VoucherType.Receipt => "RV",
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Only Payment or Receipt have a reservable voucher number.")
+    };
 
     private async Task<int?> ResolveAccountIdAsync(LedgerPartyRefType type, int? explicitAccountId, CancellationToken ct)
     {

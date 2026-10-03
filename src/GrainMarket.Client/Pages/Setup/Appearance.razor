@@ -225,7 +225,7 @@
         public bool GridFullBorders { get; set; }
 
         // Only shown/editable on the Global panel — round-trips unchanged for every other scope.
-        public NavigationLayout NavigationLayout { get; set; } = NavigationLayout.Sidebar;
+        public NavigationLayout NavigationLayout { get; set; } = NavigationLayout.TopMenu;
 
         private static string LabelFor(ThemeScope scope) => scope switch
         {

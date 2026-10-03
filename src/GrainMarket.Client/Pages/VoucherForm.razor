@@ -1,78 +1,160 @@
+@using GrainMarket.Application.Common
 @inject ApiClient Api
 
-<h1 class="page-title">@Title</h1>
-
-@if (_error is not null)
-{
-    <div class="error-banner">@_error</div>
-}
-@if (_successMessage is not null)
-{
-    <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
-}
-
-<div class="form-grid">
-    <div><label>Date</label><input type="date" @bind="_date" /></div>
+<div style="display:grid;grid-template-columns:3fr 2fr;gap:20px;align-items:start;">
     <div>
-        <label>Season</label>
-        <select @bind="_seasonId">
-            @if (_seasons is not null) { @foreach (var s in _seasons) { <option value="@s.Id">@s.Name</option> } }
-        </select>
+        <h1 class="page-title">@Title</h1>
+
+        @if (_error is not null)
+        {
+            <div class="error-banner">@_error</div>
+        }
+        @if (_successMessage is not null)
+        {
+            <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+        }
+
+        <div class="form-grid">
+            <div><label>@Title #</label><div class="batch-readonly-figure">@(_reservedVoucherNo ?? "…")</div></div>
+            <div><label>Date</label><input type="date" @bind="_date" /></div>
+            <div>
+                <label>Season</label>
+                <select @bind="_seasonId">
+                    @if (_seasons is not null) { @foreach (var s in _seasons) { <option value="@s.Id">@s.Name</option> } }
+                </select>
+            </div>
+            <div><label>Ref No</label><input @bind="_refNo" /></div>
+
+            <div class="batch-entry-section-label" style="grid-column: span 2;">From</div>
+            <div>
+                <label>From</label>
+                <select @bind="_fromType">
+                    <option value="@LedgerPartyRefType.Cash">Cash</option>
+                    <option value="@LedgerPartyRefType.Bank">Bank</option>
+                    <option value="@LedgerPartyRefType.Party">Party</option>
+                    <option value="@LedgerPartyRefType.Account">Account</option>
+                </select>
+            </div>
+            @if (_fromType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
+            {
+                <div>
+                    <label>Balance</label>
+                    <div class="batch-readonly-figure">@FixedAccountLabel(_fromType)</div>
+                </div>
+            }
+            else if (_fromType == LedgerPartyRefType.Party)
+            {
+                <div>
+                    <label>Category</label>
+                    <select @bind="_fromPartyCategoryFilter">
+                        <option value="">All</option>
+                        <option value="@PartyType.Farmer">Farmer</option>
+                        <option value="@PartyType.Vendor">Vendor</option>
+                        <option value="@PartyType.Supplier">Supplier</option>
+                        <option value="@PartyType.Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label>From Party</label>
+                    <SearchSelect TItem="PartyDto" Items="FilteredFromParties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
+                </div>
+            }
+            else
+            {
+                <div>
+                    <label>From Account</label>
+                    <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@(a => $"{DisplayText.Account(a)} ({a.CurrentBalance:N0})")" Value="@(_fromAccountId ?? 0)" ValueChanged="@(v => _fromAccountId = v)" Placeholder="Search account…" />
+                </div>
+            }
+
+            <div class="batch-entry-section-label" style="grid-column: span 2;">To</div>
+            <div>
+                <label>To</label>
+                <select @bind="_toType">
+                    <option value="@LedgerPartyRefType.Cash">Cash</option>
+                    <option value="@LedgerPartyRefType.Bank">Bank</option>
+                    <option value="@LedgerPartyRefType.Party">Party</option>
+                    <option value="@LedgerPartyRefType.Account">Account</option>
+                </select>
+            </div>
+            @if (_toType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
+            {
+                <div>
+                    <label>Balance</label>
+                    <div class="batch-readonly-figure">@FixedAccountLabel(_toType)</div>
+                </div>
+            }
+            else if (_toType == LedgerPartyRefType.Party)
+            {
+                <div>
+                    <label>Category</label>
+                    <select @bind="_toPartyCategoryFilter">
+                        <option value="">All</option>
+                        <option value="@PartyType.Farmer">Farmer</option>
+                        <option value="@PartyType.Vendor">Vendor</option>
+                        <option value="@PartyType.Supplier">Supplier</option>
+                        <option value="@PartyType.Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label>To Party</label>
+                    <SearchSelect TItem="PartyDto" Items="FilteredToParties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
+                </div>
+            }
+            else
+            {
+                <div>
+                    <label>To Account</label>
+                    <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@(a => $"{DisplayText.Account(a)} ({a.CurrentBalance:N0})")" Value="@(_toAccountId ?? 0)" ValueChanged="@(v => _toAccountId = v)" Placeholder="Search account…" />
+                </div>
+            }
+
+            <div><label>Amount</label><input type="number" step="0.01" @bind="_amount" /></div>
+            <div><label>Description</label><input @bind="_description" /></div>
+
+            <div style="grid-column: span 2;">
+                <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">Save @Title</button>
+            </div>
+        </div>
     </div>
-    <div><label>Amount</label><input type="number" step="0.01" @bind="_amount" /></div>
-    <div><label>Ref No</label><input @bind="_refNo" /></div>
 
     <div>
-        <label>From</label>
-        <select @bind="_fromType">
-            <option value="@LedgerPartyRefType.Cash">Cash</option>
-            <option value="@LedgerPartyRefType.Bank">Bank</option>
-            <option value="@LedgerPartyRefType.Party">Party</option>
-            <option value="@LedgerPartyRefType.Account">Account</option>
-        </select>
-    </div>
-    @if (_fromType == LedgerPartyRefType.Party)
-    {
-        <div>
-            <label>From Party</label>
-            <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
-        </div>
-    }
-    else if (_fromType == LedgerPartyRefType.Account)
-    {
-        <div>
-            <label>From Account</label>
-            <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@(a => $"{DisplayText.Account(a)} ({a.CurrentBalance:N0})")" Value="@(_fromAccountId ?? 0)" ValueChanged="@(v => _fromAccountId = v)" Placeholder="Search account…" />
-        </div>
-    }
-
-    <div>
-        <label>To</label>
-        <select @bind="_toType">
-            <option value="@LedgerPartyRefType.Cash">Cash</option>
-            <option value="@LedgerPartyRefType.Bank">Bank</option>
-            <option value="@LedgerPartyRefType.Party">Party</option>
-            <option value="@LedgerPartyRefType.Account">Account</option>
-        </select>
-    </div>
-    @if (_toType == LedgerPartyRefType.Party)
-    {
-        <div>
-            <label>To Party</label>
-            <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
-        </div>
-    }
-    else if (_toType == LedgerPartyRefType.Account)
-    {
-        <div>
-            <label>To Account</label>
-            <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@(a => $"{DisplayText.Account(a)} ({a.CurrentBalance:N0})")" Value="@(_toAccountId ?? 0)" ValueChanged="@(v => _toAccountId = v)" Placeholder="Search account…" />
-        </div>
-    }
-
-    <div style="grid-column: span 2;"><label>Description</label><input @bind="_description" style="width:100%;" /></div>
-    <div style="grid-column: span 2;">
-        <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">Save @Title</button>
+        <h3 style="margin-top:0;">Today's @(Title)s</h3>
+        @if (_todayVouchers is null)
+        {
+            <p>Loading…</p>
+        }
+        else if (_todayVouchers.Count == 0)
+        {
+            <p style="color:#777;">No @(Title)s added today yet.</p>
+        }
+        else
+        {
+            <div class="batch-results-grid-wrapper">
+                <table class="data-grid">
+                    <thead><tr><th>Voucher #</th><th>From</th><th>To</th><th style="text-align:right;">Amount</th><th>Description</th></tr></thead>
+                    <tbody>
+                        @foreach (var v in _todayVouchers)
+                        {
+                            <tr>
+                                <td><a href="print/voucher/@v.Id">@v.VoucherNo</a></td>
+                                <td>@(v.FromPartyName ?? v.FromAccountName ?? v.FromType?.ToString())</td>
+                                <td>@(v.ToPartyName ?? v.ToAccountName ?? v.ToType?.ToString())</td>
+                                <td style="text-align:right;">@v.Amount.ToString("N2")</td>
+                                <td>@(v.Description ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr style="font-weight:600;">
+                            <td colspan="3">Total</td>
+                            <td style="text-align:right;">@_todayVouchers.Sum(v => v.Amount).ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
     </div>
 </div>
 
@@ -83,6 +165,8 @@
     private List<SeasonDto>? _seasons;
     private List<PartyDto>? _parties;
     private List<ChartOfAccountDto>? _accounts;
+    private List<VoucherDto>? _todayVouchers;
+    private string? _reservedVoucherNo;
     private string? _error;
     private string? _successMessage;
 
@@ -92,15 +176,33 @@
     private string? _refNo;
     private string? _description;
 
-    private LedgerPartyRefType _fromType = LedgerPartyRefType.Cash;
+    private LedgerPartyRefType _fromType;
+    private string _fromPartyCategoryFilter = "";
     private int? _fromPartyId;
     private int? _fromAccountId;
-    private LedgerPartyRefType _toType = LedgerPartyRefType.Party;
+    private LedgerPartyRefType _toType;
+    private string _toPartyCategoryFilter = "";
     private int? _toPartyId;
     private int? _toAccountId;
 
+    private IEnumerable<PartyDto> FilteredFromParties => (_parties ?? new()).Where(p => string.IsNullOrEmpty(_fromPartyCategoryFilter) || p.PartyType == Enum.Parse<PartyType>(_fromPartyCategoryFilter));
+    private IEnumerable<PartyDto> FilteredToParties => (_parties ?? new()).Where(p => string.IsNullOrEmpty(_toPartyCategoryFilter) || p.PartyType == Enum.Parse<PartyType>(_toPartyCategoryFilter));
+
+    private string FixedAccountLabel(LedgerPartyRefType type)
+    {
+        var account = _accounts?.FirstOrDefault(a => a.Code == (type == LedgerPartyRefType.Cash ? DomainConstants.CashAccountCode : DomainConstants.BankAccountCode));
+        return account is null ? "…" : $"{account.Name}: Rs {account.CurrentBalance:N2}";
+    }
+
     protected override async Task OnInitializedAsync()
     {
+        // Payment pays FROM cash/bank TO a party by default; Receipt is the mirror image — money
+        // comes FROM a party TO cash/bank — matching the Dr-the-To/Cr-the-From posting convention
+        // for both (see VoucherService), so the default direction is always the common case instead
+        // of making every Receipt start backwards and need both dropdowns flipped by hand.
+        _fromType = VoucherKind == VoucherType.Receipt ? LedgerPartyRefType.Party : LedgerPartyRefType.Cash;
+        _toType = VoucherKind == VoucherType.Receipt ? LedgerPartyRefType.Cash : LedgerPartyRefType.Party;
+
         try
         {
             _seasons = await Api.GetSeasonsAsync();
@@ -109,8 +211,22 @@
             if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
             if (_parties.Count > 0) { _fromPartyId = _parties[0].Id; _toPartyId = _parties[0].Id; }
             if (_accounts.Count > 0) { _fromAccountId = _accounts[0].Id; _toAccountId = _accounts[0].Id; }
+            await ReserveVoucherNoAsync();
+            await LoadTodayVouchersAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task ReserveVoucherNoAsync()
+    {
+        var next = VoucherKind == VoucherType.Payment ? await Api.ReserveNextPaymentNoAsync() : await Api.ReserveNextReceiptNoAsync();
+        _reservedVoucherNo = next.VoucherNo;
+    }
+
+    private async Task LoadTodayVouchersAsync()
+    {
+        var all = await Api.GetVouchersAsync(VoucherKind);
+        _todayVouchers = all.Where(v => v.Date.Date == DateTime.Today).OrderByDescending(v => v.Id).ToList();
     }
 
     private async Task SaveAsync()
@@ -120,12 +236,15 @@
         var request = new CreatePaymentOrReceiptRequest(
             VoucherKind, _date, _seasonId, _amount, _refNo, _description,
             _fromType, _fromPartyId, _fromAccountId,
-            _toType, _toPartyId, _toAccountId);
+            _toType, _toPartyId, _toAccountId,
+            _reservedVoucherNo);
         try
         {
             var result = VoucherKind == VoucherType.Payment ? await Api.CreatePaymentAsync(request) : await Api.CreateReceiptAsync(request);
             _successMessage = $"{Title} {result.VoucherNo} saved.";
             _amount = 0; _refNo = null; _description = null;
+            await ReserveVoucherNoAsync();
+            await LoadTodayVouchersAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }

@@ -74,5 +74,5 @@ public class AppearanceSettings : BaseEntity
 
     /// <summary>App-wide sidebar vs. top menu choice. Only meaningful on the Global row — every
     /// other scope's row carries this column too (same shared table) but it's never read from them.</summary>
-    public NavigationLayout NavigationLayout { get; set; } = NavigationLayout.Sidebar;
+    public NavigationLayout NavigationLayout { get; set; } = NavigationLayout.TopMenu;
 }

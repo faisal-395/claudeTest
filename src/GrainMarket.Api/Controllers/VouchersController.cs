@@ -19,14 +19,29 @@ public class VouchersController : ControllerBase
         _service = service;
     }
 
-    [ModulePermission(ModuleName.Payment)]
+    // Deliberately not gated by ModulePermission: Payment and Receipt's own "Today's Vouchers"
+    // grid calls this filtered by its own type, so a Receipt-only (no Payment) role still needs to
+    // see its own receipts — matches the Seasons/Parties/ChartOfAccounts "open read, gated write"
+    // convention used elsewhere for reference/record data.
     [HttpGet]
     public async Task<ActionResult<List<VoucherDto>>> GetAll([FromQuery] VoucherType? type, [FromQuery] int? seasonId, CancellationToken ct)
         => Ok(await _service.GetAllAsync(type, seasonId, ct));
 
-    [ModulePermission(ModuleName.Payment)]
     [HttpGet("{id:int}")]
     public async Task<ActionResult<VoucherDto>> GetById(int id, CancellationToken ct) => Ok(await _service.GetByIdAsync(id, ct));
+
+    // Reserves (consumes) the next PV number immediately, so the Payment screen can show it before
+    // Save — matches Purchase/Sale Invoice's reserve-ahead pattern. Left unsaved, that number is
+    // simply skipped.
+    [ModulePermission(ModuleName.Payment, PermissionAction.Create)]
+    [HttpGet("payment/next-voucher-no")]
+    public async Task<ActionResult<NextVoucherNoDto>> ReserveNextPaymentNo(CancellationToken ct)
+        => Ok(await _service.ReserveNextVoucherNoAsync(VoucherType.Payment, ct));
+
+    [ModulePermission(ModuleName.Receipt, PermissionAction.Create)]
+    [HttpGet("receipt/next-voucher-no")]
+    public async Task<ActionResult<NextVoucherNoDto>> ReserveNextReceiptNo(CancellationToken ct)
+        => Ok(await _service.ReserveNextVoucherNoAsync(VoucherType.Receipt, ct));
 
     [ModulePermission(ModuleName.Payment, PermissionAction.Create)]
     [HttpPost("payment")]

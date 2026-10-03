@@ -149,6 +149,8 @@ public class ApiClient
     public Task<List<VoucherDto>> GetVouchersAsync(VoucherType? type = null, int? seasonId = null) =>
         GetAsync<List<VoucherDto>>($"api/vouchers?{(type.HasValue ? $"type={type}&" : "")}{(seasonId.HasValue ? $"seasonId={seasonId}" : "")}");
     public Task<VoucherDto> GetVoucherAsync(int id) => GetAsync<VoucherDto>($"api/vouchers/{id}");
+    public Task<NextVoucherNoDto> ReserveNextPaymentNoAsync() => GetAsync<NextVoucherNoDto>("api/vouchers/payment/next-voucher-no");
+    public Task<NextVoucherNoDto> ReserveNextReceiptNoAsync() => GetAsync<NextVoucherNoDto>("api/vouchers/receipt/next-voucher-no");
     public Task<VoucherDto> CreatePaymentAsync(CreatePaymentOrReceiptRequest request) => PostAsync<CreatePaymentOrReceiptRequest, VoucherDto>("api/vouchers/payment", request);
     public Task<VoucherDto> CreateReceiptAsync(CreatePaymentOrReceiptRequest request) => PostAsync<CreatePaymentOrReceiptRequest, VoucherDto>("api/vouchers/receipt", request);
     public Task<VoucherDto> CreateJournalAsync(CreateJournalRequest request) => PostAsync<CreateJournalRequest, VoucherDto>("api/vouchers/journal", request);
