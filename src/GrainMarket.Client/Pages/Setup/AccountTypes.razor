@@ -66,6 +66,13 @@
             _nameUrdu = null;
             await LoadAsync();
         }
-        catch (Models.ApiException ex) { _error = ex.Message; }
+        catch (Models.ApiException ex) { _error = FormatError(ex); }
+    }
+
+    private static string FormatError(Models.ApiException ex)
+    {
+        if (ex.Errors is null || ex.Errors.Count == 0) return ex.Message;
+        var details = string.Join(" ", ex.Errors.SelectMany(kv => kv.Value));
+        return $"{ex.Message} {details}";
     }
 }

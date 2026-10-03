@@ -42,7 +42,7 @@
             </div>
         }
         <div style="grid-column: span 2;">
-            <button class="btn" @onclick="SaveAsync">@(_editingId is null ? "Add Account" : "Update Account")</button>
+            <button class="btn" disabled="@(_accountTypeId <= 0)" @onclick="SaveAsync">@(_editingId is null ? "Add Account" : "Update Account")</button>
             @if (_editingId is not null)
             {
                 <button class="btn secondary" @onclick="ResetForm">Cancel</button>
@@ -140,12 +140,22 @@
             ResetForm();
             await LoadAsync();
         }
-        catch (Models.ApiException ex) { _error = ex.Message; }
+        catch (Models.ApiException ex) { _error = FormatError(ex); }
     }
 
     private async Task DeleteAsync(int id)
     {
         try { await Api.DeleteChartOfAccountAsync(id); await LoadAsync(); }
-        catch (Models.ApiException ex) { _error = ex.Message; }
+        catch (Models.ApiException ex) { _error = FormatError(ex); }
+    }
+
+    // The server reports *why* a save was rejected (e.g. "AccountTypeId must be greater than 0")
+    // as per-field validation errors, not in the exception's own Message (just the generic
+    // "Validation failed." title) — append them so the banner explains the real problem.
+    private static string FormatError(Models.ApiException ex)
+    {
+        if (ex.Errors is null || ex.Errors.Count == 0) return ex.Message;
+        var details = string.Join(" ", ex.Errors.SelectMany(kv => kv.Value));
+        return $"{ex.Message} {details}";
     }
 }
