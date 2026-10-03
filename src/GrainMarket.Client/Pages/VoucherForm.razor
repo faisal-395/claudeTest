@@ -25,16 +25,12 @@
                     <div class="batch-readonly-figure" style="width:140px;">@(DisplayedVoucherNo ?? "…")</div>
                 </div>
                 <div>
-                    <label>Ref No</label>
-                    <input @bind="_refNo" style="width:160px;" />
-                </div>
-                <div>
                     <label>Date</label>
                     <input type="date" @bind="_date" style="width:140px;" />
                 </div>
             </div>
 
-            <div>
+            <div style="grid-column: span 2;">
                 <label>From</label>
                 <select @bind="_fromType" style="margin-bottom:6px;">
                     <option value="@LedgerPartyRefType.Cash">Cash</option>
@@ -58,7 +54,7 @@
                 }
             </div>
 
-            <div>
+            <div style="grid-column: span 2;">
                 <label>To</label>
                 <select @bind="_toType" style="margin-bottom:6px;">
                     <option value="@LedgerPartyRefType.Cash">Cash</option>
@@ -83,6 +79,7 @@
             </div>
 
             <div><label>Amount</label><input type="number" step="0.01" @bind="_amount" /></div>
+            <div><label>Ref No</label><input @bind="_refNo" style="width:160px;" /></div>
             <div style="grid-column: span 2;"><label>Description</label><input @bind="_description" style="width:100%;" /></div>
 
             <div style="grid-column: span 2;">
