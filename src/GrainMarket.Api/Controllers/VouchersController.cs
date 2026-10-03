@@ -59,6 +59,13 @@ public class VouchersController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
+    // Gated the same way Cancel below already is: Payment's own Edit permission stands in for
+    // "can edit a voucher", regardless of whether this particular one is a Payment or a Receipt.
+    [ModulePermission(ModuleName.Payment, PermissionAction.Edit)]
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<VoucherDto>> Update(int id, UpdatePaymentOrReceiptRequest request, CancellationToken ct)
+        => Ok(await _service.UpdatePaymentOrReceiptAsync(id, request, ct));
+
     [ModulePermission(ModuleName.Journal, PermissionAction.Create)]
     [HttpPost("journal")]
     public async Task<ActionResult<VoucherDto>> CreateJournal(CreateJournalRequest request, CancellationToken ct)

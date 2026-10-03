@@ -151,6 +151,7 @@ public class ApiClient
     public Task<VoucherDto> GetVoucherAsync(int id) => GetAsync<VoucherDto>($"api/vouchers/{id}");
     public Task<NextVoucherNoDto> ReserveNextPaymentNoAsync() => GetAsync<NextVoucherNoDto>("api/vouchers/payment/next-voucher-no");
     public Task<NextVoucherNoDto> ReserveNextReceiptNoAsync() => GetAsync<NextVoucherNoDto>("api/vouchers/receipt/next-voucher-no");
+    public Task<VoucherDto> UpdateVoucherAsync(int id, UpdatePaymentOrReceiptRequest request) => PutAsync<UpdatePaymentOrReceiptRequest, VoucherDto>($"api/vouchers/{id}", request);
     public Task<VoucherDto> CreatePaymentAsync(CreatePaymentOrReceiptRequest request) => PostAsync<CreatePaymentOrReceiptRequest, VoucherDto>("api/vouchers/payment", request);
     public Task<VoucherDto> CreateReceiptAsync(CreatePaymentOrReceiptRequest request) => PostAsync<CreatePaymentOrReceiptRequest, VoucherDto>("api/vouchers/receipt", request);
     public Task<VoucherDto> CreateJournalAsync(CreateJournalRequest request) => PostAsync<CreateJournalRequest, VoucherDto>("api/vouchers/journal", request);
