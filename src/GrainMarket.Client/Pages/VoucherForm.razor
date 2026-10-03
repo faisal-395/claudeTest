@@ -1,7 +1,7 @@
 @using GrainMarket.Application.Common
 @inject ApiClient Api
 
-<div style="display:grid;grid-template-columns:3fr 2fr;gap:20px;align-items:start;">
+<div style="display:grid;grid-template-columns:5fr 4fr;gap:20px;align-items:start;">
     <div>
         <h1 class="page-title">@Title</h1>
 
@@ -15,17 +15,10 @@
         }
 
         <div class="form-grid">
-            <div><label>@Title #</label><div class="batch-readonly-figure">@(_reservedVoucherNo ?? "…")</div></div>
-            <div><label>Date</label><input type="date" @bind="_date" /></div>
-            <div>
-                <label>Season</label>
-                <select @bind="_seasonId">
-                    @if (_seasons is not null) { @foreach (var s in _seasons) { <option value="@s.Id">@s.Name</option> } }
-                </select>
-            </div>
-            <div><label>Ref No</label><input @bind="_refNo" /></div>
+            <div><label>@Title #</label><input @bind="_reservedVoucherNo" style="width:140px;" /></div>
+            <div><label>Date</label><input type="date" @bind="_date" style="width:140px;" /></div>
+            <div><label>Ref No</label><input @bind="_refNo" style="width:160px;" /></div>
 
-            <div class="batch-entry-section-label" style="grid-column: span 2;">From</div>
             <div>
                 <label>From</label>
                 <select @bind="_fromType">
@@ -45,18 +38,8 @@
             else if (_fromType == LedgerPartyRefType.Party)
             {
                 <div>
-                    <label>Category</label>
-                    <select @bind="_fromPartyCategoryFilter">
-                        <option value="">All</option>
-                        <option value="@PartyType.Farmer">Farmer</option>
-                        <option value="@PartyType.Vendor">Vendor</option>
-                        <option value="@PartyType.Supplier">Supplier</option>
-                        <option value="@PartyType.Other">Other</option>
-                    </select>
-                </div>
-                <div>
                     <label>From Party</label>
-                    <SearchSelect TItem="PartyDto" Items="FilteredFromParties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
+                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
                 </div>
             }
             else
@@ -67,7 +50,6 @@
                 </div>
             }
 
-            <div class="batch-entry-section-label" style="grid-column: span 2;">To</div>
             <div>
                 <label>To</label>
                 <select @bind="_toType">
@@ -87,18 +69,8 @@
             else if (_toType == LedgerPartyRefType.Party)
             {
                 <div>
-                    <label>Category</label>
-                    <select @bind="_toPartyCategoryFilter">
-                        <option value="">All</option>
-                        <option value="@PartyType.Farmer">Farmer</option>
-                        <option value="@PartyType.Vendor">Vendor</option>
-                        <option value="@PartyType.Supplier">Supplier</option>
-                        <option value="@PartyType.Other">Other</option>
-                    </select>
-                </div>
-                <div>
                     <label>To Party</label>
-                    <SearchSelect TItem="PartyDto" Items="FilteredToParties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
+                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
                 </div>
             }
             else
@@ -177,16 +149,11 @@
     private string? _description;
 
     private LedgerPartyRefType _fromType;
-    private string _fromPartyCategoryFilter = "";
     private int? _fromPartyId;
     private int? _fromAccountId;
     private LedgerPartyRefType _toType;
-    private string _toPartyCategoryFilter = "";
     private int? _toPartyId;
     private int? _toAccountId;
-
-    private IEnumerable<PartyDto> FilteredFromParties => (_parties ?? new()).Where(p => string.IsNullOrEmpty(_fromPartyCategoryFilter) || p.PartyType == Enum.Parse<PartyType>(_fromPartyCategoryFilter));
-    private IEnumerable<PartyDto> FilteredToParties => (_parties ?? new()).Where(p => string.IsNullOrEmpty(_toPartyCategoryFilter) || p.PartyType == Enum.Parse<PartyType>(_toPartyCategoryFilter));
 
     private string FixedAccountLabel(LedgerPartyRefType type)
     {
@@ -205,6 +172,8 @@
 
         try
         {
+            // Season is never user-picked here — GetSeasonsAsync orders by StartDate descending, so
+            // the first row is always the current/most-recent season; just use it.
             _seasons = await Api.GetSeasonsAsync();
             _parties = await Api.GetPartiesAsync();
             _accounts = await Api.GetChartOfAccountsAsync();
