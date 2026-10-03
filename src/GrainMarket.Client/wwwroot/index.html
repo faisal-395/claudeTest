@@ -40,6 +40,7 @@
             accentColor: '--brand-accent',
             surfaceColor: '--brand-surface',
             panelColor: '--brand-panel',
+            productPanelColor: '--brand-product-panel-bg',
             headingBackgroundColor: '--brand-heading-bg',
             inputBackgroundColor: '--brand-input-bg',
             gridHeaderColor: '--brand-grid-header',
@@ -98,6 +99,9 @@
                 }
                 if (settings.panelColor) {
                     declarations.push('--brand-panel-text: ' + contrastTextFor(settings.panelColor) + ';');
+                }
+                if (settings.productPanelColor) {
+                    declarations.push('--brand-product-panel-text: ' + contrastTextFor(settings.productPanelColor) + ';');
                 }
                 declarations.push('--brand-grid-border-width: ' + (settings.gridFullBorders ? '1px' : '0') + ';');
 

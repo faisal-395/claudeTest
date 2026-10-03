@@ -39,6 +39,7 @@
     --brand-accent: #2D6A4F;
     --brand-surface: #f7f9f7;
     --brand-panel: #ffffff;
+    --brand-product-panel-bg: #ffffff;
     --brand-heading-bg: #ffffff;
     --brand-input-bg: #ffffff;
     --brand-grid-header: #eef4ee;
@@ -48,16 +49,18 @@
     --brand-grid-border-width: 0;
 
     /* Readable text color for anything sitting ON a --brand-primary/--brand-accent/--brand-input-bg/
-       --brand-grid-header/--brand-surface/--brand-panel background (sidebar, buttons, the selected
-       day in the date picker, a focused text box, the grid header row, readonly Invoice#/Balance
-       figures, a panel's section label). index.html's applyTheme computes these per scope from the
-       matching color's brightness and overrides them alongside the rest — so whichever of
-       black/white actually contrasts gets used, instead of a hardcoded color that only worked for
-       one specific background. Defaults here match the dark/light default colors above. */
+       --brand-grid-header/--brand-surface/--brand-panel/--brand-product-panel-bg background (sidebar,
+       buttons, the selected day in the date picker, a focused text box, the grid header row,
+       readonly Invoice#/Balance figures, a panel's section label). index.html's applyTheme computes
+       these per scope from the matching color's brightness and overrides them alongside the rest —
+       so whichever of black/white actually contrasts gets used, instead of a hardcoded color that
+       only worked for one specific background. Defaults here match the dark/light default colors
+       above. */
     --brand-primary-text: #ffffff;
     --brand-accent-text: #ffffff;
     --brand-input-text: #1a1a1a;
     --brand-grid-header-text: #1a1a1a;
+    --brand-product-panel-text: #1a1a1a;
     --brand-surface-text: #1a1a1a;
     --brand-panel-text: #1a1a1a;
 }
@@ -486,6 +489,18 @@ table.data-grid tbody tr.selected-row:hover {
     padding: 12px 16px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     margin-bottom: 12px;
+}
+
+/* Purchase/Sale Invoice's "Add Product" panel specifically — its own background
+   (ProductPanelColor), independent of the "Invoice Info" panel's --brand-panel above, so the two
+   can look different even though they're the same page. Its own section-label text follows, to
+   stay readable against this panel's own background rather than the other panel's. */
+.batch-entry-panel-product {
+    background: var(--brand-product-panel-bg);
+}
+
+.batch-entry-panel-product .batch-entry-section-label {
+    color: var(--brand-product-panel-text);
 }
 
 .batch-entry-inputs {

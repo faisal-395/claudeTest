@@ -43,9 +43,15 @@ public class AppearanceSettings : BaseEntity
     /// Setup > Appearance control anymore (kept frozen at whatever it's set to).</summary>
     public string SurfaceColor { get; set; } = "#F7F9F7";
 
-    /// <summary>Background of form/entry cards — the Purchase/Sale Invoice entry panel(s) and
-    /// Setup forms. The results grid's own body background is separate — see GridBackgroundColor.</summary>
+    /// <summary>Background of form/entry cards — Setup forms, Kachi/Pakki's single entry panel,
+    /// and Purchase/Sale Invoice's "Invoice Info" panel specifically (their "Add Product" panel has
+    /// its own color — see ProductPanelColor). The results grid's own body background is separate
+    /// too — see GridBackgroundColor.</summary>
     public string PanelColor { get; set; } = "#FFFFFF";
+
+    /// <summary>Background of Purchase/Sale Invoice's "Add Product" panel — independent of
+    /// PanelColor, so the two panels can look different even though they're the same page.</summary>
+    public string ProductPanelColor { get; set; } = "#FFFFFF";
 
     /// <summary>Background behind the page's own &lt;h1&gt; heading text.</summary>
     public string HeadingBackgroundColor { get; set; } = "#FFFFFF";
