@@ -24,6 +24,7 @@ public class UpdateAppearanceSettingsRequestValidator : AbstractValidator<Update
         RuleFor(x => x.HeadingBackgroundColor).NotEmpty().Matches(HexColorPattern).WithMessage("Heading background must be a hex code like #FFFFFF.");
         RuleFor(x => x.InputBackgroundColor).NotEmpty().Matches(HexColorPattern).WithMessage("Selected text box background must be a hex code like #FFFFFF.");
         RuleFor(x => x.GridHeaderColor).NotEmpty().Matches(HexColorPattern).WithMessage("Grid header color must be a hex code like #EEF4EE.");
+        RuleFor(x => x.GridBackgroundColor).NotEmpty().Matches(HexColorPattern).WithMessage("Grid background color must be a hex code like #FFFFFF.");
         RuleFor(x => x.LabelFontSizePx).InclusiveBetween(8, 32).WithMessage("Label font size must be between 8 and 32 px.");
     }
 

@@ -26,21 +26,26 @@
             <div style="max-width:760px;background:white;padding:16px 20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
                 <h2 style="font-size:1.05rem;color:var(--brand-primary);margin-top:0;">@s.Label</h2>
 
-                <div class="form-grid" style="max-width:none;padding:0;box-shadow:none;">
+                <div style="font-size:0.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.03em;margin:4px 0 8px;">Heading</div>
+                <div class="form-grid" style="max-width:none;padding:0;box-shadow:none;margin-bottom:18px;">
                     <div>
-                        <label>Form Heading Text</label>
+                        <label>Heading Text</label>
                         <div style="display:flex;align-items:center;gap:10px;">
                             <input type="color" @bind="s.PrimaryColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
                             <input @bind="s.PrimaryColor" style="width:100px;" />
                         </div>
                     </div>
                     <div>
-                        <label>Form Heading Background</label>
+                        <label>Heading Background</label>
                         <div style="display:flex;align-items:center;gap:10px;">
                             <input type="color" @bind="s.HeadingBackgroundColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
                             <input @bind="s.HeadingBackgroundColor" style="width:100px;" />
                         </div>
                     </div>
+                </div>
+
+                <div style="font-size:0.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.03em;margin:4px 0 8px;">Form (Invoice Info / Add Product panels)</div>
+                <div class="form-grid" style="max-width:none;padding:0;box-shadow:none;margin-bottom:18px;">
                     <div>
                         <label>Button</label>
                         <div style="display:flex;align-items:center;gap:10px;">
@@ -49,7 +54,7 @@
                         </div>
                     </div>
                     <div>
-                        <label>Form / Grid Panel Background</label>
+                        <label>Form Panel Background</label>
                         <div style="display:flex;align-items:center;gap:10px;">
                             <input type="color" @bind="s.PanelColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
                             <input @bind="s.PanelColor" style="width:100px;" />
@@ -63,6 +68,14 @@
                         </div>
                     </div>
                     <div>
+                        <label>Field Label Font Size (px)</label>
+                        <input type="number" min="8" max="32" @bind="s.LabelFontSizePx" style="width:80px;" />
+                    </div>
+                </div>
+
+                <div style="font-size:0.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.03em;margin:4px 0 8px;">Results Grid</div>
+                <div class="form-grid" style="max-width:none;padding:0;box-shadow:none;margin-bottom:18px;">
+                    <div>
                         <label>Grid Header Background</label>
                         <div style="display:flex;align-items:center;gap:10px;">
                             <input type="color" @bind="s.GridHeaderColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
@@ -70,15 +83,11 @@
                         </div>
                     </div>
                     <div>
-                        <label>Grid Background</label>
+                        <label>Grid Body Background</label>
                         <div style="display:flex;align-items:center;gap:10px;">
                             <input type="color" @bind="s.GridBackgroundColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
                             <input @bind="s.GridBackgroundColor" style="width:100px;" />
                         </div>
-                    </div>
-                    <div>
-                        <label>Field Label Font Size (px)</label>
-                        <input type="number" min="8" max="32" @bind="s.LabelFontSizePx" style="width:80px;" />
                     </div>
                     <div>
                         <label>Grid Borders</label>
@@ -105,7 +114,7 @@
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                         <div style="background:@s.HeadingBackgroundColor;color:@s.PrimaryColor;padding:6px 12px;border-radius:4px;font-size:@(s.LabelFontSizePx)px;font-weight:600;">Heading</div>
                         <div style="background:@s.AccentColor;color:white;padding:6px 12px;border-radius:4px;">Button</div>
-                        <div style="background:@s.PanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Panel</div>
+                        <div style="background:@s.PanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Form Panel</div>
                         <div style="background:@s.InputBackgroundColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Text Box (selected)</div>
                         <div style="background:@s.GridHeaderColor;color:@s.PrimaryColor;padding:6px 12px;border-radius:4px;font-weight:600;">Grid Header</div>
                         <div style="background:@s.GridBackgroundColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Grid Body</div>
@@ -132,7 +141,18 @@
             var settings = await Api.GetAppearanceSettingsAsync();
             _scopes = settings.Select(ScopeEditModel.From).OrderBy(s => s.Scope).ToList();
         }
-        catch (Models.ApiException ex) { _error = ex.Message; }
+        catch (Models.ApiException ex) { _error = FormatError(ex); }
+    }
+
+    // The server reports *why* a save was rejected (e.g. "Primary color is too light to read as
+    // text") as per-field validation errors, not in the exception's own Message (which is just the
+    // generic "Validation failed." title) — append them so the banner actually explains the
+    // problem instead of leaving it looking like nothing happened.
+    private static string FormatError(Models.ApiException ex)
+    {
+        if (ex.Errors is null || ex.Errors.Count == 0) return ex.Message;
+        var details = string.Join(" ", ex.Errors.SelectMany(kv => kv.Value));
+        return $"{ex.Message} {details}";
     }
 
     private async Task SaveAsync(ScopeEditModel s)
@@ -151,7 +171,7 @@
             await JS.InvokeVoidAsync("applyTheme", _scopes!.Select(x => x.ToDto()).ToList());
             _successMessage = $"{s.Label} saved. The new colors are live across the app.";
         }
-        catch (Models.ApiException ex) { _error = ex.Message; }
+        catch (Models.ApiException ex) { _error = FormatError(ex); }
         finally { s.Saving = false; }
     }
 
