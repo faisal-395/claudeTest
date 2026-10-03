@@ -1,7 +1,7 @@
 @using GrainMarket.Application.Common
 @inject ApiClient Api
 
-<div style="display:grid;grid-template-columns:5fr 4fr;gap:20px;align-items:start;">
+<div style="display:grid;grid-template-columns:4fr 5fr;gap:20px;align-items:start;">
     <div>
         <h1 class="page-title">@Title</h1>
 
@@ -25,76 +25,62 @@
                     <div class="batch-readonly-figure" style="width:140px;">@(DisplayedVoucherNo ?? "…")</div>
                 </div>
                 <div>
-                    <label>Date</label>
-                    <input type="date" @bind="_date" style="width:140px;" />
-                </div>
-                <div>
                     <label>Ref No</label>
                     <input @bind="_refNo" style="width:160px;" />
+                </div>
+                <div>
+                    <label>Date</label>
+                    <input type="date" @bind="_date" style="width:140px;" />
                 </div>
             </div>
 
             <div>
                 <label>From</label>
-                <select @bind="_fromType">
+                <select @bind="_fromType" style="margin-bottom:6px;">
                     <option value="@LedgerPartyRefType.Cash">Cash</option>
                     <option value="@LedgerPartyRefType.Bank">Bank</option>
                     <option value="@LedgerPartyRefType.Party">Party</option>
                     <option value="@LedgerPartyRefType.Account">Account</option>
                 </select>
-            </div>
-            @if (_fromType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
-            {
-                <div>
-                    <label>Balance</label>
+                @if (_fromType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
+                {
                     <div class="batch-readonly-figure">@FixedAccountLabel(_fromType)</div>
-                </div>
-            }
-            else if (_fromType == LedgerPartyRefType.Party)
-            {
-                <div>
-                    <label>From Party</label>
-                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
-                </div>
-            }
-            else
-            {
-                <div>
-                    <label>From Account</label>
-                    <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@(a => $"{DisplayText.Account(a)} ({a.CurrentBalance:N0})")" Value="@(_fromAccountId ?? 0)" ValueChanged="@(v => _fromAccountId = v)" Placeholder="Search account…" />
-                </div>
-            }
+                }
+                else if (_fromType == LedgerPartyRefType.Party)
+                {
+                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
+                    <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(SelectedFromPartyBalance?.ToString("N2") ?? "0.00")</div>
+                }
+                else
+                {
+                    <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_fromAccountId ?? 0)" ValueChanged="@(v => _fromAccountId = v)" Placeholder="Search account…" />
+                    <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(SelectedFromAccountBalance?.ToString("N2") ?? "0.00")</div>
+                }
+            </div>
 
             <div>
                 <label>To</label>
-                <select @bind="_toType">
+                <select @bind="_toType" style="margin-bottom:6px;">
                     <option value="@LedgerPartyRefType.Cash">Cash</option>
                     <option value="@LedgerPartyRefType.Bank">Bank</option>
                     <option value="@LedgerPartyRefType.Party">Party</option>
                     <option value="@LedgerPartyRefType.Account">Account</option>
                 </select>
-            </div>
-            @if (_toType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
-            {
-                <div>
-                    <label>Balance</label>
+                @if (_toType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
+                {
                     <div class="batch-readonly-figure">@FixedAccountLabel(_toType)</div>
-                </div>
-            }
-            else if (_toType == LedgerPartyRefType.Party)
-            {
-                <div>
-                    <label>To Party</label>
-                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@(p => $"{DisplayText.Party(p)} ({p.CurrentBalance:N0})")" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
-                </div>
-            }
-            else
-            {
-                <div>
-                    <label>To Account</label>
-                    <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@(a => $"{DisplayText.Account(a)} ({a.CurrentBalance:N0})")" Value="@(_toAccountId ?? 0)" ValueChanged="@(v => _toAccountId = v)" Placeholder="Search account…" />
-                </div>
-            }
+                }
+                else if (_toType == LedgerPartyRefType.Party)
+                {
+                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
+                    <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(SelectedToPartyBalance?.ToString("N2") ?? "0.00")</div>
+                }
+                else
+                {
+                    <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_toAccountId ?? 0)" ValueChanged="@(v => _toAccountId = v)" Placeholder="Search account…" />
+                    <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(SelectedToAccountBalance?.ToString("N2") ?? "0.00")</div>
+                }
+            </div>
 
             <div><label>Amount</label><input type="number" step="0.01" @bind="_amount" /></div>
             <div style="grid-column: span 2;"><label>Description</label><input @bind="_description" style="width:100%;" /></div>
@@ -179,6 +165,11 @@
     private int? _toAccountId;
 
     private string? DisplayedVoucherNo => _editingVoucherId is not null ? _editingVoucherNo : _reservedVoucherNo;
+
+    private decimal? SelectedFromPartyBalance => _parties?.FirstOrDefault(p => p.Id == _fromPartyId)?.CurrentBalance;
+    private decimal? SelectedFromAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _fromAccountId)?.CurrentBalance;
+    private decimal? SelectedToPartyBalance => _parties?.FirstOrDefault(p => p.Id == _toPartyId)?.CurrentBalance;
+    private decimal? SelectedToAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _toAccountId)?.CurrentBalance;
 
     private string FixedAccountLabel(LedgerPartyRefType type)
     {
