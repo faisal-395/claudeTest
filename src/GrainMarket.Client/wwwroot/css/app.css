@@ -47,16 +47,19 @@
     /* 0 = today's look (bottom divider only); a scope's "Full Grid Borders" toggle sets this to 1px. */
     --brand-grid-border-width: 0;
 
-    /* Readable text color for anything sitting ON a --brand-primary/--brand-accent/--brand-input-bg
-       background (sidebar, buttons, the selected day in the date picker, a focused text box).
-       index.html's applyTheme computes these per scope from the matching color's brightness and
-       overrides them alongside the rest — so whichever of black/white actually contrasts gets used,
-       instead of a hardcoded color that only worked for one specific background. Defaults here
-       match the dark/light default colors above (white text on the dark greens, dark text on the
-       white input background). */
+    /* Readable text color for anything sitting ON a --brand-primary/--brand-accent/--brand-input-bg/
+       --brand-grid-header/--brand-surface/--brand-panel background (sidebar, buttons, the selected
+       day in the date picker, a focused text box, the grid header row, readonly Invoice#/Balance
+       figures, a panel's section label). index.html's applyTheme computes these per scope from the
+       matching color's brightness and overrides them alongside the rest — so whichever of
+       black/white actually contrasts gets used, instead of a hardcoded color that only worked for
+       one specific background. Defaults here match the dark/light default colors above. */
     --brand-primary-text: #ffffff;
     --brand-accent-text: #ffffff;
     --brand-input-text: #1a1a1a;
+    --brand-grid-header-text: #1a1a1a;
+    --brand-surface-text: #1a1a1a;
+    --brand-panel-text: #1a1a1a;
 }
 
 html, body {
@@ -233,7 +236,7 @@ html, body {
 
 .topbar-dropdown-menu a:hover, .topbar-dropdown-menu a.active {
     background: var(--brand-surface);
-    color: var(--brand-primary);
+    color: var(--brand-surface-text);
 }
 
 .topbar-logout {
@@ -409,7 +412,7 @@ table.data-grid th, table.data-grid td {
 
 table.data-grid th {
     background: var(--brand-grid-header);
-    color: var(--brand-primary);
+    color: var(--brand-grid-header-text);
     font-weight: 600;
 }
 
@@ -592,7 +595,7 @@ table.data-grid tbody tr.selected-row:hover {
 .batch-entry-deductions-title {
     font-size: 0.8rem;
     font-weight: 700;
-    color: var(--brand-primary);
+    color: var(--brand-panel-text);
     margin-bottom: 3px;
 }
 
@@ -649,7 +652,7 @@ table.data-grid tbody tr.selected-row:hover {
     border: 1px solid #e2e2e2;
     border-radius: 3px;
     font-weight: 700;
-    color: var(--brand-primary);
+    color: var(--brand-surface-text);
     font-size: 0.92rem;
     box-sizing: border-box;
     white-space: nowrap;
@@ -671,7 +674,7 @@ table.data-grid tbody tr.selected-row:hover {
     margin: 0 0 8px;
     font-size: 0.8rem;
     font-weight: 700;
-    color: var(--brand-primary);
+    color: var(--brand-panel-text);
 }
 
 .batch-staging-calc {
@@ -1048,7 +1051,7 @@ table.batch-results-grid th, table.batch-results-grid td {
 .total-figure {
     font-size: 1.1rem;
     font-weight: 700;
-    color: var(--brand-primary);
+    color: var(--brand-surface-text);
 }
 
 .invalid-total {

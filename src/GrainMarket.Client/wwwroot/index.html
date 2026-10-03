@@ -46,13 +46,18 @@
             gridBackgroundColor: '--brand-grid-bg'
         };
 
-        // Several elements (sidebar, buttons, the date picker's selected day, a focused text box)
-        // show text directly on top of a themed background (primaryColor/accentColor/
-        // inputBackgroundColor) and used to hardcode that text as a fixed color — fine for the
-        // original defaults, but invisible the moment someone picks a background close to it from
-        // Setup > Appearance. contrastTextFor picks whichever of near-black/white actually reads
-        // against the given background, using the standard perceived-brightness formula, so this
-        // self-corrects for any color without the person needing to know why.
+        // Several elements (sidebar, buttons, the date picker's selected day, a focused text box,
+        // the grid header row, the results grid/totals' "Form Panel"-colored labels, the readonly
+        // Invoice#/Balance figures) show text directly on top of a themed background
+        // (primaryColor/accentColor/inputBackgroundColor/gridHeaderColor/panelColor/surfaceColor)
+        // and used to hardcode that text as a fixed color — fine for the original defaults, but
+        // invisible the moment someone picks a background close to it from Setup > Appearance.
+        // contrastTextFor picks whichever of near-black/white actually reads against the given
+        // background, using the standard perceived-brightness formula, so this self-corrects for
+        // any color without the person needing to know why. The one exception is Primary as the
+        // page heading's own text (--brand-primary direct, not one of these computed *-text vars)
+        // — that pairing is both-sides-editable from Setup > Appearance, so it's validated
+        // server-side instead of auto-corrected (see UpdateAppearanceSettingsRequestValidator).
         function contrastTextFor(hex) {
             if (!hex || hex.length < 7) return '#ffffff';
             var r = parseInt(hex.substr(1, 2), 16);
@@ -84,6 +89,15 @@
                 }
                 if (settings.inputBackgroundColor) {
                     declarations.push('--brand-input-text: ' + contrastTextFor(settings.inputBackgroundColor) + ';');
+                }
+                if (settings.gridHeaderColor) {
+                    declarations.push('--brand-grid-header-text: ' + contrastTextFor(settings.gridHeaderColor) + ';');
+                }
+                if (settings.surfaceColor) {
+                    declarations.push('--brand-surface-text: ' + contrastTextFor(settings.surfaceColor) + ';');
+                }
+                if (settings.panelColor) {
+                    declarations.push('--brand-panel-text: ' + contrastTextFor(settings.panelColor) + ';');
                 }
                 declarations.push('--brand-grid-border-width: ' + (settings.gridFullBorders ? '1px' : '0') + ';');
 

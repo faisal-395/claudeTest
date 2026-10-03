@@ -6,15 +6,16 @@ public class UpdateAppearanceSettingsRequestValidator : AbstractValidator<Update
 {
     private const string HexColorPattern = "^#[0-9A-Fa-f]{6}$";
 
-    // Primary doubles as the text color sitting directly on three backgrounds: the page's own
-    // form-heading (HeadingBackgroundColor), the Grid Header row (GridHeaderColor), and the
-    // readonly "Invoice #"/"Balance" figures (SurfaceColor, fixed). None of those auto-pick a
-    // readable text color the way Primary/Accent-as-BACKGROUND cases do (see index.html's
-    // contrastTextFor) — so this checks Primary's perceived-brightness CONTRAST against each of
-    // those three, rather than rejecting Primary for being light outright. That used to block even
-    // a perfectly readable "dark heading background + white heading text" pairing just because the
-    // text color itself was light. Same perceived-brightness formula as the JS, so both sides of
-    // the system draw the line the same way.
+    // Primary is also used as the page heading's own text, sitting directly on
+    // HeadingBackgroundColor — unlike every other place Primary/Accent/*BackgroundColor sit under
+    // text (grid header, readonly Invoice#/Balance figures, a panel's section label), which all
+    // auto-pick a readable black/white text color against their own background (see index.html's
+    // contrastTextFor), this ONE pairing is both sides independently editable from Setup >
+    // Appearance with no auto-correction, so it's the one case still worth validating here. Checks
+    // perceived-brightness CONTRAST between the two, rather than rejecting Primary for being light
+    // outright — that used to block even a perfectly readable "dark heading background + white
+    // heading text" pairing just because the text color itself was light. Same perceived-brightness
+    // formula as the JS, so both sides of the system draw the line the same way.
     private const int MinContrastDifference = 125;
 
     public UpdateAppearanceSettingsRequestValidator()
@@ -32,12 +33,6 @@ public class UpdateAppearanceSettingsRequestValidator : AbstractValidator<Update
         RuleFor(x => x).Must(x => HasContrast(x.PrimaryColor, x.HeadingBackgroundColor))
             .WithName(nameof(UpdateAppearanceSettingsRequest.PrimaryColor))
             .WithMessage("Heading Text and Heading Background are too close in brightness to read clearly — pick a lighter/darker pair.");
-        RuleFor(x => x).Must(x => HasContrast(x.PrimaryColor, x.GridHeaderColor))
-            .WithName(nameof(UpdateAppearanceSettingsRequest.PrimaryColor))
-            .WithMessage("Heading Text and Grid Header Background are too close in brightness to read clearly — pick a lighter/darker pair.");
-        RuleFor(x => x).Must(x => HasContrast(x.PrimaryColor, x.SurfaceColor))
-            .WithName(nameof(UpdateAppearanceSettingsRequest.PrimaryColor))
-            .WithMessage("Heading Text doesn't contrast enough against the page background for the Invoice #/Balance figures to stay readable.");
     }
 
     // Returns true (passes validation) for a malformed hex — the Matches rule above already
