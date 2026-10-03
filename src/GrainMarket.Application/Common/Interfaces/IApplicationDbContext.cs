@@ -14,6 +14,7 @@ public interface IApplicationDbContext
     DbSet<UnitConversion> UnitConversions { get; }
     DbSet<ChartOfAccount> ChartOfAccounts { get; }
     DbSet<ChartOfAccountRole> ChartOfAccountRoles { get; }
+    DbSet<AccountTypeDefinition> AccountTypeDefinitions { get; }
     DbSet<Role> Roles { get; }
     DbSet<RolePermission> RolePermissions { get; }
     DbSet<User> Users { get; }

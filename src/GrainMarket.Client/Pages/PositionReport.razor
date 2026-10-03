@@ -77,7 +77,7 @@
                     <tr>
                         <td>@a.Code</td>
                         <td>@a.Name @(string.IsNullOrEmpty(a.NameUrdu) ? "" : $"— {a.NameUrdu}")</td>
-                        <td>@a.AccountType</td>
+                        <td>@a.AccountTypeName</td>
                         <td style="text-align:right;">@Math.Abs(a.CurrentBalance).ToString("N2")</td>
                         <td>@(a.CurrentBalance >= 0 ? "Dr" : "Cr")</td>
                     </tr>

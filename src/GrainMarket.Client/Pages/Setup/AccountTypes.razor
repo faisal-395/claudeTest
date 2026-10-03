@@ -1,0 +1,71 @@
+@page "/setup/account-types"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Account Types</h1>
+    <p style="color:#777;">The categories available under "Account Type" when adding a Chart of Accounts entry. Asset, Liability, Income, Expense and Equity are built in — add more here if your books need another category.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="margin-bottom:20px;">
+        <div><label>Name</label><input @bind="_name" /></div>
+        <div><label>Name (Urdu)</label><input class="rtl-urdu" @bind="_nameUrdu" /></div>
+        <div style="grid-column: span 2;">
+            <button class="btn" disabled="@string.IsNullOrWhiteSpace(_name)" @onclick="SaveAsync">Add Account Type</button>
+        </div>
+    </div>
+
+    @if (_types is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>Name</th><th>Name (Urdu)</th><th>Built-in</th></tr></thead>
+            <tbody>
+                @foreach (var t in _types)
+                {
+                    <tr>
+                        <td>@t.Name</td>
+                        <td class="rtl-urdu">@t.NameUrdu</td>
+                        <td>@(t.IsSystemType ? "Yes" : "")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<AccountTypeDto>? _types;
+    private string? _error;
+
+    private string _name = "";
+    private string? _nameUrdu;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try { _types = await Api.GetAccountTypesAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var request = new CreateAccountTypeRequest(_name, _nameUrdu);
+        try
+        {
+            await Api.CreateAccountTypeAsync(request);
+            _name = "";
+            _nameUrdu = null;
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

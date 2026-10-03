@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using GrainMarket.Application.AccountTypes;
 using GrainMarket.Application.Appearance;
 using GrainMarket.Application.Approvals;
 using GrainMarket.Application.Auth;
@@ -85,6 +86,9 @@ public class ApiClient
     public Task<ChartOfAccountDto> CreateChartOfAccountAsync(UpsertChartOfAccountRequest request) => PostAsync<UpsertChartOfAccountRequest, ChartOfAccountDto>("api/chart-of-accounts", request);
     public Task<ChartOfAccountDto> UpdateChartOfAccountAsync(int id, UpsertChartOfAccountRequest request) => PutAsync<UpsertChartOfAccountRequest, ChartOfAccountDto>($"api/chart-of-accounts/{id}", request);
     public Task DeleteChartOfAccountAsync(int id) => DeleteAsync($"api/chart-of-accounts/{id}");
+
+    public Task<List<AccountTypeDto>> GetAccountTypesAsync() => GetAsync<List<AccountTypeDto>>("api/account-types");
+    public Task<AccountTypeDto> CreateAccountTypeAsync(CreateAccountTypeRequest request) => PostAsync<CreateAccountTypeRequest, AccountTypeDto>("api/account-types", request);
 
     public Task<List<DeductionRuleDto>> GetDeductionRulesAsync(bool includeInactive = false) => GetAsync<List<DeductionRuleDto>>($"api/deduction-rules?includeInactive={includeInactive}");
     public Task<DeductionRuleDto> CreateDeductionRuleAsync(UpsertDeductionRuleRequest request) => PostAsync<UpsertDeductionRuleRequest, DeductionRuleDto>("api/deduction-rules", request);

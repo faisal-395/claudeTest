@@ -17,6 +17,7 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<UnitConversion> UnitConversions => Set<UnitConversion>();
     public DbSet<ChartOfAccount> ChartOfAccounts => Set<ChartOfAccount>();
     public DbSet<ChartOfAccountRole> ChartOfAccountRoles => Set<ChartOfAccountRole>();
+    public DbSet<AccountTypeDefinition> AccountTypeDefinitions => Set<AccountTypeDefinition>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<User> Users => Set<User>();

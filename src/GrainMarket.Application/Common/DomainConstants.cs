@@ -20,4 +20,14 @@ public static class DomainConstants
 
     /// <summary>Dashboard flags a purchase lot once its expiry date is this many days away (or past).</summary>
     public const int ExpiryAlertWindowDays = 15;
+
+    /// <summary>AccountTypeDefinition ids seeded by the AddAccountTypeDefinitions migration, in this
+    /// exact order so they land on these ids — matches the old fixed AccountType enum's ordinals,
+    /// so existing ChartOfAccount rows carry over unchanged. Setup &gt; Account Types can add more
+    /// after these five; only this handful of well-known ids is ever referenced by code.</summary>
+    public const int AssetAccountTypeId = 1;
+    public const int LiabilityAccountTypeId = 2;
+    public const int IncomeAccountTypeId = 3;
+    public const int ExpenseAccountTypeId = 4;
+    public const int EquityAccountTypeId = 5;
 }
