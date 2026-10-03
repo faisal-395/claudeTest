@@ -1,26 +1,21 @@
 namespace GrainMarket.Domain.Enums;
 
+[Flags]
 public enum PartyType
 {
     Farmer = 1,
-    Buyer = 2,
-    Agent = 3,
-    Other = 4
+    Vendor = 2,
+    Other = 4,
+
+    /// <summary>Supplies agricultural inputs (pesticides, seeds, fertilizer, etc.) that the market
+    /// buys via Purchase — distinct from Vendor, which means the buyer a farmer sells grain to.</summary>
+    Supplier = 8
 }
 
 public enum BalanceSide
 {
     Debit = 1,
     Credit = 2
-}
-
-public enum AccountType
-{
-    Asset = 1,
-    Liability = 2,
-    Income = 3,
-    Expense = 4,
-    Equity = 5
 }
 
 public enum DeductionCalculationType
@@ -43,7 +38,7 @@ public enum DeductionAppliesTo
 /// top, informational only for now (no ledger posting).</summary>
 public enum DeductionChargedTo
 {
-    Farmer = 1,
+    Seller = 1,
     Buyer = 2
 }
 
@@ -68,6 +63,17 @@ public enum InvoiceStatus
     ConvertedToPakki = 2,
     Cancelled = 3,
     Posted = 4
+}
+
+/// <summary>Review state of a transaction raised by a role whose Role.RequiresApproval is set —
+/// see Kachi/Pakki/Purchase/SaleInvoice.ApprovalStatus. Pending transactions are saved immediately
+/// (so the number sequence, stock allocations, etc. all happen as usual) but their ledger postings
+/// are deferred until a Manager/Admin Approves them; Rejecting never posts anything.</summary>
+public enum ApprovalStatus
+{
+    Approved = 0,
+    Pending = 1,
+    Rejected = 2
 }
 
 public enum VoucherType

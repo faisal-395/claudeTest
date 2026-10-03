@@ -40,16 +40,18 @@ public class VoucherService : IVoucherService
         return ToDto(voucher, balances);
     }
 
+    public async Task<NextVoucherNoDto> ReserveNextVoucherNoAsync(VoucherType type, CancellationToken ct = default) =>
+        new(await _numberGenerator.NextAsync(PrefixFor(type), ct));
+
     public async Task<VoucherDto> CreatePaymentOrReceiptAsync(CreatePaymentOrReceiptRequest request, CancellationToken ct = default)
     {
         await EnsureRefValidAsync(request.FromType, request.FromPartyId, request.FromAccountId, ct);
         await EnsureRefValidAsync(request.ToType, request.ToPartyId, request.ToAccountId, ct);
 
-        var prefix = request.VoucherType == VoucherType.Payment ? "PV" : "RV";
         var voucher = new Voucher
         {
             VoucherType = request.VoucherType,
-            VoucherNo = await _numberGenerator.NextAsync(prefix, ct),
+            VoucherNo = request.VoucherNo ?? await _numberGenerator.NextAsync(PrefixFor(request.VoucherType), ct),
             Date = request.Date,
             SeasonId = request.SeasonId,
             Amount = request.Amount,
@@ -69,7 +71,9 @@ public class VoucherService : IVoucherService
         await _db.SaveChangesAsync(ct);
 
         var sourceType = request.VoucherType == VoucherType.Payment ? LedgerSourceType.Payment : LedgerSourceType.Receipt;
-        var description = request.Description ?? $"{request.VoucherType} {voucher.VoucherNo}";
+        // The voucher number itself is surfaced separately (LedgerRowDto.ReferenceNo, resolved from
+        // SourceId), so the description here is just the human-readable text.
+        var description = request.Description ?? request.VoucherType.ToString();
 
         // Convention: Dr the "To" side, Cr the "From" side, for both Payment and Receipt.
         await PostRefAsync(request.ToType, voucher.ToPartyId, voucher.ToAccountId, voucher.Date, request.Amount, 0m, sourceType, voucher.Id, description, ct);
@@ -77,6 +81,51 @@ public class VoucherService : IVoucherService
 
         await _db.SaveChangesAsync(ct);
         return await GetByIdAsync(voucher.Id, ct);
+    }
+
+    public async Task<VoucherDto> UpdatePaymentOrReceiptAsync(int id, UpdatePaymentOrReceiptRequest request, CancellationToken ct = default)
+    {
+        var voucher = await LoadAsync(id, ct);
+        if (voucher.VoucherType is not (VoucherType.Payment or VoucherType.Receipt))
+            throw new InvalidCalculationException("Only a Payment or Receipt voucher can be edited here.");
+        if (voucher.IsCancelled)
+            throw new InvalidCalculationException("A cancelled voucher cannot be edited.");
+
+        await EnsureRefValidAsync(request.FromType, request.FromPartyId, request.FromAccountId, ct);
+        await EnsureRefValidAsync(request.ToType, request.ToPartyId, request.ToAccountId, ct);
+
+        var sourceType = voucher.VoucherType == VoucherType.Payment ? LedgerSourceType.Payment : LedgerSourceType.Receipt;
+        var reversalReason = $"Reversal: {voucher.VoucherNo} edited";
+
+        // Reverse the existing postings before anything on the voucher is mutated — mirrors
+        // KachiService/PakkiService.UpdateAsync (reverse what was posted, then post fresh entries
+        // for the new terms below). Never mutates or deletes the original LedgerEntry rows.
+        await PostRefAsync(voucher.ToType!.Value, voucher.ToPartyId, voucher.ToAccountId, _clock.UtcNow, 0m, voucher.Amount, sourceType, voucher.Id, reversalReason, ct);
+        await PostRefAsync(voucher.FromType!.Value, voucher.FromPartyId, voucher.FromAccountId, _clock.UtcNow, voucher.Amount, 0m, sourceType, voucher.Id, reversalReason, ct);
+
+        voucher.Date = request.Date;
+        voucher.SeasonId = request.SeasonId;
+        voucher.Amount = request.Amount;
+        voucher.RefNo = request.RefNo;
+        voucher.Description = request.Description;
+        voucher.FromType = request.FromType;
+        voucher.FromPartyId = request.FromType == LedgerPartyRefType.Party ? request.FromPartyId : null;
+        voucher.FromAccountId = request.FromType is LedgerPartyRefType.Account or LedgerPartyRefType.Cash or LedgerPartyRefType.Bank
+            ? await ResolveAccountIdAsync(request.FromType, request.FromAccountId, ct) : null;
+        voucher.ToType = request.ToType;
+        voucher.ToPartyId = request.ToType == LedgerPartyRefType.Party ? request.ToPartyId : null;
+        voucher.ToAccountId = request.ToType is LedgerPartyRefType.Account or LedgerPartyRefType.Cash or LedgerPartyRefType.Bank
+            ? await ResolveAccountIdAsync(request.ToType, request.ToAccountId, ct) : null;
+        voucher.UpdatedAtUtc = _clock.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+
+        var description = request.Description ?? voucher.VoucherType.ToString();
+        await PostRefAsync(request.ToType, voucher.ToPartyId, voucher.ToAccountId, voucher.Date, request.Amount, 0m, sourceType, voucher.Id, description, ct);
+        await PostRefAsync(request.FromType, voucher.FromPartyId, voucher.FromAccountId, voucher.Date, 0m, request.Amount, sourceType, voucher.Id, description, ct);
+
+        await _db.SaveChangesAsync(ct);
+        return await GetByIdAsync(id, ct);
     }
 
     public async Task<VoucherDto> CreateJournalAsync(CreateJournalRequest request, CancellationToken ct = default)
@@ -103,8 +152,8 @@ public class VoucherService : IVoucherService
         _db.Vouchers.Add(voucher);
         await _db.SaveChangesAsync(ct);
 
-        await _ledger.PostAccountEntryAsync(request.DebitAccountId, voucher.Date, request.Amount, 0, LedgerSourceType.Journal, voucher.Id, request.DebitDescription ?? voucher.VoucherNo, ct);
-        await _ledger.PostAccountEntryAsync(request.CreditAccountId, voucher.Date, 0, request.Amount, LedgerSourceType.Journal, voucher.Id, request.CreditDescription ?? voucher.VoucherNo, ct);
+        await _ledger.PostAccountEntryAsync(request.DebitAccountId, voucher.Date, request.Amount, 0, LedgerSourceType.Journal, voucher.Id, request.DebitDescription ?? "Journal Entry", ct);
+        await _ledger.PostAccountEntryAsync(request.CreditAccountId, voucher.Date, 0, request.Amount, LedgerSourceType.Journal, voucher.Id, request.CreditDescription ?? "Journal Entry", ct);
 
         await _db.SaveChangesAsync(ct);
         return await GetByIdAsync(voucher.Id, ct);
@@ -133,6 +182,13 @@ public class VoucherService : IVoucherService
 
         await _db.SaveChangesAsync(ct);
     }
+
+    private static string PrefixFor(VoucherType type) => type switch
+    {
+        VoucherType.Payment => "PV",
+        VoucherType.Receipt => "RV",
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Only Payment or Receipt have a reservable voucher number.")
+    };
 
     private async Task<int?> ResolveAccountIdAsync(LedgerPartyRefType type, int? explicitAccountId, CancellationToken ct)
     {

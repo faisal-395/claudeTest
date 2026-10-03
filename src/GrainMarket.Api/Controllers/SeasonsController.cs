@@ -9,7 +9,6 @@ namespace GrainMarket.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/seasons")]
-[ModulePermission(ModuleName.SetupSeasons)]
 public class SeasonsController : ControllerBase
 {
     private readonly ISeasonService _service;
@@ -19,6 +18,9 @@ public class SeasonsController : ControllerBase
         _service = service;
     }
 
+    // Deliberately not gated by ModulePermission: Kachi/Pakki entry needs the season list to
+    // populate its dropdown regardless of the caller's Setup access — e.g. a Clerk with Create on
+    // Kachi but no Setup > Seasons permission still needs to read this list.
     [HttpGet]
     public async Task<ActionResult<List<SeasonDto>>> GetAll(CancellationToken ct) => Ok(await _service.GetAllAsync(ct));
 

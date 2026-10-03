@@ -22,6 +22,7 @@ public class ChartOfAccountService : IChartOfAccountService
     {
         var query = _db.ChartOfAccounts
             .Include(a => a.AllowedRoles)
+            .Include(a => a.AccountType)
             .Where(a => !a.IsDeleted);
         if (!includeInactive) query = query.Where(a => a.IsActive);
 
@@ -36,6 +37,7 @@ public class ChartOfAccountService : IChartOfAccountService
     {
         var account = await _db.ChartOfAccounts
             .Include(a => a.AllowedRoles)
+            .Include(a => a.AccountType)
             .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, ct)
             ?? throw new NotFoundException(nameof(ChartOfAccount), id);
 
@@ -56,7 +58,7 @@ public class ChartOfAccountService : IChartOfAccountService
             Code = request.Code,
             Name = request.Name,
             NameUrdu = request.NameUrdu,
-            AccountType = request.AccountType,
+            AccountTypeId = request.AccountTypeId,
             ParentAccountId = request.ParentAccountId,
             IsProtected = request.IsProtected,
             IsActive = request.IsActive
@@ -86,7 +88,7 @@ public class ChartOfAccountService : IChartOfAccountService
         account.Code = request.Code;
         account.Name = request.Name;
         account.NameUrdu = request.NameUrdu;
-        account.AccountType = request.AccountType;
+        account.AccountTypeId = request.AccountTypeId;
         account.ParentAccountId = request.ParentAccountId;
         account.IsProtected = request.IsProtected;
         account.IsActive = request.IsActive;
@@ -138,6 +140,6 @@ public class ChartOfAccountService : IChartOfAccountService
     }
 
     private static ChartOfAccountDto ToDto(ChartOfAccount a, decimal currentBalance) => new(
-        a.Id, a.Code, a.Name, a.NameUrdu, a.AccountType, a.ParentAccountId,
+        a.Id, a.Code, a.Name, a.NameUrdu, a.AccountTypeId, a.AccountType.Name, a.ParentAccountId,
         a.IsProtected, a.IsActive, currentBalance, a.AllowedRoles.Select(r => r.RoleId).ToList());
 }

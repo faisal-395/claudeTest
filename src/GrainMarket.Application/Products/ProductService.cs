@@ -16,10 +16,11 @@ public class ProductService : IProductService
         _clock = clock;
     }
 
-    public async Task<List<ProductDto>> GetAllAsync(bool includeInactive = false, CancellationToken ct = default)
+    public async Task<List<ProductDto>> GetAllAsync(bool includeInactive = false, string? category = null, CancellationToken ct = default)
     {
         var query = _db.Products.Where(p => !p.IsDeleted);
         if (!includeInactive) query = query.Where(p => p.IsActive);
+        if (category is not null) query = query.Where(p => p.Category == category);
         var products = await query.OrderBy(p => p.Name).ToListAsync(ct);
         return products.Select(ToDto).ToList();
     }
@@ -38,9 +39,11 @@ public class ProductService : IProductService
             Name = request.Name,
             NameUrdu = request.NameUrdu,
             Category = request.Category,
-            BaseUnit = "kg",
+            BaseUnit = request.BaseUnit,
             DefaultRate = request.DefaultRate,
-            IsActive = request.IsActive
+            IsActive = request.IsActive,
+            SalePrice = request.SalePrice,
+            SaleMarkupPercent = request.SaleMarkupPercent
         };
         _db.Products.Add(product);
         await _db.SaveChangesAsync(ct);
@@ -55,8 +58,11 @@ public class ProductService : IProductService
         product.Name = request.Name;
         product.NameUrdu = request.NameUrdu;
         product.Category = request.Category;
+        product.BaseUnit = request.BaseUnit;
         product.DefaultRate = request.DefaultRate;
         product.IsActive = request.IsActive;
+        product.SalePrice = request.SalePrice;
+        product.SaleMarkupPercent = request.SaleMarkupPercent;
         product.UpdatedAtUtc = _clock.UtcNow;
 
         await _db.SaveChangesAsync(ct);
@@ -72,5 +78,5 @@ public class ProductService : IProductService
         await _db.SaveChangesAsync(ct);
     }
 
-    private static ProductDto ToDto(Product p) => new(p.Id, p.Name, p.NameUrdu, p.Category, p.BaseUnit, p.DefaultRate, p.IsActive);
+    private static ProductDto ToDto(Product p) => new(p.Id, p.Name, p.NameUrdu, p.Category, p.BaseUnit, p.DefaultRate, p.IsActive, p.SalePrice, p.SaleMarkupPercent);
 }

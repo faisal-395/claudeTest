@@ -22,6 +22,137 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("GrainMarket.Domain.Entities.AccountTypeDefinition", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsSystemType")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NameUrdu")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("AccountTypeDefinitions");
+                });
+
+            modelBuilder.Entity("GrainMarket.Domain.Entities.AppearanceSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccentColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("GridBackgroundColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<bool>("GridFullBorders")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("GridHeaderColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("HeadingBackgroundColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("InputBackgroundColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("LabelFontSizePx")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NavigationLayout")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PanelColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("PrimaryColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("ProductPanelColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SurfaceColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Scope")
+                        .IsUnique();
+
+                    b.ToTable("AppearanceSettings");
+                });
+
             modelBuilder.Entity("GrainMarket.Domain.Entities.ChartOfAccount", b =>
                 {
                     b.Property<int>("Id")
@@ -30,7 +161,7 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AccountType")
+                    b.Property<int>("AccountTypeId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Code")
@@ -73,6 +204,8 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AccountTypeId");
+
                     b.HasIndex("Code")
                         .IsUnique();
 
@@ -94,6 +227,67 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("ChartOfAccountRoles");
+                });
+
+            modelBuilder.Entity("GrainMarket.Domain.Entities.CompanyInfo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MarketName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Mobile")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("NameEnglish")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NameUrdu")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NtnNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("ProprietorName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CompanyInfos");
                 });
 
             modelBuilder.Entity("GrainMarket.Domain.Entities.DeductionRule", b =>
@@ -239,6 +433,9 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("ApprovalStatus")
+                        .HasColumnType("integer");
+
                     b.Property<decimal?>("BhartiKgPerBag")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
@@ -303,10 +500,23 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("SeasonId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SubmittedByUserId")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Total")
@@ -336,8 +546,7 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("FarmerId");
 
-                    b.HasIndex("InvoiceNo")
-                        .IsUnique();
+                    b.HasIndex("InvoiceNo");
 
                     b.HasIndex("ProductId");
 
@@ -502,12 +711,27 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("ApprovalStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("BhartiKgPerBag")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("BillNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<decimal?>("BoriQty")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
                     b.Property<int>("BuyerId")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("BuyerChargesTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -520,10 +744,6 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("FarmerId")
                         .HasColumnType("integer");
-
-                    b.Property<decimal?>("GramQty")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
 
                     b.Property<decimal>("GrossAmount")
                         .HasPrecision(18, 2)
@@ -539,14 +759,6 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     b.Property<int?>("KachiId")
                         .HasColumnType("integer");
-
-                    b.Property<decimal?>("KiloQty")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
-
-                    b.Property<decimal?>("ManQty")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
 
                     b.Property<decimal>("NetPayableToFarmer")
                         .HasPrecision(18, 2)
@@ -566,15 +778,32 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("SeasonId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("SubmittedByUserId")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("TotalDeductions")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("TotalWeightKg")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -592,8 +821,7 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("FarmerId");
 
-                    b.HasIndex("InvoiceNo")
-                        .IsUnique();
+                    b.HasIndex("InvoiceNo");
 
                     b.HasIndex("KachiId")
                         .IsUnique();
@@ -616,6 +844,9 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("ChargedTo")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -769,6 +1000,14 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<decimal?>("SaleMarkupPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<decimal?>("SalePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -790,6 +1029,9 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("ApprovalStatus")
+                        .HasColumnType("integer");
+
                     b.Property<string>("BillNo")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
@@ -802,6 +1044,10 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("InvoiceNo")
                         .IsRequired()
@@ -826,6 +1072,19 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int>("PrintLanguage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SubmittedByUserId")
                         .HasColumnType("integer");
 
                     b.Property<int>("SupplierId")
@@ -873,6 +1132,9 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
 
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -891,6 +1153,10 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("RemainingQuantity")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
@@ -1037,6 +1303,9 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("RequiresApproval")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -1108,6 +1377,9 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("ApprovalStatus")
+                        .HasColumnType("integer");
+
                     b.Property<string>("BillNo")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
@@ -1123,6 +1395,10 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("InvoiceNo")
                         .IsRequired()
@@ -1152,6 +1428,19 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("ReceivedCash")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SubmittedByUserId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("TotalBill")
                         .HasPrecision(18, 2)
@@ -1229,6 +1518,52 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                     b.HasIndex("SaleInvoiceId");
 
                     b.ToTable("SaleInvoiceLines");
+                });
+
+            modelBuilder.Entity("GrainMarket.Domain.Entities.SaleInvoiceLineAllocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PurchaseLineId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<int>("SaleInvoiceLineId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseLineId");
+
+                    b.HasIndex("SaleInvoiceLineId");
+
+                    b.ToTable("SaleInvoiceLineAllocations");
                 });
 
             modelBuilder.Entity("GrainMarket.Domain.Entities.Season", b =>
@@ -1487,10 +1822,18 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("GrainMarket.Domain.Entities.ChartOfAccount", b =>
                 {
+                    b.HasOne("GrainMarket.Domain.Entities.AccountTypeDefinition", "AccountType")
+                        .WithMany()
+                        .HasForeignKey("AccountTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GrainMarket.Domain.Entities.ChartOfAccount", "ParentAccount")
                         .WithMany()
                         .HasForeignKey("ParentAccountId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AccountType");
 
                     b.Navigation("ParentAccount");
                 });
@@ -1785,6 +2128,25 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("SaleInvoice");
+                });
+
+            modelBuilder.Entity("GrainMarket.Domain.Entities.SaleInvoiceLineAllocation", b =>
+                {
+                    b.HasOne("GrainMarket.Domain.Entities.PurchaseLine", "PurchaseLine")
+                        .WithMany()
+                        .HasForeignKey("PurchaseLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GrainMarket.Domain.Entities.SaleInvoiceLine", "SaleInvoiceLine")
+                        .WithMany()
+                        .HasForeignKey("SaleInvoiceLineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PurchaseLine");
+
+                    b.Navigation("SaleInvoiceLine");
                 });
 
             modelBuilder.Entity("GrainMarket.Domain.Entities.UnitConversion", b =>

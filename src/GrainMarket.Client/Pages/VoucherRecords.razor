@@ -1,0 +1,101 @@
+@page "/vouchers"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Voucher Records</h1>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div style="margin-bottom:16px;">
+        <button class="btn secondary" @onclick="() => _filtersExpanded = !_filtersExpanded">
+            @(_filtersExpanded ? "▾" : "▸") Filters
+            @if (!_filtersExpanded && (_typeFilter != "All" || _from is not null || _to is not null))
+            {
+                <span style="font-weight:400;color:#666;">&nbsp;— active</span>
+            }
+        </button>
+
+        @if (_filtersExpanded)
+        {
+            <div class="form-grid" style="max-width:900px;margin-top:12px;">
+                <div>
+                    <label>Type</label>
+                    <select @bind="_typeFilter">
+                        <option value="All">All</option>
+                        <option value="Payment">Payment only</option>
+                        <option value="Receipt">Receipt only</option>
+                        <option value="Journal">Journal only</option>
+                    </select>
+                </div>
+                <div><label>From</label><input type="date" @bind="_from" /></div>
+                <div><label>To</label><input type="date" @bind="_to" /></div>
+            </div>
+        }
+    </div>
+
+    @if (_vouchers is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div class="batch-results-grid-wrapper">
+            <table class="data-grid kachi-records-grid">
+                <thead>
+                    <tr>
+                        <th></th><th>Type</th><th>Voucher #</th><th>Date</th><th>From / Debit</th>
+                        <th>To / Credit</th><th>Amount</th><th>Description</th><th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var v in FilteredVouchers)
+                    {
+                        <tr>
+                            <td>
+                                <a href="print/voucher/@v.Id">Details</a>
+                            </td>
+                            <td>@v.VoucherType</td>
+                            <td>@v.VoucherNo</td>
+                            <td>@v.Date.ToString("yyyy-MM-dd")</td>
+                            <td>@(v.VoucherType == VoucherType.Journal ? v.DebitAccountName : (v.FromPartyName ?? v.FromAccountName ?? v.FromType?.ToString()))</td>
+                            <td>@(v.VoucherType == VoucherType.Journal ? v.CreditAccountName : (v.ToPartyName ?? v.ToAccountName ?? v.ToType?.ToString()))</td>
+                            <td>@v.Amount.ToString("N2")</td>
+                            <td>@(v.Description ?? "—")</td>
+                            <td>@(v.IsCancelled ? "Cancelled" : "Open")</td>
+                        </tr>
+                    }
+                    @if (FilteredVouchers.Count == 0)
+                    {
+                        <tr><td colspan="9" style="text-align:center;color:#999;">No vouchers found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    private List<VoucherDto>? _vouchers;
+    private string _typeFilter = "All";
+    private DateTime? _from;
+    private DateTime? _to;
+    private string? _error;
+    private bool _filtersExpanded;
+
+    private List<VoucherDto> FilteredVouchers =>
+        (_vouchers ?? new())
+            .Where(v => _typeFilter == "All" || v.VoucherType.ToString() == _typeFilter)
+            .Where(v => _from is null || v.Date.Date >= _from.Value.Date)
+            .Where(v => _to is null || v.Date.Date <= _to.Value.Date)
+            .OrderByDescending(v => v.Date).ThenByDescending(v => v.Id)
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _vouchers = await Api.GetVouchersAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+}

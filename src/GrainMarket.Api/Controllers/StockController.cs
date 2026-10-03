@@ -1,0 +1,32 @@
+using GrainMarket.Api.Common;
+using GrainMarket.Application.Stock;
+using GrainMarket.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace GrainMarket.Api.Controllers;
+
+[Authorize]
+[ApiController]
+[Route("api/stock")]
+public class StockController : ControllerBase
+{
+    private readonly IStockService _service;
+
+    public StockController(IStockService service)
+    {
+        _service = service;
+    }
+
+    // Deliberately not gated by ModulePermission: Purchase/Sale Invoice entry needs to see stock
+    // on hand regardless of the caller's Setup access, same reasoning as suggested-price below.
+    [HttpGet]
+    public async Task<ActionResult<List<StockDto>>> GetAll(CancellationToken ct) => Ok(await _service.GetStockAsync(ct));
+
+    // Gated by SaleInvoice (not SetupProducts) — this is called from the Sale Invoice screen itself
+    // to auto-fill a line's price, so anyone who can use Sale Invoice needs to be able to call it.
+    [ModulePermission(ModuleName.SaleInvoice)]
+    [HttpGet("suggested-price")]
+    public async Task<ActionResult<SuggestedSalePriceDto>> GetSuggestedPrice([FromQuery] int productId, CancellationToken ct)
+        => Ok(await _service.GetSuggestedSalePriceAsync(productId, ct));
+}

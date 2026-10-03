@@ -53,7 +53,7 @@ public class ExpenseService : IExpenseService
         _db.Expenses.Add(expense);
         await _db.SaveChangesAsync(ct);
 
-        var description = request.Description ?? expense.ExpenseNo;
+        var description = request.Description ?? "Expense";
         await _ledger.PostAccountEntryAsync(request.ExpenseAccountId, expense.Date, request.Amount, 0, LedgerSourceType.Expense, expense.Id, description, ct);
         await _ledger.PostAccountEntryAsync(paidFromAccountId, expense.Date, 0, request.Amount, LedgerSourceType.Expense, expense.Id, description, ct);
 

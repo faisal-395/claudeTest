@@ -8,6 +8,10 @@
     {
         <div class="error-banner">@_error</div>
     }
+    @if (_successMessage is not null)
+    {
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+    }
 
     <div class="form-grid">
         <div><label>Date</label><input type="date" @bind="_date" /></div>
@@ -40,33 +44,13 @@
             <button class="btn" disabled="@(_amount <= 0 || _debitAccountId == _creditAccountId)" @onclick="SaveAsync">Save Journal</button>
         </div>
     </div>
-
-    @if (_vouchers is not null)
-    {
-        <h3 style="margin-top:24px;">Recent Journal Entries</h3>
-        <table class="data-grid" style="max-width:1000px;">
-            <thead><tr><th>No</th><th>Date</th><th>Debit</th><th>Credit</th><th>Amount</th></tr></thead>
-            <tbody>
-                @foreach (var v in _vouchers)
-                {
-                    <tr>
-                        <td>@v.VoucherNo</td>
-                        <td>@v.Date.ToString("yyyy-MM-dd")</td>
-                        <td>@v.DebitAccountName</td>
-                        <td>@v.CreditAccountName</td>
-                        <td>@v.Amount.ToString("N2")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
 </RequireAuth>
 
 @code {
     private List<SeasonDto>? _seasons;
     private List<ChartOfAccountDto>? _accounts;
-    private List<VoucherDto>? _vouchers;
     private string? _error;
+    private string? _successMessage;
 
     private DateTime _date = DateTime.Today;
     private int _seasonId;
@@ -86,25 +70,19 @@
             if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
             if (_accounts.Count > 0) { _debitAccountId = _accounts[0].Id; _creditAccountId = _accounts.Count > 1 ? _accounts[1].Id : _accounts[0].Id; }
         }
-        catch (Models.ApiException ex) { _error = ex.Message; return; }
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        try { _vouchers = await Api.GetVouchersAsync(VoucherType.Journal); }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
     private async Task SaveAsync()
     {
         _error = null;
+        _successMessage = null;
         var request = new CreateJournalRequest(_date, _seasonId, _amount, _refNo, _debitAccountId, _debitDescription, _creditAccountId, _creditDescription);
         try
         {
-            await Api.CreateJournalAsync(request);
+            var result = await Api.CreateJournalAsync(request);
+            _successMessage = $"Journal Voucher {result.VoucherNo} saved.";
             _amount = 0; _refNo = null; _debitDescription = null; _creditDescription = null;
-            await LoadAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }

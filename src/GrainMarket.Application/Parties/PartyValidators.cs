@@ -9,6 +9,7 @@ public class UpsertPartyRequestValidator : AbstractValidator<UpsertPartyRequest>
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
         RuleFor(x => x.NameUrdu).MaximumLength(200);
         RuleFor(x => x.PartyType).IsInEnum();
+        RuleFor(x => x.PartyType).Must(t => t != 0).WithMessage("Select at least one party role.");
         RuleFor(x => x.Phone).MaximumLength(30);
         RuleFor(x => x.Cnic).MaximumLength(20);
         RuleFor(x => x.Address).MaximumLength(500);

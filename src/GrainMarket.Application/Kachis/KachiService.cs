@@ -14,13 +14,15 @@ public class KachiService : IKachiService
     private readonly ILedgerPostingService _ledger;
     private readonly IInvoiceNumberGenerator _numberGenerator;
     private readonly IDateTimeProvider _clock;
+    private readonly ICurrentUser _currentUser;
 
-    public KachiService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock)
+    public KachiService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock, ICurrentUser currentUser)
     {
         _db = db;
         _ledger = ledger;
         _numberGenerator = numberGenerator;
         _clock = clock;
+        _currentUser = currentUser;
     }
 
     public async Task<List<KachiDto>> GetAllAsync(int? seasonId = null, CancellationToken ct = default)
@@ -53,13 +55,15 @@ public class KachiService : IKachiService
             : 0m;
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
-        var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);
-        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).Sum(l => l.Amount);
+        var rateOverrides = request.DeductionOverrides?.ToDictionary(o => o.DeductionRuleId, o => o.Value);
+        var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules, rateOverrides);
+        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
         var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
+        var approvalStatus = await DetermineApprovalStatusAsync(ct);
 
         var kachi = new Kachi
         {
-            InvoiceNo = await _numberGenerator.NextAsync("K", ct),
+            InvoiceNo = request.InvoiceNo ?? await _numberGenerator.NextAsync("K", ct),
             ReceiptNumber = await _numberGenerator.NextAsync("KR", ct),
             BillNumber = request.BillNumber,
             Date = request.Date,
@@ -77,7 +81,9 @@ public class KachiService : IKachiService
             BuyerChargesTotal = buyerTotal,
             Total = grossAmount - farmerTotal,
             Status = InvoiceStatus.Open,
-            Notes = request.Notes
+            Notes = request.Notes,
+            ApprovalStatus = approvalStatus,
+            SubmittedByUserId = _currentUser.UserId
         };
 
         foreach (var line in calc.Lines)
@@ -96,8 +102,11 @@ public class KachiService : IKachiService
         _db.Kachis.Add(kachi);
         await _db.SaveChangesAsync(ct);
 
-        await PostLedgerAsync(kachi, calc.Lines, ct);
-        await _db.SaveChangesAsync(ct);
+        if (kachi.ApprovalStatus == ApprovalStatus.Approved)
+        {
+            await PostLedgerAsync(kachi, calc.Lines, ct);
+            await _db.SaveChangesAsync(ct);
+        }
 
         return await GetByIdAsync(kachi.Id, ct);
     }
@@ -110,6 +119,15 @@ public class KachiService : IKachiService
             throw new InvalidCalculationException("Only an open Kachi (not yet converted to Pakki or cancelled) can be edited.");
         }
 
+        // Fixing a Rejected Kachi re-enters the approval flow: if the editor themselves can
+        // Approve/Reject (Manager/Admin), their own fix is taken as approved immediately; otherwise
+        // (the original submitter correcting it) it goes back to Pending for another review.
+        var wasRejected = kachi.ApprovalStatus == ApprovalStatus.Rejected;
+        // Only an Approved Kachi has live ledger entries to reverse — a Pending or Rejected one was
+        // never posted, so reversing it here would fabricate a reversal against postings that don't
+        // exist and corrupt the running balance.
+        var hadLivePostings = kachi.ApprovalStatus == ApprovalStatus.Approved;
+
         await EnsureReferencesExistAsync(request.SeasonId, request.FarmerId, request.ProductId, ct);
         await EnsureBuyerExistsAsync(request.BuyerId, ct);
 
@@ -121,12 +139,15 @@ public class KachiService : IKachiService
 
         var rules = await _db.DeductionRules.Where(r => r.IsActive && !r.IsDeleted).ToListAsync(ct);
         var calc = DeductionEngine.Calculate(grossAmount, netWeightKg, DeductionAppliesTo.Kachi, request.ProductId, request.FarmerId, rules);
-        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Farmer).Sum(l => l.Amount);
+        var farmerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Seller).Sum(l => l.Amount);
         var buyerTotal = calc.Lines.Where(l => l.ChargedTo == DeductionChargedTo.Buyer).Sum(l => l.Amount);
 
         // Reverse against the pre-update buyer/amounts before anything is mutated — mirrors
         // PakkiService.UpdateAsync (reverse what was posted, then post fresh entries below).
-        await ReverseLedgerAsync(kachi, $"Reversal: {kachi.InvoiceNo} edited", ct);
+        if (hadLivePostings)
+        {
+            await ReverseLedgerAsync(kachi, $"Reversal: {kachi.InvoiceNo} edited", ct);
+        }
 
         kachi.Date = request.Date;
         kachi.BillNumber = request.BillNumber;
@@ -166,8 +187,27 @@ public class KachiService : IKachiService
 
         await _db.SaveChangesAsync(ct);
 
-        await PostLedgerAsync(kachi, calc.Lines, ct);
-        await _db.SaveChangesAsync(ct);
+        if (wasRejected)
+        {
+            if (await HasApprovalsEditPermissionAsync(ct))
+            {
+                kachi.ApprovalStatus = ApprovalStatus.Approved;
+                kachi.ReviewedByUserId = _currentUser.UserId;
+                kachi.ReviewedAtUtc = _clock.UtcNow;
+            }
+            else
+            {
+                kachi.ApprovalStatus = ApprovalStatus.Pending;
+            }
+            kachi.RejectionReason = null;
+            await _db.SaveChangesAsync(ct);
+        }
+
+        if (kachi.ApprovalStatus == ApprovalStatus.Approved)
+        {
+            await PostLedgerAsync(kachi, calc.Lines, ct);
+            await _db.SaveChangesAsync(ct);
+        }
 
         return await GetByIdAsync(id, ct);
     }
@@ -182,8 +222,68 @@ public class KachiService : IKachiService
         kachi.Status = InvoiceStatus.Cancelled;
         kachi.UpdatedAtUtc = _clock.UtcNow;
 
-        await ReverseLedgerAsync(kachi, $"Reversal: {kachi.InvoiceNo} cancelled", ct);
+        // Nothing was ever posted for a Kachi still awaiting (or denied) review, so there is nothing
+        // to reverse — only an Approved Kachi has live ledger entries.
+        if (kachi.ApprovalStatus == ApprovalStatus.Approved)
+        {
+            await ReverseLedgerAsync(kachi, $"Reversal: {kachi.InvoiceNo} cancelled", ct);
+        }
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Approves a Pending Kachi, posting the ledger entries that were deferred at creation.</summary>
+    public async Task<KachiDto> ApproveAsync(int id, CancellationToken ct = default)
+    {
+        var kachi = await LoadAsync(id, ct);
+        if (kachi.ApprovalStatus != ApprovalStatus.Pending)
+        {
+            throw new InvalidCalculationException("Only a Kachi awaiting review can be approved.");
+        }
+
+        kachi.ApprovalStatus = ApprovalStatus.Approved;
+        kachi.ReviewedByUserId = _currentUser.UserId;
+        kachi.ReviewedAtUtc = _clock.UtcNow;
+        kachi.UpdatedAtUtc = _clock.UtcNow;
+
+        await PostLedgerFromStoredLinesAsync(kachi, ct);
+        await _db.SaveChangesAsync(ct);
+
+        return await GetByIdAsync(id, ct);
+    }
+
+    /// <summary>Rejects a Pending Kachi — nothing was ever posted, so there is nothing to reverse.
+    /// The original submitter (or anyone with Approvals edit permission) can then fix it via
+    /// UpdateAsync, which resubmits it.</summary>
+    public async Task<KachiDto> RejectAsync(int id, string? reason, CancellationToken ct = default)
+    {
+        var kachi = await LoadAsync(id, ct);
+        if (kachi.ApprovalStatus != ApprovalStatus.Pending)
+        {
+            throw new InvalidCalculationException("Only a Kachi awaiting review can be rejected.");
+        }
+
+        kachi.ApprovalStatus = ApprovalStatus.Rejected;
+        kachi.ReviewedByUserId = _currentUser.UserId;
+        kachi.ReviewedAtUtc = _clock.UtcNow;
+        kachi.RejectionReason = reason;
+        kachi.UpdatedAtUtc = _clock.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return await GetByIdAsync(id, ct);
+    }
+
+    private async Task<ApprovalStatus> DetermineApprovalStatusAsync(CancellationToken ct)
+    {
+        if (_currentUser.RoleId is null) return ApprovalStatus.Approved;
+        var requiresApproval = await _db.Roles.Where(r => r.Id == _currentUser.RoleId).Select(r => r.RequiresApproval).FirstOrDefaultAsync(ct);
+        return requiresApproval ? ApprovalStatus.Pending : ApprovalStatus.Approved;
+    }
+
+    private async Task<bool> HasApprovalsEditPermissionAsync(CancellationToken ct)
+    {
+        if (_currentUser.RoleId is null) return false;
+        var permission = await _db.RolePermissions.FirstOrDefaultAsync(p => p.RoleId == _currentUser.RoleId && p.Module == ModuleName.Approvals, ct);
+        return permission is not null && permission.CanEdit;
     }
 
     /// <summary>Reverses this Kachi's own ledger postings without cancelling it — called by
@@ -193,15 +293,26 @@ public class KachiService : IKachiService
     public async Task ReverseLedgerForConversionAsync(int kachiId, CancellationToken ct = default)
     {
         var kachi = await LoadAsync(kachiId, ct);
-        await ReverseLedgerAsync(kachi, $"Reversal: {kachi.InvoiceNo} converted to Pakki", ct);
-        await _db.SaveChangesAsync(ct);
+        // A Pending/Rejected Kachi was never posted (see CreateAsync), so there is nothing to
+        // reverse — only an Approved Kachi has live ledger entries to hand off to the Pakki.
+        if (kachi.ApprovalStatus == ApprovalStatus.Approved)
+        {
+            await ReverseLedgerAsync(kachi, $"Reversal: {kachi.InvoiceNo} converted to Pakki", ct);
+            await _db.SaveChangesAsync(ct);
+        }
     }
 
     public async Task RepostLedgerAfterPakkiCancellationAsync(int kachiId, CancellationToken ct = default)
     {
         var kachi = await LoadAsync(kachiId, ct);
-        await PostLedgerFromStoredLinesAsync(kachi, ct);
-        await _db.SaveChangesAsync(ct);
+        // Mirrors ReverseLedgerForConversionAsync above: a Kachi that was still Pending/Rejected
+        // when it got converted never had postings reversed, so there is nothing to restore here —
+        // re-posting it now would fabricate entries for a transaction that was never approved.
+        if (kachi.ApprovalStatus == ApprovalStatus.Approved)
+        {
+            await PostLedgerFromStoredLinesAsync(kachi, ct);
+            await _db.SaveChangesAsync(ct);
+        }
     }
 
     private async Task<Kachi> LoadAsync(int id, CancellationToken ct)
@@ -216,7 +327,7 @@ public class KachiService : IKachiService
     {
         if (!await _db.Seasons.AnyAsync(s => s.Id == seasonId && !s.IsDeleted, ct))
             throw new NotFoundException(nameof(Season), seasonId);
-        if (!await _db.Parties.AnyAsync(p => p.Id == farmerId && !p.IsDeleted && p.PartyType == PartyType.Farmer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == farmerId && !p.IsDeleted && (p.PartyType & PartyType.Farmer) == PartyType.Farmer, ct))
             throw new NotFoundException(nameof(Party), farmerId);
         if (!await _db.Products.AnyAsync(p => p.Id == productId && !p.IsDeleted, ct))
             throw new NotFoundException(nameof(Product), productId);
@@ -225,7 +336,7 @@ public class KachiService : IKachiService
     private async Task EnsureBuyerExistsAsync(int? buyerId, CancellationToken ct)
     {
         if (buyerId is null) return;
-        if (!await _db.Parties.AnyAsync(p => p.Id == buyerId && !p.IsDeleted && p.PartyType == PartyType.Buyer, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == buyerId && !p.IsDeleted && (p.PartyType & PartyType.Vendor) == PartyType.Vendor, ct))
             throw new NotFoundException(nameof(Party), buyerId.Value);
     }
 
@@ -320,5 +431,6 @@ public class KachiService : IKachiService
         k.Id, k.InvoiceNo, k.ReceiptNumber, k.BillNumber, k.Date, k.SeasonId, k.Season.Name, k.FarmerId, k.Farmer.Name, k.BuyerId, k.Buyer?.Name,
         k.ProductId, k.Product.Name, k.BhartiKgPerBag, k.TotalWeightKg, k.BoriQty, k.NetWeightKg,
         k.RatePerUnit, k.GrossAmount, k.TotalDeductions, k.BuyerChargesTotal, k.Total, k.Status, k.ConvertedToPakkiId, k.Notes,
+        k.ApprovalStatus, k.SubmittedByUserId, k.RejectionReason,
         k.DeductionLines.Select(l => new KachiDeductionLineDto(l.DeductionRuleId, l.Name, l.NameUrdu, l.Amount, l.VehicleNumber, l.ChargedTo)).ToList());
 }
