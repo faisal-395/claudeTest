@@ -15,6 +15,7 @@ public class AppearanceSettingsConfiguration : IEntityTypeConfiguration<Appearan
         builder.Property(a => a.HeadingBackgroundColor).IsRequired().HasMaxLength(7);
         builder.Property(a => a.InputBackgroundColor).IsRequired().HasMaxLength(7);
         builder.Property(a => a.GridHeaderColor).IsRequired().HasMaxLength(7);
+        builder.Property(a => a.GridBackgroundColor).IsRequired().HasMaxLength(7);
 
         builder.HasIndex(a => a.Scope).IsUnique();
     }

@@ -51,6 +51,7 @@ public class AppearanceSettingsService : IAppearanceSettingsService
         settings.HeadingBackgroundColor = request.HeadingBackgroundColor;
         settings.InputBackgroundColor = request.InputBackgroundColor;
         settings.GridHeaderColor = request.GridHeaderColor;
+        settings.GridBackgroundColor = request.GridBackgroundColor;
         settings.LabelFontSizePx = request.LabelFontSizePx;
         settings.GridFullBorders = request.GridFullBorders;
         settings.NavigationLayout = request.NavigationLayout;
@@ -62,6 +63,6 @@ public class AppearanceSettingsService : IAppearanceSettingsService
 
     private static AppearanceSettingsDto ToDto(AppearanceSettings s) => new(
         s.Id, s.Scope, s.PrimaryColor, s.AccentColor, s.SurfaceColor,
-        s.PanelColor, s.HeadingBackgroundColor, s.InputBackgroundColor, s.GridHeaderColor, s.LabelFontSizePx,
-        s.GridFullBorders, s.NavigationLayout);
+        s.PanelColor, s.HeadingBackgroundColor, s.InputBackgroundColor, s.GridHeaderColor, s.GridBackgroundColor,
+        s.LabelFontSizePx, s.GridFullBorders, s.NavigationLayout);
 }

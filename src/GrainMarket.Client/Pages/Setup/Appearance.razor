@@ -70,6 +70,13 @@
                         </div>
                     </div>
                     <div>
+                        <label>Grid Background</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.GridBackgroundColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.GridBackgroundColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
                         <label>Field Label Font Size (px)</label>
                         <input type="number" min="8" max="32" @bind="s.LabelFontSizePx" style="width:80px;" />
                     </div>
@@ -101,6 +108,7 @@
                         <div style="background:@s.PanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Panel</div>
                         <div style="background:@s.InputBackgroundColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Text Box (selected)</div>
                         <div style="background:@s.GridHeaderColor;color:@s.PrimaryColor;padding:6px 12px;border-radius:4px;font-weight:600;">Grid Header</div>
+                        <div style="background:@s.GridBackgroundColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Grid Body</div>
                     </div>
                     <div style="margin-left:auto;">
                         <button class="btn" disabled="@s.Saving" @onclick="() => SaveAsync(s)">@(s.Saving ? "Saving…" : "Save")</button>
@@ -136,7 +144,7 @@
         {
             var request = new UpdateAppearanceSettingsRequest(
                 s.PrimaryColor, s.AccentColor, s.SurfaceColor,
-                s.PanelColor, s.HeadingBackgroundColor, s.InputBackgroundColor, s.GridHeaderColor,
+                s.PanelColor, s.HeadingBackgroundColor, s.InputBackgroundColor, s.GridHeaderColor, s.GridBackgroundColor,
                 s.LabelFontSizePx, s.GridFullBorders, s.NavigationLayout);
             var updated = await Api.UpdateAppearanceSettingsAsync(s.Scope, request);
             s.ApplyFrom(updated);
@@ -157,6 +165,7 @@
         s.HeadingBackgroundColor = defaults.HeadingBackgroundColor;
         s.InputBackgroundColor = defaults.InputBackgroundColor;
         s.GridHeaderColor = defaults.GridHeaderColor;
+        s.GridBackgroundColor = defaults.GridBackgroundColor;
         s.LabelFontSizePx = defaults.LabelFontSizePx;
         s.GridFullBorders = defaults.GridFullBorders;
         s.NavigationLayout = defaults.NavigationLayout;
@@ -180,6 +189,7 @@
         public string HeadingBackgroundColor { get; set; } = "#FFFFFF";
         public string InputBackgroundColor { get; set; } = "#FFFFFF";
         public string GridHeaderColor { get; set; } = "#EEF4EE";
+        public string GridBackgroundColor { get; set; } = "#FFFFFF";
         public int LabelFontSizePx { get; set; } = 13;
         public bool GridFullBorders { get; set; }
 
@@ -213,6 +223,7 @@
             HeadingBackgroundColor = dto.HeadingBackgroundColor;
             InputBackgroundColor = dto.InputBackgroundColor;
             GridHeaderColor = dto.GridHeaderColor;
+            GridBackgroundColor = dto.GridBackgroundColor;
             LabelFontSizePx = dto.LabelFontSizePx;
             GridFullBorders = dto.GridFullBorders;
             NavigationLayout = dto.NavigationLayout;
@@ -220,7 +231,7 @@
 
         public AppearanceSettingsDto ToDto() => new(
             0, Scope, PrimaryColor, AccentColor, SurfaceColor,
-            PanelColor, HeadingBackgroundColor, InputBackgroundColor, GridHeaderColor, LabelFontSizePx,
-            GridFullBorders, NavigationLayout);
+            PanelColor, HeadingBackgroundColor, InputBackgroundColor, GridHeaderColor, GridBackgroundColor,
+            LabelFontSizePx, GridFullBorders, NavigationLayout);
     }
 }

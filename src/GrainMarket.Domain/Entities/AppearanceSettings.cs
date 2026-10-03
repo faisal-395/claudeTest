@@ -43,8 +43,8 @@ public class AppearanceSettings : BaseEntity
     /// Setup > Appearance control anymore (kept frozen at whatever it's set to).</summary>
     public string SurfaceColor { get; set; } = "#F7F9F7";
 
-    /// <summary>Background of form/entry cards — the Purchase/Sale Invoice entry panel, Setup
-    /// forms, and the results grid's own background (not its header row — see GridHeaderColor).</summary>
+    /// <summary>Background of form/entry cards — the Purchase/Sale Invoice entry panel(s) and
+    /// Setup forms. The results grid's own body background is separate — see GridBackgroundColor.</summary>
     public string PanelColor { get; set; } = "#FFFFFF";
 
     /// <summary>Background behind the page's own &lt;h1&gt; heading text.</summary>
@@ -54,6 +54,10 @@ public class AppearanceSettings : BaseEntity
     /// text box at rest.</summary>
     public string InputBackgroundColor { get; set; } = "#FFFFFF";
     public string GridHeaderColor { get; set; } = "#EEF4EE";
+
+    /// <summary>The results grid's own body background (behind every data row) — independent of
+    /// PanelColor, so a client can give the entry form and the grid below it different backgrounds.</summary>
+    public string GridBackgroundColor { get; set; } = "#FFFFFF";
 
     /// <summary>Font size (px) of field labels ("Invoice #", "Bill No", etc.) within this scope.</summary>
     public int LabelFontSizePx { get; set; } = 13;
