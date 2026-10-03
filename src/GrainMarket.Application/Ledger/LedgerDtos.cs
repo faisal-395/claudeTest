@@ -6,4 +6,4 @@ public record LedgerRowDto(int Id, DateTime Date, DateTime CreatedAtUtc, decimal
 
 public record PartyLedgerDto(int PartyId, string PartyName, decimal OpeningBalance, decimal ClosingBalance, List<LedgerRowDto> Rows);
 
-public record AccountLedgerDto(int AccountId, string AccountCode, string AccountName, decimal ClosingBalance, List<LedgerRowDto> Rows);
+public record AccountLedgerDto(int AccountId, string AccountCode, string AccountName, decimal OpeningBalance, decimal ClosingBalance, List<LedgerRowDto> Rows);

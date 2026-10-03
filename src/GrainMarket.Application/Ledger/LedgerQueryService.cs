@@ -56,9 +56,16 @@ public class LedgerQueryService : ILedgerQueryService
         if (to is not null) query = query.Where(e => e.Date <= to);
 
         var rows = await query.OrderBy(e => e.Date).ThenBy(e => e.CreatedAtUtc).ThenBy(e => e.Id).ToListAsync(ct);
-        var closing = rows.Count > 0 ? rows[^1].RunningBalance : 0m;
 
-        return new AccountLedgerDto(accountId, account.Code, account.Name, closing, await ToRowDtosAsync(rows, ct));
+        var opening = from is null
+            ? 0m
+            : await _db.LedgerEntries.Where(e => e.ChartOfAccountId == accountId && e.Date < from && !e.IsDeleted)
+                .OrderByDescending(e => e.Date).ThenByDescending(e => e.Id)
+                .Select(e => e.RunningBalance).FirstOrDefaultAsync(ct);
+
+        var closing = rows.Count > 0 ? rows[^1].RunningBalance : opening;
+
+        return new AccountLedgerDto(accountId, account.Code, account.Name, opening, closing, await ToRowDtosAsync(rows, ct));
     }
 
     // Description is free text (or an auto-generated label); ReferenceNo is the actual

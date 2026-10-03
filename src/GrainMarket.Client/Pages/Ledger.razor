@@ -1,68 +1,122 @@
 @page "/ledger"
 @inject ApiClient Api
+@inject IJSRuntime JS
 
 <RequireAuth>
-    <h1 class="page-title">Ledger</h1>
+    <div class="no-print" style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title">Ledger</h1>
+    </div>
 
     @if (_error is not null)
     {
         <div class="error-banner">@_error</div>
     }
 
-    <div class="form-grid" style="max-width:900px;">
-        <div>
-            <label>View</label>
-            <SearchSelect TItem="ModeOption" Items="ModeOptions" IdSelector="@(m => m.Id)" TextSelector="@(m => m.Label)" Value="@_modeId" ValueChanged="@OnModeChanged" Placeholder="Select view…" />
+    <div class="no-print" style="max-width:900px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <button class="btn secondary" @onclick="() => _filtersExpanded = !_filtersExpanded">
+                @(_filtersExpanded ? "▾" : "▸") Filters
+                @if (!_filtersExpanded && (_partyLedger is not null || _accountLedger is not null))
+                {
+                    <span style="font-weight:400;color:#666;">
+                        &nbsp;— @StatementName, @(_from?.ToString("yyyy-MM-dd") ?? "Start") to @(_to?.ToString("yyyy-MM-dd") ?? "Today")
+                    </span>
+                }
+            </button>
+            @if (_partyLedger is not null || _accountLedger is not null)
+            {
+                <button class="btn" @onclick="PrintAsync">Print</button>
+            }
         </div>
-        @if (_mode == "party")
+
+        @if (_filtersExpanded)
         {
-            <div>
-                <label>Party</label>
-                <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" @bind-Value="_partyId" Placeholder="Search party…" />
+            <div class="form-grid">
+                <div>
+                    <label>View</label>
+                    <SearchSelect TItem="ModeOption" Items="ModeOptions" IdSelector="@(m => m.Id)" TextSelector="@(m => m.Label)" Value="@_modeId" ValueChanged="@OnModeChanged" Placeholder="Select view…" />
+                </div>
+                @if (_mode == "party")
+                {
+                    <div>
+                        <label>Party</label>
+                        <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" @bind-Value="_partyId" Placeholder="Search party…" />
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        <label>Account</label>
+                        <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" @bind-Value="_accountId" Placeholder="Search account…" />
+                    </div>
+                }
+                <div><label>From</label><input type="date" @bind="_from" /></div>
+                <div><label>To</label><input type="date" @bind="_to" /></div>
+                <div style="grid-column: span 2;"><button class="btn" @onclick="LoadAsync">Show Ledger</button></div>
             </div>
         }
-        else
-        {
-            <div>
-                <label>Account</label>
-                <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" @bind-Value="_accountId" Placeholder="Search account…" />
-            </div>
-        }
-        <div><label>From</label><input type="date" @bind="_from" /></div>
-        <div><label>To</label><input type="date" @bind="_to" /></div>
-        <div style="grid-column: span 2;"><button class="btn" @onclick="LoadAsync">Show Ledger</button></div>
     </div>
 
     @{
         var rows = _partyLedger?.Rows ?? _accountLedger?.Rows;
-    }
-
-    @if (_partyLedger is not null)
-    {
-        <h3 style="margin-top:20px;">@_partyLedger.PartyName — Opening: @_partyLedger.OpeningBalance.ToString("N2"), Closing: @_partyLedger.ClosingBalance.ToString("N2")</h3>
-    }
-    else if (_accountLedger is not null)
-    {
-        <h3 style="margin-top:20px;">@_accountLedger.AccountCode - @_accountLedger.AccountName — Closing: @_accountLedger.ClosingBalance.ToString("N2")</h3>
+        var opening = _partyLedger?.OpeningBalance ?? _accountLedger?.OpeningBalance;
+        var closing = _partyLedger?.ClosingBalance ?? _accountLedger?.ClosingBalance;
     }
 
     @if (rows is not null)
     {
-        <table class="data-grid">
-            <thead><tr><th>Date</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
-            <tbody>
-                @foreach (var r in rows)
+        <div class="print-a4-report" style="background:white;padding:20px;border:1px solid #ccc;margin-top:16px;">
+            <div style="border:1px solid #000;padding:8px 10px;">
+                <div style="text-align:center;font-family:Georgia,'Times New Roman',serif;font-size:1.3rem;font-weight:700;">@_companyInfo?.NameEnglish</div>
+                @if (!string.IsNullOrWhiteSpace(_companyInfo?.MarketName))
                 {
-                    <tr>
-                        <td>@r.Date.ToString("yyyy-MM-dd")</td>
-                        <td>@r.Description</td>
-                        <td>@(r.Debit > 0 ? r.Debit.ToString("N2") : "")</td>
-                        <td>@(r.Credit > 0 ? r.Credit.ToString("N2") : "")</td>
-                        <td>@r.RunningBalance.ToString("N2")</td>
-                    </tr>
+                    <div style="text-align:center;font-size:0.9rem;">@_companyInfo.MarketName</div>
                 }
-            </tbody>
-        </table>
+                @if (ContactLine is { Length: > 0 })
+                {
+                    <div style="text-align:center;font-size:0.75rem;">@ContactLine</div>
+                }
+                @if (ProprietorLine is { Length: > 0 })
+                {
+                    <div style="text-align:center;font-size:0.8rem;">@ProprietorLine</div>
+                }
+            </div>
+            <div style="text-align:center;color:#666;margin-top:6px;">@(_mode == "party" ? "Party Account Statement" : "Account Statement")</div>
+            <hr />
+            <table style="width:100%;margin-bottom:10px;">
+                <tr>
+                    <td><b>@StatementName</b></td>
+                    <td style="text-align:right;">@(_from?.ToString("yyyy-MM-dd") ?? "Start") to @(_to?.ToString("yyyy-MM-dd") ?? "Today")</td>
+                </tr>
+                <tr>
+                    <td>Opening Balance: <b>@opening?.ToString("N2")</b></td>
+                    <td style="text-align:right;">Closing Balance: <b>@closing?.ToString("N2")</b></td>
+                </tr>
+            </table>
+            @if (rows.Count == 0)
+            {
+                <p style="color:#777;">No transactions in this period.</p>
+            }
+            else
+            {
+                <table class="data-grid" style="width:100%;">
+                    <thead><tr><th>Date</th><th>Invoice / Voucher #</th><th>Description</th><th style="text-align:right;">Debit</th><th style="text-align:right;">Credit</th><th style="text-align:right;">Balance</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in rows)
+                        {
+                            <tr>
+                                <td>@r.Date.ToString("yyyy-MM-dd")</td>
+                                <td>@(r.ReferenceNo ?? "—")</td>
+                                <td>@r.Description</td>
+                                <td style="text-align:right;">@(r.Debit > 0 ? r.Debit.ToString("N2") : "")</td>
+                                <td style="text-align:right;">@(r.Credit > 0 ? r.Credit.ToString("N2") : "")</td>
+                                <td style="text-align:right;">@r.RunningBalance.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
     }
 </RequireAuth>
 
@@ -71,7 +125,9 @@
     private List<ChartOfAccountDto>? _accounts;
     private PartyLedgerDto? _partyLedger;
     private AccountLedgerDto? _accountLedger;
+    private CompanyInfoDto? _companyInfo;
     private string? _error;
+    private bool _filtersExpanded = true;
 
     private record ModeOption(int Id, string Label);
     private static readonly List<ModeOption> ModeOptions = new()
@@ -87,10 +143,27 @@
     private DateTime? _from;
     private DateTime? _to;
 
+    private string StatementName => _partyLedger?.PartyName ?? (_accountLedger is null ? "" : $"{_accountLedger.AccountCode} - {_accountLedger.AccountName}");
+
+    private string ContactLine => string.Join("  ", new[]
+    {
+        string.IsNullOrWhiteSpace(_companyInfo?.Phone) ? null : $"Phone: {_companyInfo.Phone}",
+        string.IsNullOrWhiteSpace(_companyInfo?.Mobile) ? null : $"Mobile: {_companyInfo.Mobile}",
+        string.IsNullOrWhiteSpace(_companyInfo?.Email) ? null : $"Email: {_companyInfo.Email}"
+    }.Where(s => s is not null));
+
+    private string ProprietorLine => string.Join("  |  ", new[]
+    {
+        string.IsNullOrWhiteSpace(_companyInfo?.ProprietorName) ? null : $"Proprietor: {_companyInfo.ProprietorName}",
+        string.IsNullOrWhiteSpace(_companyInfo?.NtnNumber) ? null : $"NTN No: {_companyInfo.NtnNumber}"
+    }.Where(s => s is not null));
+
     private void OnModeChanged(int id)
     {
         _modeId = id;
         _mode = id == 0 ? "party" : "account";
+        _partyLedger = null;
+        _accountLedger = null;
     }
 
     protected override async Task OnInitializedAsync()
@@ -99,6 +172,7 @@
         {
             _parties = await Api.GetPartiesAsync();
             _accounts = await Api.GetChartOfAccountsAsync();
+            _companyInfo = await Api.GetCompanyInfoAsync();
             if (_parties.Count > 0) _partyId = _parties[0].Id;
             if (_accounts.Count > 0) _accountId = _accounts[0].Id;
         }
@@ -114,7 +188,10 @@
         {
             if (_mode == "party") _partyLedger = await Api.GetPartyLedgerAsync(_partyId, _from, _to);
             else _accountLedger = await Api.GetAccountLedgerAsync(_accountId, _from, _to);
+            _filtersExpanded = false;
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
 }
