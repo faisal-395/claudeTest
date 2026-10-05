@@ -149,14 +149,20 @@ public class PurchaseService : IPurchaseService
             var cashAccountId = await GetAccountIdAsync(DomainConstants.CashAccountCode, ct);
             var reason = $"Reversal: {purchase.InvoiceNo} cancelled";
 
-            await _ledger.PostAccountEntryAsync(purchaseExpenseAccountId, _clock.UtcNow, 0, purchase.NetBill, LedgerSourceType.Purchase, purchase.Id, reason, ct);
-            await _ledger.PostPartyEntryAsync(purchase.SupplierId, _clock.UtcNow, purchase.NetBill, 0, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+            // Dated with the purchase's own Date, not _clock.UtcNow: LedgerQueryService and
+            // LedgerPostingService's "find the latest balance" lookup both sort primarily by Date, so
+            // a reversal dated with the real wall-clock time (which carries a time-of-day, unlike the
+            // midnight-only business Date on every normal entry) would sort as "later" than same-day
+            // entries actually posted after it — scrambling both the displayed order and the running
+            // balance chain on any same-day cancel.
+            await _ledger.PostAccountEntryAsync(purchaseExpenseAccountId, purchase.Date, 0, purchase.NetBill, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+            await _ledger.PostPartyEntryAsync(purchase.SupplierId, purchase.Date, purchase.NetBill, 0, LedgerSourceType.Purchase, purchase.Id, reason, ct);
 
             var cashApplied = Math.Min(purchase.PaidCash, purchase.NetBill);
             if (cashApplied > 0)
             {
-                await _ledger.PostPartyEntryAsync(purchase.SupplierId, _clock.UtcNow, 0, cashApplied, LedgerSourceType.Purchase, purchase.Id, reason, ct);
-                await _ledger.PostAccountEntryAsync(cashAccountId, _clock.UtcNow, cashApplied, 0, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+                await _ledger.PostPartyEntryAsync(purchase.SupplierId, purchase.Date, 0, cashApplied, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+                await _ledger.PostAccountEntryAsync(cashAccountId, purchase.Date, cashApplied, 0, LedgerSourceType.Purchase, purchase.Id, reason, ct);
             }
         }
 

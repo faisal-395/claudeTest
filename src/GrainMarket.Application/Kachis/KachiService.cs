@@ -402,19 +402,25 @@ public class KachiService : IKachiService
     /// <summary>Posts the mirror image of PostLedgerAsync, so the running balance is corrected
     /// without ever deleting or mutating a previously posted row. Used by CancelAsync,
     /// UpdateAsync (reverse, then post fresh entries for the new terms) and
-    /// ReverseLedgerForConversionAsync (converting to a Pakki).</summary>
+    /// ReverseLedgerForConversionAsync (converting to a Pakki). Dated with the Kachi's own
+    /// (pre-mutation) business Date, not _clock.UtcNow: LedgerQueryService and
+    /// LedgerPostingService's "find the latest balance" lookup both sort primarily by Date, so a
+    /// reversal dated with the real wall-clock time (which carries a time-of-day, unlike the
+    /// midnight-only business Date on every normal entry) would sort as "later" than same-day
+    /// entries actually posted after it — scrambling both the displayed order and the running
+    /// balance chain on any same-day edit/cancel.</summary>
     private async Task ReverseLedgerAsync(Kachi kachi, string reason, CancellationToken ct)
     {
         if (kachi.BuyerId is null) return;
 
-        await _ledger.PostPartyEntryAsync(kachi.BuyerId.Value, _clock.UtcNow, 0, kachi.GrossAmount + kachi.BuyerChargesTotal, LedgerSourceType.Kachi, kachi.Id, reason, ct);
-        await _ledger.PostPartyEntryAsync(kachi.FarmerId, _clock.UtcNow, kachi.Total, 0, LedgerSourceType.Kachi, kachi.Id, reason, ct);
+        await _ledger.PostPartyEntryAsync(kachi.BuyerId.Value, kachi.Date, 0, kachi.GrossAmount + kachi.BuyerChargesTotal, LedgerSourceType.Kachi, kachi.Id, reason, ct);
+        await _ledger.PostPartyEntryAsync(kachi.FarmerId, kachi.Date, kachi.Total, 0, LedgerSourceType.Kachi, kachi.Id, reason, ct);
 
         foreach (var line in kachi.DeductionLines)
         {
             var ruleAccountId = await _db.DeductionRules.Where(r => r.Id == line.DeductionRuleId).Select(r => r.IncomeAccountId).FirstOrDefaultAsync(ct);
             var accountId = await ResolveIncomeAccountIdAsync(ruleAccountId, ct);
-            await _ledger.PostAccountEntryAsync(accountId, _clock.UtcNow, line.Amount, 0, LedgerSourceType.Kachi, kachi.Id, $"{reason} ({line.Name})", ct);
+            await _ledger.PostAccountEntryAsync(accountId, kachi.Date, line.Amount, 0, LedgerSourceType.Kachi, kachi.Id, $"{reason} ({line.Name})", ct);
         }
     }
 

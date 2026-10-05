@@ -402,15 +402,21 @@ public class PakkiService : IPakkiService
 
     /// <summary>Posts the mirror image of a Pakki's ledger postings, so the running balance is
     /// corrected without ever deleting or mutating a previously posted row. Used by both
-    /// CancelAsync and UpdateAsync (which reverses, then posts fresh entries for the new terms).</summary>
+    /// CancelAsync and UpdateAsync (which reverses, then posts fresh entries for the new terms).
+    /// Dated with the Pakki's own (pre-mutation) business Date, not _clock.UtcNow: LedgerQueryService
+    /// and LedgerPostingService's "find the latest balance" lookup both sort primarily by Date, so a
+    /// reversal dated with the real wall-clock time (which carries a time-of-day, unlike the
+    /// midnight-only business Date on every normal entry) would sort as "later" than same-day
+    /// entries actually posted after it — scrambling both the displayed order and the running
+    /// balance chain on any same-day edit/cancel.</summary>
     private async Task ReverseLedgerAsync(Pakki pakki, string reason, CancellationToken ct)
     {
-        await _ledger.PostPartyEntryAsync(pakki.BuyerId, _clock.UtcNow, 0, pakki.GrossAmount + pakki.BuyerChargesTotal, LedgerSourceType.Pakki, pakki.Id, reason, ct);
-        await _ledger.PostPartyEntryAsync(pakki.FarmerId, _clock.UtcNow, pakki.NetPayableToFarmer, 0, LedgerSourceType.Pakki, pakki.Id, reason, ct);
+        await _ledger.PostPartyEntryAsync(pakki.BuyerId, pakki.Date, 0, pakki.GrossAmount + pakki.BuyerChargesTotal, LedgerSourceType.Pakki, pakki.Id, reason, ct);
+        await _ledger.PostPartyEntryAsync(pakki.FarmerId, pakki.Date, pakki.NetPayableToFarmer, 0, LedgerSourceType.Pakki, pakki.Id, reason, ct);
         foreach (var line in pakki.DeductionLines)
         {
             var accountId = await ResolveIncomeAccountIdAsync(await _db.DeductionRules.Where(r => r.Id == line.DeductionRuleId).Select(r => r.IncomeAccountId).FirstOrDefaultAsync(ct), ct);
-            await _ledger.PostAccountEntryAsync(accountId, _clock.UtcNow, line.Amount, 0, LedgerSourceType.Pakki, pakki.Id, $"{reason} ({line.Name})", ct);
+            await _ledger.PostAccountEntryAsync(accountId, pakki.Date, line.Amount, 0, LedgerSourceType.Pakki, pakki.Id, $"{reason} ({line.Name})", ct);
         }
     }
 

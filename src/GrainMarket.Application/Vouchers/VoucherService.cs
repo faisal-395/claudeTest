@@ -102,9 +102,15 @@ public class VoucherService : IVoucherService
 
         // Reverse the existing postings before anything on the voucher is mutated — mirrors
         // KachiService/PakkiService.UpdateAsync (reverse what was posted, then post fresh entries
-        // for the new terms below). Never mutates or deletes the original LedgerEntry rows.
-        await PostRefAsync(voucher.ToType!.Value, voucher.ToPartyId, voucher.ToAccountId, _clock.UtcNow, 0m, voucher.Amount, sourceType, voucher.Id, reversalReason, ct);
-        await PostRefAsync(voucher.FromType!.Value, voucher.FromPartyId, voucher.FromAccountId, _clock.UtcNow, voucher.Amount, 0m, sourceType, voucher.Id, reversalReason, ct);
+        // for the new terms below). Never mutates or deletes the original LedgerEntry rows. Dated
+        // with the voucher's own (pre-mutation) business Date, not _clock.UtcNow: LedgerQueryService
+        // and LedgerPostingService's "find the latest balance" lookup both sort primarily by Date,
+        // so a reversal dated with the real wall-clock time (which carries a time-of-day, unlike the
+        // midnight-only business Date on every normal entry) would sort as "later" than same-day
+        // entries that were actually posted after it — scrambling both the displayed order and the
+        // running balance chain on any same-day edit.
+        await PostRefAsync(voucher.ToType!.Value, voucher.ToPartyId, voucher.ToAccountId, voucher.Date, 0m, voucher.Amount, sourceType, voucher.Id, reversalReason, ct);
+        await PostRefAsync(voucher.FromType!.Value, voucher.FromPartyId, voucher.FromAccountId, voucher.Date, voucher.Amount, 0m, sourceType, voucher.Id, reversalReason, ct);
 
         voucher.Date = request.Date;
         voucher.SeasonId = request.SeasonId;
@@ -173,14 +179,14 @@ public class VoucherService : IVoucherService
         var reason = $"Reversal: {voucher.VoucherNo} cancelled";
         if (voucher.VoucherType == VoucherType.Journal)
         {
-            await _ledger.PostAccountEntryAsync(voucher.DebitAccountId!.Value, _clock.UtcNow, 0, voucher.Amount, LedgerSourceType.Journal, voucher.Id, reason, ct);
-            await _ledger.PostAccountEntryAsync(voucher.CreditAccountId!.Value, _clock.UtcNow, voucher.Amount, 0, LedgerSourceType.Journal, voucher.Id, reason, ct);
+            await _ledger.PostAccountEntryAsync(voucher.DebitAccountId!.Value, voucher.Date, 0, voucher.Amount, LedgerSourceType.Journal, voucher.Id, reason, ct);
+            await _ledger.PostAccountEntryAsync(voucher.CreditAccountId!.Value, voucher.Date, voucher.Amount, 0, LedgerSourceType.Journal, voucher.Id, reason, ct);
         }
         else
         {
             var sourceType = voucher.VoucherType == VoucherType.Payment ? LedgerSourceType.Payment : LedgerSourceType.Receipt;
-            await PostRefAsync(voucher.ToType!.Value, voucher.ToPartyId, voucher.ToAccountId, _clock.UtcNow, 0m, voucher.Amount, sourceType, voucher.Id, reason, ct);
-            await PostRefAsync(voucher.FromType!.Value, voucher.FromPartyId, voucher.FromAccountId, _clock.UtcNow, voucher.Amount, 0m, sourceType, voucher.Id, reason, ct);
+            await PostRefAsync(voucher.ToType!.Value, voucher.ToPartyId, voucher.ToAccountId, voucher.Date, 0m, voucher.Amount, sourceType, voucher.Id, reason, ct);
+            await PostRefAsync(voucher.FromType!.Value, voucher.FromPartyId, voucher.FromAccountId, voucher.Date, voucher.Amount, 0m, sourceType, voucher.Id, reason, ct);
         }
 
         await _db.SaveChangesAsync(ct);

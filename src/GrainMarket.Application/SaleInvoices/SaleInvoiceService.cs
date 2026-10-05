@@ -161,14 +161,20 @@ public class SaleInvoiceService : ISaleInvoiceService
             var cashAccountId = await GetAccountIdAsync(DomainConstants.CashAccountCode, ct);
             var reason = $"Reversal: {sale.InvoiceNo} cancelled";
 
-            await _ledger.PostPartyEntryAsync(sale.CustomerId, _clock.UtcNow, 0, sale.NetBill, LedgerSourceType.Sale, sale.Id, reason, ct);
-            await _ledger.PostAccountEntryAsync(salesIncomeAccountId, _clock.UtcNow, sale.NetBill, 0, LedgerSourceType.Sale, sale.Id, reason, ct);
+            // Dated with the sale's own Date, not _clock.UtcNow: LedgerQueryService and
+            // LedgerPostingService's "find the latest balance" lookup both sort primarily by Date, so
+            // a reversal dated with the real wall-clock time (which carries a time-of-day, unlike the
+            // midnight-only business Date on every normal entry) would sort as "later" than same-day
+            // entries actually posted after it — scrambling both the displayed order and the running
+            // balance chain on any same-day cancel.
+            await _ledger.PostPartyEntryAsync(sale.CustomerId, sale.Date, 0, sale.NetBill, LedgerSourceType.Sale, sale.Id, reason, ct);
+            await _ledger.PostAccountEntryAsync(salesIncomeAccountId, sale.Date, sale.NetBill, 0, LedgerSourceType.Sale, sale.Id, reason, ct);
 
             var cashApplied = Math.Min(sale.ReceivedCash, sale.NetBill);
             if (cashApplied > 0)
             {
-                await _ledger.PostAccountEntryAsync(cashAccountId, _clock.UtcNow, 0, cashApplied, LedgerSourceType.Sale, sale.Id, reason, ct);
-                await _ledger.PostPartyEntryAsync(sale.CustomerId, _clock.UtcNow, cashApplied, 0, LedgerSourceType.Sale, sale.Id, reason, ct);
+                await _ledger.PostAccountEntryAsync(cashAccountId, sale.Date, 0, cashApplied, LedgerSourceType.Sale, sale.Id, reason, ct);
+                await _ledger.PostPartyEntryAsync(sale.CustomerId, sale.Date, cashApplied, 0, LedgerSourceType.Sale, sale.Id, reason, ct);
             }
         }
 
