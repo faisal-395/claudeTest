@@ -1,10 +1,9 @@
 @using GrainMarket.Application.Common
 @inject ApiClient Api
 
+<h3 style="margin:0 0 6px;text-align:center;">@Title</h3>
 <div style="display:grid;grid-template-columns:4fr 5fr;gap:20px;align-items:start;">
     <div>
-        <h3 style="margin-top:0;">@Title</h3>
-
         @if (_error is not null)
         {
             <div class="error-banner">@_error</div>
@@ -93,7 +92,6 @@
     </div>
 
     <div>
-        <h3 style="margin-top:0;">@(Title)s on @_date.ToString("yyyy-MM-dd")</h3>
         @if (_gridVouchers is null)
         {
             <p>Loading…</p>
