@@ -9,83 +9,91 @@
             <div class="error-banner">@_error</div>
         }
 
-        <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; flex-direction:column; gap:12px; background:var(--brand-panel); padding:16px 20px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
             <div style="display:flex; gap:20px; flex-wrap:wrap;">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <label style="flex:0 0 auto; white-space:nowrap;">Voucher #:</label>
-                    <input @bind="_voucherNoField" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="width:110px;" placeholder="#" title="Type a voucher # and press Enter to find and edit it." />
+                    <label style="@LabelStyle">Voucher #:</label>
+                    <div class="batch-readonly-figure" style="width:100px;">@(DisplayedVoucherNo ?? "…")</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <label style="flex:0 0 auto; white-space:nowrap;">Date:</label>
-                    <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="width:140px;" />
+                    <label style="@LabelStyle">Search:</label>
+                    <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:100px;")" placeholder="# then Enter" title="Type a voucher # and press Enter to find and edit it." />
                 </div>
             </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <label style="@LabelStyle">Date:</label>
+                <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:140px;")" />
+            </div>
 
-            <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; flex-direction:column; gap:10px; background:var(--brand-surface); border:1px solid #e2e2e2; border-radius:4px; padding:10px 12px;">
             <div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <label style="flex:0 0 40px;">From:</label>
-                    <select @bind="_fromType" style="flex:1 1 auto;">
+                    <label style="@LabelStyle flex:0 0 40px;">From:</label>
+                    <select @bind="_fromType" style="@($"{FieldStyle}width:150px;")">
                         <option value="@LedgerPartyRefType.Cash">Cash</option>
                         <option value="@LedgerPartyRefType.Bank">Bank</option>
                         <option value="@LedgerPartyRefType.Party">Party</option>
                         <option value="@LedgerPartyRefType.Account">Account</option>
                     </select>
                 </div>
+                <div style="margin-top:6px; max-width:280px;">
                 @if (_fromType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
                 {
-                    <div class="batch-readonly-figure" style="margin-top:6px;">@(FixedAccountFor(_fromType)?.Name ?? "…")</div>
+                    <div class="batch-readonly-figure">@(FixedAccountFor(_fromType)?.Name ?? "…")</div>
                     <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(FixedAccountFor(_fromType)?.CurrentBalance.ToString("N2") ?? "0.00")</div>
                 }
                 else if (_fromType == LedgerPartyRefType.Party)
                 {
-                    <div style="margin-top:6px;"><SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" /></div>
+                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
                     <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(SelectedFromPartyBalance?.ToString("N2") ?? "0.00")</div>
                 }
                 else
                 {
-                    <div style="margin-top:6px;"><SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_fromAccountId ?? 0)" ValueChanged="@(v => _fromAccountId = v)" Placeholder="Search account…" /></div>
+                    <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_fromAccountId ?? 0)" ValueChanged="@(v => _fromAccountId = v)" Placeholder="Search account…" />
                     <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(SelectedFromAccountBalance?.ToString("N2") ?? "0.00")</div>
                 }
+                </div>
             </div>
 
             <div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <label style="flex:0 0 40px;">To:</label>
-                    <select @bind="_toType" style="flex:1 1 auto;">
+                    <label style="@LabelStyle flex:0 0 40px;">To:</label>
+                    <select @bind="_toType" style="@($"{FieldStyle}width:150px;")">
                         <option value="@LedgerPartyRefType.Cash">Cash</option>
                         <option value="@LedgerPartyRefType.Bank">Bank</option>
                         <option value="@LedgerPartyRefType.Party">Party</option>
                         <option value="@LedgerPartyRefType.Account">Account</option>
                     </select>
                 </div>
+                <div style="margin-top:6px; max-width:280px;">
                 @if (_toType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
                 {
-                    <div class="batch-readonly-figure" style="margin-top:6px;">@(FixedAccountFor(_toType)?.Name ?? "…")</div>
+                    <div class="batch-readonly-figure">@(FixedAccountFor(_toType)?.Name ?? "…")</div>
                     <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(FixedAccountFor(_toType)?.CurrentBalance.ToString("N2") ?? "0.00")</div>
                 }
                 else if (_toType == LedgerPartyRefType.Party)
                 {
-                    <div style="margin-top:6px;"><SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" /></div>
+                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
                     <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(SelectedToPartyBalance?.ToString("N2") ?? "0.00")</div>
                 }
                 else
                 {
-                    <div style="margin-top:6px;"><SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_toAccountId ?? 0)" ValueChanged="@(v => _toAccountId = v)" Placeholder="Search account…" /></div>
+                    <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_toAccountId ?? 0)" ValueChanged="@(v => _toAccountId = v)" Placeholder="Search account…" />
                     <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(SelectedToAccountBalance?.ToString("N2") ?? "0.00")</div>
                 }
+                </div>
             </div>
             </div>
 
             <div style="display:flex; align-items:center; gap:8px;">
-                <label style="flex:0 0 70px;">Amount:</label>
-                <input type="number" step="0.01" @bind="_amount" style="flex:1 1 auto;" />
-                <label style="flex:0 0 60px; margin-left:12px; text-align:right;">Ref No:</label>
-                <input @bind="_refNo" style="width:140px;" />
+                <label style="@LabelStyle flex:0 0 70px;">Amount:</label>
+                <input type="number" step="0.01" @bind="_amount" style="@($"{FieldStyle}flex:1 1 auto;")" />
+                <label style="@LabelStyle flex:0 0 60px; margin-left:12px; text-align:right;">Ref No:</label>
+                <input @bind="_refNo" style="@($"{FieldStyle}width:140px;")" />
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-                <label style="flex:0 0 70px;">Description:</label>
-                <input @bind="_description" style="flex:1 1 auto;" />
+                <label style="@LabelStyle flex:0 0 70px;">Description:</label>
+                <input @bind="_description" style="@($"{FieldStyle}flex:1 1 auto;")" />
             </div>
 
             <div>
@@ -148,8 +156,12 @@
     private string? _nextVoucherNo;
     private string? _error;
 
-    private string? _voucherNoField;
+    private const string FieldStyle = "padding:6px 8px;border:1px solid #ccc;border-radius:3px;box-sizing:border-box;";
+    private const string LabelStyle = "font-weight:600;color:#444;font-size:0.92rem;white-space:nowrap;";
+
+    private string? _searchVoucherNo;
     private int? _editingVoucherId;
+    private string? _editingVoucherNo;
 
     private DateTime _date = DateTime.Today;
     private int _seasonId;
@@ -163,6 +175,8 @@
     private LedgerPartyRefType _toType;
     private int? _toPartyId;
     private int? _toAccountId;
+
+    private string? DisplayedVoucherNo => _editingVoucherId is not null ? _editingVoucherNo : _nextVoucherNo;
 
     private decimal? SelectedFromPartyBalance => _parties?.FirstOrDefault(p => p.Id == _fromPartyId)?.CurrentBalance;
     private decimal? SelectedFromAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _fromAccountId)?.CurrentBalance;
@@ -199,23 +213,21 @@
 
     // Looks up the entered number only among the vouchers currently shown in the grid (same kind,
     // same date as the form's own Date field) — never the full voucher history — and loads it into
-    // the form fields for editing in place via UpdateVoucherAsync. The same box normally just
-    // displays the next (or currently-edited) voucher number, so typing over it and pressing Enter
-    // is what turns it into a search.
+    // the form fields for editing in place via UpdateVoucherAsync.
     private void SearchGridVoucher()
     {
         _error = null;
-        if (string.IsNullOrWhiteSpace(_voucherNoField)) return;
+        if (string.IsNullOrWhiteSpace(_searchVoucherNo)) return;
 
-        var match = _gridVouchers?.FirstOrDefault(v => string.Equals(v.VoucherNo, _voucherNoField.Trim(), StringComparison.OrdinalIgnoreCase));
+        var match = _gridVouchers?.FirstOrDefault(v => string.Equals(v.VoucherNo, _searchVoucherNo.Trim(), StringComparison.OrdinalIgnoreCase));
         if (match is null)
         {
-            _error = $"No {Title} numbered \"{_voucherNoField}\" found on {_date:yyyy-MM-dd}.";
+            _error = $"No {Title} numbered \"{_searchVoucherNo}\" found on {_date:yyyy-MM-dd}.";
             return;
         }
 
         _editingVoucherId = match.Id;
-        _voucherNoField = match.VoucherNo;
+        _editingVoucherNo = match.VoucherNo;
         _date = match.Date;
         _seasonId = match.SeasonId;
         _refNo = match.RefNo;
@@ -232,7 +244,8 @@
     private void ResetFormToNew()
     {
         _editingVoucherId = null;
-        _voucherNoField = _nextVoucherNo;
+        _editingVoucherNo = null;
+        _searchVoucherNo = null;
         _date = DateTime.Today;
         if (_seasons?.Count > 0) _seasonId = _seasons[0].Id;
         _amount = 0;
@@ -256,7 +269,6 @@
     {
         var next = VoucherKind == VoucherType.Payment ? await Api.PeekNextPaymentNoAsync() : await Api.PeekNextReceiptNoAsync();
         _nextVoucherNo = next.VoucherNo;
-        if (_editingVoucherId is null) _voucherNoField = _nextVoucherNo;
     }
 
     private async Task LoadGridVouchersAsync()
