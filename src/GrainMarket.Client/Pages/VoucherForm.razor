@@ -278,6 +278,16 @@
         _gridVouchers = all.Where(v => v.Date.Date == _date.Date).OrderByDescending(v => v.Id).ToList();
     }
 
+    // Re-fetches parties/accounts so every From/To balance figure on screen reflects the voucher
+    // that was just saved — _parties/_accounts were otherwise only loaded once, on page open, so
+    // every balance kept showing its value as of then no matter how many vouchers were posted
+    // afterward.
+    private async Task RefreshBalancesAsync()
+    {
+        _parties = await Api.GetPartiesAsync();
+        _accounts = await Api.GetChartOfAccountsAsync();
+    }
+
     private async Task SaveAsync()
     {
         _error = null;
@@ -292,6 +302,7 @@
                     _toType, _toPartyId, _toAccountId);
                 var result = await Api.UpdateVoucherAsync(_editingVoucherId.Value, request);
                 _successMessage = $"{Title} {result.VoucherNo} updated.";
+                await RefreshBalancesAsync();
                 ResetFormToNew();
             }
             else
@@ -302,6 +313,7 @@
                     _toType, _toPartyId, _toAccountId);
                 var result = VoucherKind == VoucherType.Payment ? await Api.CreatePaymentAsync(request) : await Api.CreateReceiptAsync(request);
                 _successMessage = $"{Title} {result.VoucherNo} saved.";
+                await RefreshBalancesAsync();
                 ResetFormToNew();
                 await PeekVoucherNoAsync();
             }
