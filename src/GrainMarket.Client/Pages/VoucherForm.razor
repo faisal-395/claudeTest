@@ -9,10 +9,6 @@
         {
             <div class="error-banner">@_error</div>
         }
-        @if (_successMessage is not null)
-        {
-            <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
-        }
 
         <div class="form-grid">
             <div style="grid-column: span 2; display:flex; gap:16px; flex-wrap:wrap;">
@@ -156,7 +152,6 @@
     private List<VoucherDto>? _gridVouchers;
     private string? _nextVoucherNo;
     private string? _error;
-    private string? _successMessage;
 
     private string? _searchVoucherNo;
     private int? _editingVoucherId;
@@ -216,7 +211,6 @@
     private void SearchGridVoucher()
     {
         _error = null;
-        _successMessage = null;
         if (string.IsNullOrWhiteSpace(_searchVoucherNo)) return;
 
         var match = _gridVouchers?.FirstOrDefault(v => string.Equals(v.VoucherNo, _searchVoucherNo.Trim(), StringComparison.OrdinalIgnoreCase));
@@ -239,7 +233,6 @@
         _toType = match.ToType ?? _toType;
         _toPartyId = match.ToPartyId;
         _toAccountId = match.ToAccountId;
-        _successMessage = $"Editing {match.VoucherNo} — make changes and click Update {Title}.";
     }
 
     private void ResetFormToNew()
@@ -291,7 +284,6 @@
     private async Task SaveAsync()
     {
         _error = null;
-        _successMessage = null;
         try
         {
             if (_editingVoucherId is not null)
@@ -300,8 +292,7 @@
                     _date, _seasonId, _amount, _refNo, _description,
                     _fromType, _fromPartyId, _fromAccountId,
                     _toType, _toPartyId, _toAccountId);
-                var result = await Api.UpdateVoucherAsync(_editingVoucherId.Value, request);
-                _successMessage = $"{Title} {result.VoucherNo} updated.";
+                await Api.UpdateVoucherAsync(_editingVoucherId.Value, request);
                 await RefreshBalancesAsync();
                 ResetFormToNew();
             }
@@ -311,8 +302,7 @@
                     VoucherKind, _date, _seasonId, _amount, _refNo, _description,
                     _fromType, _fromPartyId, _fromAccountId,
                     _toType, _toPartyId, _toAccountId);
-                var result = VoucherKind == VoucherType.Payment ? await Api.CreatePaymentAsync(request) : await Api.CreateReceiptAsync(request);
-                _successMessage = $"{Title} {result.VoucherNo} saved.";
+                await (VoucherKind == VoucherType.Payment ? Api.CreatePaymentAsync(request) : Api.CreateReceiptAsync(request));
                 await RefreshBalancesAsync();
                 ResetFormToNew();
                 await PeekVoucherNoAsync();
