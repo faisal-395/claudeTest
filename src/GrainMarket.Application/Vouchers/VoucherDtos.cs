@@ -14,8 +14,7 @@ public record VoucherDto(
 public record CreatePaymentOrReceiptRequest(
     VoucherType VoucherType, DateTime Date, int SeasonId, decimal Amount, string? RefNo, string? Description,
     LedgerPartyRefType FromType, int? FromPartyId, int? FromAccountId,
-    LedgerPartyRefType ToType, int? ToPartyId, int? ToAccountId,
-    string? VoucherNo = null);
+    LedgerPartyRefType ToType, int? ToPartyId, int? ToAccountId);
 
 public record NextVoucherNoDto(string VoucherNo);
 

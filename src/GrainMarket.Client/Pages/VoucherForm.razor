@@ -154,7 +154,7 @@
     private List<PartyDto>? _parties;
     private List<ChartOfAccountDto>? _accounts;
     private List<VoucherDto>? _gridVouchers;
-    private string? _reservedVoucherNo;
+    private string? _nextVoucherNo;
     private string? _error;
     private string? _successMessage;
 
@@ -175,7 +175,7 @@
     private int? _toPartyId;
     private int? _toAccountId;
 
-    private string? DisplayedVoucherNo => _editingVoucherId is not null ? _editingVoucherNo : _reservedVoucherNo;
+    private string? DisplayedVoucherNo => _editingVoucherId is not null ? _editingVoucherNo : _nextVoucherNo;
 
     private decimal? SelectedFromPartyBalance => _parties?.FirstOrDefault(p => p.Id == _fromPartyId)?.CurrentBalance;
     private decimal? SelectedFromAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _fromAccountId)?.CurrentBalance;
@@ -199,7 +199,7 @@
             _parties = await Api.GetPartiesAsync();
             _accounts = await Api.GetChartOfAccountsAsync();
             ResetFormToNew();
-            await ReserveVoucherNoAsync();
+            await PeekVoucherNoAsync();
             await LoadGridVouchersAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
@@ -263,10 +263,13 @@
         if (_accounts?.Count > 0) { _fromAccountId = _accounts[0].Id; _toAccountId = _accounts[0].Id; }
     }
 
-    private async Task ReserveVoucherNoAsync()
+    // Read-only preview of what the next voucher number will be — never consumes it. The server
+    // only actually generates (and advances) the number inside CreatePaymentAsync/CreateReceiptAsync
+    // when the voucher is saved, so just opening this page no longer skips a number.
+    private async Task PeekVoucherNoAsync()
     {
-        var next = VoucherKind == VoucherType.Payment ? await Api.ReserveNextPaymentNoAsync() : await Api.ReserveNextReceiptNoAsync();
-        _reservedVoucherNo = next.VoucherNo;
+        var next = VoucherKind == VoucherType.Payment ? await Api.PeekNextPaymentNoAsync() : await Api.PeekNextReceiptNoAsync();
+        _nextVoucherNo = next.VoucherNo;
     }
 
     private async Task LoadGridVouchersAsync()
@@ -296,12 +299,11 @@
                 var request = new CreatePaymentOrReceiptRequest(
                     VoucherKind, _date, _seasonId, _amount, _refNo, _description,
                     _fromType, _fromPartyId, _fromAccountId,
-                    _toType, _toPartyId, _toAccountId,
-                    _reservedVoucherNo);
+                    _toType, _toPartyId, _toAccountId);
                 var result = VoucherKind == VoucherType.Payment ? await Api.CreatePaymentAsync(request) : await Api.CreateReceiptAsync(request);
                 _successMessage = $"{Title} {result.VoucherNo} saved.";
                 ResetFormToNew();
-                await ReserveVoucherNoAsync();
+                await PeekVoucherNoAsync();
             }
             await LoadGridVouchersAsync();
         }

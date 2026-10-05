@@ -40,8 +40,11 @@ public class VoucherService : IVoucherService
         return ToDto(voucher, balances);
     }
 
-    public async Task<NextVoucherNoDto> ReserveNextVoucherNoAsync(VoucherType type, CancellationToken ct = default) =>
-        new(await _numberGenerator.NextAsync(PrefixFor(type), ct));
+    // Read-only preview — never consumes a number. The real one is only generated, and the
+    // sequence only advances, inside CreatePaymentOrReceiptAsync when the voucher actually saves;
+    // simply opening the Payment/Receipt screen (or abandoning it unsaved) no longer burns one.
+    public async Task<NextVoucherNoDto> PeekNextVoucherNoAsync(VoucherType type, CancellationToken ct = default) =>
+        new(await _numberGenerator.PeekNextAsync(PrefixFor(type), 0, ct));
 
     public async Task<VoucherDto> CreatePaymentOrReceiptAsync(CreatePaymentOrReceiptRequest request, CancellationToken ct = default)
     {
@@ -51,7 +54,7 @@ public class VoucherService : IVoucherService
         var voucher = new Voucher
         {
             VoucherType = request.VoucherType,
-            VoucherNo = request.VoucherNo ?? await _numberGenerator.NextAsync(PrefixFor(request.VoucherType), ct),
+            VoucherNo = await _numberGenerator.NextAsync(PrefixFor(request.VoucherType), 0, ct),
             Date = request.Date,
             SeasonId = request.SeasonId,
             Amount = request.Amount,

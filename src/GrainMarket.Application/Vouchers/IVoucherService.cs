@@ -7,10 +7,11 @@ public interface IVoucherService
     Task<List<VoucherDto>> GetAllAsync(VoucherType? type = null, int? seasonId = null, CancellationToken ct = default);
     Task<VoucherDto> GetByIdAsync(int id, CancellationToken ct = default);
 
-    /// <summary>Reserves (consumes) the next PV/RV number immediately, so the Payment/Receipt
-    /// screen can show it before Save — matches Purchase/Sale Invoice's reserve-ahead pattern. Left
-    /// unsaved, that number is simply skipped. VoucherType.Journal is not a valid argument here.</summary>
-    Task<NextVoucherNoDto> ReserveNextVoucherNoAsync(VoucherType type, CancellationToken ct = default);
+    /// <summary>Read-only preview of the next PV/RV number — never consumes it. The real number is
+    /// only generated (and the sequence only advances) when the voucher is actually saved via
+    /// CreatePaymentOrReceiptAsync, so merely opening the Payment/Receipt screen never burns one.
+    /// VoucherType.Journal is not a valid argument here.</summary>
+    Task<NextVoucherNoDto> PeekNextVoucherNoAsync(VoucherType type, CancellationToken ct = default);
     Task<VoucherDto> CreatePaymentOrReceiptAsync(CreatePaymentOrReceiptRequest request, CancellationToken ct = default);
 
     /// <summary>Reverses the voucher's existing ledger postings and re-posts fresh ones for the new

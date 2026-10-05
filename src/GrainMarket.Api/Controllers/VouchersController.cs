@@ -30,18 +30,18 @@ public class VouchersController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<VoucherDto>> GetById(int id, CancellationToken ct) => Ok(await _service.GetByIdAsync(id, ct));
 
-    // Reserves (consumes) the next PV number immediately, so the Payment screen can show it before
-    // Save — matches Purchase/Sale Invoice's reserve-ahead pattern. Left unsaved, that number is
-    // simply skipped.
+    // Read-only preview of the next PV number — never consumes it. The real number is only
+    // generated (and the sequence only advances) by CreatePayment below when the voucher is
+    // actually saved, so just opening the Payment screen never burns one.
     [ModulePermission(ModuleName.Payment, PermissionAction.Create)]
     [HttpGet("payment/next-voucher-no")]
-    public async Task<ActionResult<NextVoucherNoDto>> ReserveNextPaymentNo(CancellationToken ct)
-        => Ok(await _service.ReserveNextVoucherNoAsync(VoucherType.Payment, ct));
+    public async Task<ActionResult<NextVoucherNoDto>> PeekNextPaymentNo(CancellationToken ct)
+        => Ok(await _service.PeekNextVoucherNoAsync(VoucherType.Payment, ct));
 
     [ModulePermission(ModuleName.Receipt, PermissionAction.Create)]
     [HttpGet("receipt/next-voucher-no")]
-    public async Task<ActionResult<NextVoucherNoDto>> ReserveNextReceiptNo(CancellationToken ct)
-        => Ok(await _service.ReserveNextVoucherNoAsync(VoucherType.Receipt, ct));
+    public async Task<ActionResult<NextVoucherNoDto>> PeekNextReceiptNo(CancellationToken ct)
+        => Ok(await _service.PeekNextVoucherNoAsync(VoucherType.Receipt, ct));
 
     [ModulePermission(ModuleName.Payment, PermissionAction.Create)]
     [HttpPost("payment")]
