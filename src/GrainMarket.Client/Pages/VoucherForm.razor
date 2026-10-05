@@ -1,8 +1,8 @@
 @using GrainMarket.Application.Common
 @inject ApiClient Api
 
-<div style="display:grid;grid-template-columns:4fr 5fr;gap:20px;align-items:start;">
-    <div>
+<div style="display:grid;grid-template-columns:4fr 5fr;grid-template-rows:minmax(0,1fr);gap:20px;flex:1 1 auto;min-height:0;overflow:hidden;">
+    <div style="overflow-y:auto;min-height:0;">
         <h1 class="page-title">@Title</h1>
 
         @if (_error is not null)
@@ -94,8 +94,8 @@
         </div>
     </div>
 
-    <div>
-        <h3 style="margin-top:0;">@(Title)s on @_date.ToString("yyyy-MM-dd")</h3>
+    <div style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+        <h3 style="margin-top:0;flex:0 0 auto;">@(Title)s on @_date.ToString("yyyy-MM-dd")</h3>
         @if (_gridVouchers is null)
         {
             <p>Loading…</p>
@@ -106,7 +106,7 @@
         }
         else
         {
-            <div class="batch-results-grid-wrapper">
+            <div class="batch-results-grid-wrapper batch-results-grid-wrapper-scroll">
                 <table class="data-grid">
                     <thead><tr><th>Voucher #</th><th>From</th><th>To</th><th style="text-align:right;">Amount</th><th>Description</th></tr></thead>
                     <tbody>
