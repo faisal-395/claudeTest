@@ -26,7 +26,7 @@
                 </div>
                 <div>
                     <label>Date</label>
-                    <input type="date" @bind="_date" style="width:140px;" />
+                    <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="width:140px;" />
                 </div>
             </div>
 
@@ -40,7 +40,8 @@
                 </select>
                 @if (_fromType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
                 {
-                    <div class="batch-readonly-figure" style="margin-top:6px;">@FixedAccountLabel(_fromType)</div>
+                    <div class="batch-readonly-figure">@(FixedAccountFor(_fromType)?.Name ?? "…")</div>
+                    <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(FixedAccountFor(_fromType)?.CurrentBalance.ToString("N2") ?? "0.00")</div>
                 }
                 else if (_fromType == LedgerPartyRefType.Party)
                 {
@@ -64,7 +65,8 @@
                 </select>
                 @if (_toType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
                 {
-                    <div class="batch-readonly-figure" style="margin-top:6px;">@FixedAccountLabel(_toType)</div>
+                    <div class="batch-readonly-figure">@(FixedAccountFor(_toType)?.Name ?? "…")</div>
+                    <div class="batch-readonly-figure" style="margin-top:6px;">Balance: Rs @(FixedAccountFor(_toType)?.CurrentBalance.ToString("N2") ?? "0.00")</div>
                 }
                 else if (_toType == LedgerPartyRefType.Party)
                 {
@@ -93,20 +95,14 @@
     </div>
 
     <div>
-        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px;">
-            <h3 style="margin:0;">@(Title)s</h3>
-            <div>
-                <label style="margin-right:6px;">Date</label>
-                <input type="date" value="@_gridDate.ToString("yyyy-MM-dd")" @onchange="OnGridDateChanged" style="width:150px;" />
-            </div>
-        </div>
+        <h3 style="margin-top:0;">@(Title)s on @_date.ToString("yyyy-MM-dd")</h3>
         @if (_gridVouchers is null)
         {
             <p>Loading…</p>
         }
         else if (_gridVouchers.Count == 0)
         {
-            <p style="color:#777;">No @(Title)s on @_gridDate.ToString("yyyy-MM-dd").</p>
+            <p style="color:#777;">No @(Title)s on @_date.ToString("yyyy-MM-dd").</p>
         }
         else
         {
@@ -146,7 +142,6 @@
     private List<PartyDto>? _parties;
     private List<ChartOfAccountDto>? _accounts;
     private List<VoucherDto>? _gridVouchers;
-    private DateTime _gridDate = DateTime.Today;
     private string? _reservedVoucherNo;
     private string? _error;
     private string? _successMessage;
@@ -175,11 +170,8 @@
     private decimal? SelectedToPartyBalance => _parties?.FirstOrDefault(p => p.Id == _toPartyId)?.CurrentBalance;
     private decimal? SelectedToAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _toAccountId)?.CurrentBalance;
 
-    private string FixedAccountLabel(LedgerPartyRefType type)
-    {
-        var account = _accounts?.FirstOrDefault(a => a.Code == (type == LedgerPartyRefType.Cash ? DomainConstants.CashAccountCode : DomainConstants.BankAccountCode));
-        return account is null ? "…" : $"{account.Name}: Rs {account.CurrentBalance:N2}";
-    }
+    private ChartOfAccountDto? FixedAccountFor(LedgerPartyRefType type) =>
+        _accounts?.FirstOrDefault(a => a.Code == (type == LedgerPartyRefType.Cash ? DomainConstants.CashAccountCode : DomainConstants.BankAccountCode));
 
     protected override async Task OnInitializedAsync()
     {
@@ -206,18 +198,9 @@
         if (e.Key == "Enter") SearchGridVoucher();
     }
 
-    private async Task OnGridDateChanged(ChangeEventArgs e)
-    {
-        if (DateTime.TryParse(e.Value?.ToString(), out var picked))
-        {
-            _gridDate = picked;
-            await LoadGridVouchersAsync();
-        }
-    }
-
     // Looks up the entered number only among the vouchers currently shown in the grid (same kind,
-    // same selected date) — never the full voucher history — and loads it into the form fields for
-    // editing in place via UpdateVoucherAsync.
+    // same date as the form's own Date field) — never the full voucher history — and loads it into
+    // the form fields for editing in place via UpdateVoucherAsync.
     private void SearchGridVoucher()
     {
         _error = null;
@@ -227,7 +210,7 @@
         var match = _gridVouchers?.FirstOrDefault(v => string.Equals(v.VoucherNo, _searchVoucherNo.Trim(), StringComparison.OrdinalIgnoreCase));
         if (match is null)
         {
-            _error = $"No {Title} numbered \"{_searchVoucherNo}\" found on {_gridDate:yyyy-MM-dd}.";
+            _error = $"No {Title} numbered \"{_searchVoucherNo}\" found on {_date:yyyy-MM-dd}.";
             return;
         }
 
@@ -277,7 +260,7 @@
     private async Task LoadGridVouchersAsync()
     {
         var all = await Api.GetVouchersAsync(VoucherKind);
-        _gridVouchers = all.Where(v => v.Date.Date == _gridDate.Date).OrderByDescending(v => v.Id).ToList();
+        _gridVouchers = all.Where(v => v.Date.Date == _date.Date).OrderByDescending(v => v.Id).ToList();
     }
 
     private async Task SaveAsync()
