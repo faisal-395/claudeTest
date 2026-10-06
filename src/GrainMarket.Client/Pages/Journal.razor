@@ -90,12 +90,17 @@
                 <input @bind="_refNo" style="@($"{FieldStyle}width:140px;")" />
             </div>
 
+            @if (CreditAndDebitAreSame)
+            {
+                <div class="invalid-total">Credit and Debit must be different.</div>
+            }
+
             <div style="display:flex; justify-content:flex-end; gap:10px;">
                 @if (_editingVoucherId is not null)
                 {
                     <button class="btn secondary" @onclick="ResetFormToNew">Cancel</button>
                 }
-                <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">@(_editingVoucherId is null ? "Save" : "Update")</button>
+                <button class="btn" disabled="@(_amount <= 0 || CreditAndDebitAreSame)" @onclick="SaveAsync">@(_editingVoucherId is null ? "Save" : "Update")</button>
                 @if (_lastSavedVoucherId is not null)
                 {
                     <a class="btn secondary" href="print/voucher/@_lastSavedVoucherId" target="_blank">Print</a>
@@ -196,6 +201,11 @@
     private decimal? SelectedCreditAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _creditAccountId)?.CurrentBalance;
     private decimal? SelectedDebitPartyBalance => _parties?.FirstOrDefault(p => p.Id == _debitPartyId)?.CurrentBalance;
     private decimal? SelectedDebitAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _debitAccountId)?.CurrentBalance;
+
+    // Mirrors the server's own check (VoucherSides.AreTheSame in VoucherValidators.cs) so the
+    // mistake shows up immediately instead of only after Save round-trips to the server.
+    private bool CreditAndDebitAreSame => _creditType == _debitType &&
+        (_creditType == LedgerPartyRefType.Party ? _creditPartyId == _debitPartyId : _creditAccountId == _debitAccountId);
 
     // Same Cash/Bank-family narrowing as VoucherForm's AccountsFor — see its comment for why this
     // is found by NAME ("Cash"/"Bank") rather than a fixed account code, and only returns the
