@@ -23,19 +23,16 @@
         <div><label>Amount</label><input type="number" step="0.01" @bind="_amount" /></div>
         <div>
             <label>Paid From</label>
-            <select @bind="_paidFrom">
+            <select @bind="_paidFrom" @bind:after="OnPaidFromChanged">
                 <option value="@LedgerPartyRefType.Cash">Cash</option>
                 <option value="@LedgerPartyRefType.Bank">Bank</option>
                 <option value="@LedgerPartyRefType.Account">Other Account</option>
             </select>
         </div>
-        @if (_paidFrom == LedgerPartyRefType.Account)
-        {
-            <div>
-                <label>Account</label>
-                <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_paidFromAccountId ?? 0)" ValueChanged="@(v => _paidFromAccountId = v)" Placeholder="Search account…" />
-            </div>
-        }
+        <div>
+            <label>@(_paidFrom == LedgerPartyRefType.Account ? "Account" : _paidFrom == LedgerPartyRefType.Cash ? "Cash Account" : "Bank Account")</label>
+            <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_paidFrom)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_paidFromAccountId ?? 0)" ValueChanged="@(v => _paidFromAccountId = v)" Placeholder="@PlaceholderFor(_paidFrom)" />
+        </div>
         <div style="grid-column: span 2;"><label>Description</label><input @bind="_description" style="width:100%;" /></div>
         <div style="grid-column: span 2;">
             <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">Save Expense</button>
@@ -62,16 +59,50 @@
             _accounts = await Api.GetChartOfAccountsAsync();
             var firstExpense = _accounts.FirstOrDefault(a => a.AccountTypeId == DomainConstants.ExpenseAccountTypeId);
             if (firstExpense is not null) _expenseAccountId = firstExpense.Id;
-            if (_accounts.Count > 0) _paidFromAccountId = _accounts[0].Id;
+            _paidFromAccountId = AccountsFor(_paidFrom).FirstOrDefault()?.Id;
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    // Same Cash/Bank-family narrowing as VoucherForm's AccountsFor — see its comment for why Cash
+    // recognizes an account parented to either "Cash" (the group) or "Cash in Hand" (a specific
+    // account that happens to sit in that group).
+    private List<ChartOfAccountDto> AccountsFor(LedgerPartyRefType type)
+    {
+        if (_accounts is null) return new();
+        if (type == LedgerPartyRefType.Account) return _accounts;
+
+        if (type == LedgerPartyRefType.Bank)
+        {
+            var bank = _accounts.FirstOrDefault(a => a.Code == DomainConstants.BankAccountCode);
+            if (bank is null) return new();
+            return _accounts.Where(a => a.Id == bank.Id || a.ParentAccountId == bank.Id).ToList();
+        }
+
+        var cashInHand = _accounts.FirstOrDefault(a => a.Code == DomainConstants.CashAccountCode);
+        if (cashInHand is null) return new();
+        var cashGroupId = cashInHand.ParentAccountId;
+        return _accounts.Where(a => a.Id == cashInHand.Id || a.ParentAccountId == cashGroupId || a.ParentAccountId == cashInHand.Id).ToList();
+    }
+
+    private static string PlaceholderFor(LedgerPartyRefType type) => type switch
+    {
+        LedgerPartyRefType.Cash => "Search cash account…",
+        LedgerPartyRefType.Bank => "Search bank account…",
+        _ => "Search account…"
+    };
+
+    private void OnPaidFromChanged()
+    {
+        var family = AccountsFor(_paidFrom);
+        if (!family.Any(a => a.Id == _paidFromAccountId)) _paidFromAccountId = family.FirstOrDefault()?.Id;
     }
 
     private async Task SaveAsync()
     {
         _error = null;
         _successMessage = null;
-        var request = new CreateExpenseRequest(_date, _expenseAccountId, _amount, _description, _paidFrom, _paidFrom == LedgerPartyRefType.Account ? _paidFromAccountId : null);
+        var request = new CreateExpenseRequest(_date, _expenseAccountId, _amount, _description, _paidFrom, _paidFromAccountId);
         try
         {
             var result = await Api.CreateExpenseAsync(request);

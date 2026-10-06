@@ -213,9 +213,15 @@
         }
 
         var cashInHand = _accounts.FirstOrDefault(a => a.Code == DomainConstants.CashAccountCode);
-        var cashGroupId = cashInHand?.ParentAccountId;
-        if (cashGroupId is null) return cashInHand is null ? new() : new() { cashInHand };
-        return _accounts.Where(a => a.ParentAccountId == cashGroupId).ToList();
+        if (cashInHand is null) return new();
+
+        // Setup > Chart of Accounts offers both "Cash" (the group) and "Cash in Hand" (a specific
+        // account that happens to sit in that group) as valid parents — someone adding a new cash
+        // account like "Petty Cash" could reasonably pick either one. Treat both as meaning "this is
+        // a cash account" instead of only recognizing accounts parented to the group, so it shows up
+        // here either way.
+        var cashGroupId = cashInHand.ParentAccountId;
+        return _accounts.Where(a => a.Id == cashInHand.Id || a.ParentAccountId == cashGroupId || a.ParentAccountId == cashInHand.Id).ToList();
     }
 
     private static string PlaceholderFor(LedgerPartyRefType type) => type switch

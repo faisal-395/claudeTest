@@ -32,10 +32,19 @@ public class ExpenseService : IExpenseService
         if (!await _db.ChartOfAccounts.AnyAsync(a => a.Id == request.ExpenseAccountId && !a.IsDeleted, ct))
             throw new NotFoundException(nameof(ChartOfAccount), request.ExpenseAccountId);
 
+        // Cash/Bank are no longer a single fixed account each (see VoucherService's identical
+        // comment) — request.PaidFromAccountId carries the specific one the client picked, when
+        // it picked one; only fall back to the seeded code-based account if it didn't.
+        if (request.PaidFromAccountId is not null
+            && !await _db.ChartOfAccounts.AnyAsync(a => a.Id == request.PaidFromAccountId && !a.IsDeleted, ct))
+        {
+            throw new NotFoundException(nameof(ChartOfAccount), request.PaidFromAccountId.Value);
+        }
+
         var paidFromAccountId = request.PaidFrom switch
         {
-            LedgerPartyRefType.Cash => await GetAccountIdByCodeAsync(DomainConstants.CashAccountCode, ct),
-            LedgerPartyRefType.Bank => await GetAccountIdByCodeAsync(DomainConstants.BankAccountCode, ct),
+            LedgerPartyRefType.Cash => request.PaidFromAccountId ?? await GetAccountIdByCodeAsync(DomainConstants.CashAccountCode, ct),
+            LedgerPartyRefType.Bank => request.PaidFromAccountId ?? await GetAccountIdByCodeAsync(DomainConstants.BankAccountCode, ct),
             _ => request.PaidFromAccountId!.Value
         };
 
