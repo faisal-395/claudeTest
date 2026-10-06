@@ -7,7 +7,7 @@
 <div style="background:var(--brand-heading-bg); text-align:center; padding:8px 0; margin:-12px 0 6px; border-radius:4px;">
     <h3 style="margin:0; color:var(--brand-primary); font-size:1.4rem; font-weight:600;">General Voucher</h3>
 </div>
-<div style="display:grid;grid-template-columns:4fr 5fr;gap:20px;align-items:start;">
+<div style="display:grid;grid-template-columns:minmax(0,4fr) minmax(0,5fr);gap:20px;align-items:start;">
     <div>
         @if (_error is not null)
         {
@@ -27,7 +27,7 @@
                 <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:150px;")" />
             </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+            <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px;">
             <div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label style="@LabelStyle flex:0 0 60px;">Credit:</label>
