@@ -1,7 +1,9 @@
 @using GrainMarket.Application.Common
 @inject ApiClient Api
 
-<h3 style="margin:-12px 0 6px;text-align:center;">@Title</h3>
+<div style="text-align:center; margin:-12px 0 6px;">
+    <h3 class="page-title" style="margin:0;">@Title</h3>
+</div>
 <div style="display:grid;grid-template-columns:4fr 5fr;gap:20px;align-items:start;">
     <div>
         @if (_error is not null)
@@ -37,12 +39,18 @@
                 @if (_fromType == LedgerPartyRefType.Party)
                 {
                     <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
-                    <div class="batch-readonly-figure" style="margin-top:6px; text-align:right;">Balance: Rs @(SelectedFromPartyBalance?.ToString("N2") ?? "0.00")</div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                        <label style="@LabelStyle flex:0 0 60px;">Balance:</label>
+                        <div class="batch-readonly-figure" style="width:150px; text-align:right;">Rs @(SelectedFromPartyBalance?.ToString("N2") ?? "0.00")</div>
+                    </div>
                 }
                 else
                 {
                     <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_fromType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_fromAccountId ?? 0)" ValueChanged="@(v => _fromAccountId = v)" Placeholder="@PlaceholderFor(_fromType)" />
-                    <div class="batch-readonly-figure" style="margin-top:6px; text-align:right;">Balance: Rs @(SelectedFromAccountBalance?.ToString("N2") ?? "0.00")</div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                        <label style="@LabelStyle flex:0 0 60px;">Balance:</label>
+                        <div class="batch-readonly-figure" style="width:150px; text-align:right;">Rs @(SelectedFromAccountBalance?.ToString("N2") ?? "0.00")</div>
+                    </div>
                 }
                 </div>
             </div>
@@ -61,12 +69,18 @@
                 @if (_toType == LedgerPartyRefType.Party)
                 {
                     <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
-                    <div class="batch-readonly-figure" style="margin-top:6px; text-align:right;">Balance: Rs @(SelectedToPartyBalance?.ToString("N2") ?? "0.00")</div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                        <label style="@LabelStyle flex:0 0 60px;">Balance:</label>
+                        <div class="batch-readonly-figure" style="width:150px; text-align:right;">Rs @(SelectedToPartyBalance?.ToString("N2") ?? "0.00")</div>
+                    </div>
                 }
                 else
                 {
                     <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_toType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_toAccountId ?? 0)" ValueChanged="@(v => _toAccountId = v)" Placeholder="@PlaceholderFor(_toType)" />
-                    <div class="batch-readonly-figure" style="margin-top:6px; text-align:right;">Balance: Rs @(SelectedToAccountBalance?.ToString("N2") ?? "0.00")</div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                        <label style="@LabelStyle flex:0 0 60px;">Balance:</label>
+                        <div class="batch-readonly-figure" style="width:150px; text-align:right;">Rs @(SelectedToAccountBalance?.ToString("N2") ?? "0.00")</div>
+                    </div>
                 }
                 </div>
             </div>
