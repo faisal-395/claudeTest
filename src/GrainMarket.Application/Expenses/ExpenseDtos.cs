@@ -11,4 +11,10 @@ public record CreateExpenseRequest(
     DateTime Date, int ExpenseAccountId, decimal Amount, string? Description, string? RefNo,
     LedgerPartyRefType PaidFrom, int? PaidFromAccountId);
 
+/// <summary>Same shape as CreateExpenseRequest — editing an expense never changes its
+/// ExpenseNo, only the terms it was raised with.</summary>
+public record UpdateExpenseRequest(
+    DateTime Date, int ExpenseAccountId, decimal Amount, string? Description, string? RefNo,
+    LedgerPartyRefType PaidFrom, int? PaidFromAccountId);
+
 public record NextExpenseNoDto(string ExpenseNo);

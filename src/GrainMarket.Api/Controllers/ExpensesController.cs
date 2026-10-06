@@ -29,4 +29,9 @@ public class ExpensesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ExpenseDto>> Create(CreateExpenseRequest request, CancellationToken ct)
         => Ok(await _service.CreateAsync(request, ct));
+
+    [ModulePermission(ModuleName.Expense, PermissionAction.Edit)]
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<ExpenseDto>> Update(int id, UpdateExpenseRequest request, CancellationToken ct)
+        => Ok(await _service.UpdateAsync(id, request, ct));
 }

@@ -21,7 +21,8 @@
         <div style="display:flex; flex-direction:column; gap:12px; background:var(--brand-panel); padding:16px 20px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
             <div style="display:flex; align-items:center; gap:8px;">
                 <label style="@LabelStyle flex:0 0 90px;">Voucher #:</label>
-                <div class="batch-readonly-figure" style="width:150px;">@(_nextExpenseNo ?? "…")</div>
+                <div class="batch-readonly-figure" style="width:150px;">@(DisplayedExpenseNo ?? "…")</div>
+                <input @bind="_searchExpenseNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:140px;margin-left:auto;")" title="Type a voucher # and press Enter to find and edit it." />
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
                 <label style="@LabelStyle flex:0 0 90px;">Date:</label>
@@ -68,7 +69,11 @@
             </div>
 
             <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button class="btn" disabled="@(_amount <= 0 || _expenseAccountId <= 0 || _paidFromAccountId is null)" @onclick="SaveAsync">Save</button>
+                @if (_editingExpenseId is not null)
+                {
+                    <button class="btn secondary" @onclick="ResetFormToNew">Cancel</button>
+                }
+                <button class="btn" disabled="@(_amount <= 0 || _expenseAccountId <= 0 || _paidFromAccountId is null)" @onclick="SaveAsync">@(_editingExpenseId is null ? "Save" : "Update")</button>
             </div>
         </div>
     </div>
@@ -129,12 +134,18 @@
     private SearchSelect<ChartOfAccountDto>? _fromSearchRef;
     private bool _focusFromPending = true;
 
+    private string? _searchExpenseNo;
+    private int? _editingExpenseId;
+    private string? _editingExpenseNo;
+
     private DateTime _date = DateTime.Today;
     private int _expenseAccountId;
     private int? _paidFromAccountId;
     private decimal _amount;
     private string? _refNo;
     private string? _description;
+
+    private string? DisplayedExpenseNo => _editingExpenseId is not null ? _editingExpenseNo : _nextExpenseNo;
 
     private List<ChartOfAccountDto> ExpenseAccounts => (_accounts ?? new()).Where(a => a.AccountTypeId == DomainConstants.ExpenseAccountTypeId).ToList();
 
@@ -148,17 +159,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ResetFormToNew();
+
         try
         {
             _accounts = await Api.GetChartOfAccountsAsync();
-
-            // "From" defaults to Cash in Hand, matching the legacy software's convention — found by
-            // NAME, not a fixed account code, same reasoning as every other Cash/Bank lookup in this
-            // app (Code is a plain editable Setup > Chart of Accounts field).
-            _paidFromAccountId = _accounts.FirstOrDefault(a => string.Equals(a.Name, "Cash in Hand", StringComparison.OrdinalIgnoreCase))?.Id
-                ?? _accounts.FirstOrDefault()?.Id;
-            _expenseAccountId = ExpenseAccounts.FirstOrDefault()?.Id ?? 0;
-
+            ResetFormToNew();
             await PeekExpenseNoAsync();
             await LoadGridAsync();
         }
@@ -173,10 +179,60 @@
         if (_fromSearchRef is not null) await _fromSearchRef.FocusAsync();
     }
 
+    private void OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") SearchGridExpense();
+    }
+
+    // Looks up the entered number only among the expenses currently shown in the grid (same date
+    // as the form's own Date field) — never the full expense history — and loads it into the form
+    // fields for editing in place via UpdateExpenseAsync.
+    private void SearchGridExpense()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_searchExpenseNo)) return;
+
+        var match = _expenses?.FirstOrDefault(e => string.Equals(e.ExpenseNo, _searchExpenseNo.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (match is null)
+        {
+            _error = $"No Expense Voucher numbered \"{_searchExpenseNo}\" found on {_date:yyyy-MM-dd}.";
+            return;
+        }
+
+        _editingExpenseId = match.Id;
+        _editingExpenseNo = match.ExpenseNo;
+        _date = match.Date;
+        _refNo = match.RefNo;
+        _description = match.Description;
+        _amount = match.Amount;
+        _expenseAccountId = match.ExpenseAccountId;
+        _paidFromAccountId = match.PaidFromAccountId;
+    }
+
+    private void ResetFormToNew()
+    {
+        _focusFromPending = true;
+        _editingExpenseId = null;
+        _editingExpenseNo = null;
+        _searchExpenseNo = _nextExpenseNo;
+        _date = DateTime.Today;
+        _amount = 0;
+        _refNo = null;
+        _description = null;
+
+        // "From" defaults to Cash in Hand, matching the legacy software's convention — found by
+        // NAME, not a fixed account code, same reasoning as every other Cash/Bank lookup in this
+        // app (Code is a plain editable Setup > Chart of Accounts field).
+        _paidFromAccountId = _accounts?.FirstOrDefault(a => string.Equals(a.Name, "Cash in Hand", StringComparison.OrdinalIgnoreCase))?.Id
+            ?? _accounts?.FirstOrDefault()?.Id;
+        _expenseAccountId = ExpenseAccounts.FirstOrDefault()?.Id ?? 0;
+    }
+
     private async Task PeekExpenseNoAsync()
     {
         var next = await Api.PeekNextExpenseNoAsync();
         _nextExpenseNo = next.ExpenseNo;
+        if (_editingExpenseId is null) _searchExpenseNo = _nextExpenseNo;
     }
 
     private async Task LoadGridAsync()
@@ -212,13 +268,20 @@
         _successMessage = null;
         try
         {
-            var request = new CreateExpenseRequest(_date, _expenseAccountId, _amount, _description, _refNo, LedgerPartyRefType.Account, _paidFromAccountId);
-            var result = await Api.CreateExpenseAsync(request);
-            _successMessage = $"Expense {result.ExpenseNo} saved.";
-            _amount = 0;
-            _description = null;
-            _refNo = null;
+            if (_editingExpenseId is not null)
+            {
+                var request = new UpdateExpenseRequest(_date, _expenseAccountId, _amount, _description, _refNo, LedgerPartyRefType.Account, _paidFromAccountId);
+                var result = await Api.UpdateExpenseAsync(_editingExpenseId.Value, request);
+                _successMessage = $"Expense {result.ExpenseNo} updated.";
+            }
+            else
+            {
+                var request = new CreateExpenseRequest(_date, _expenseAccountId, _amount, _description, _refNo, LedgerPartyRefType.Account, _paidFromAccountId);
+                var result = await Api.CreateExpenseAsync(request);
+                _successMessage = $"Expense {result.ExpenseNo} saved.";
+            }
             await RefreshBalancesAsync();
+            ResetFormToNew();
             await PeekExpenseNoAsync();
             await LoadGridAsync();
         }
