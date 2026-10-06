@@ -92,7 +92,7 @@
             <tbody>
                 @foreach (var line in GridLines)
                 {
-                    <tr>
+                    <tr style="@(line.Credit > 0 ? "background:var(--brand-credit-panel-bg);color:var(--brand-credit-panel-text);" : "background:var(--brand-debit-panel-bg);color:var(--brand-debit-panel-text);")">
                         <td>@(line.Id?.ToString() ?? "—")</td>
                         <td>@line.Title</td>
                         <td><a href="print/voucher/@line.VoucherId">@line.VoucherNo</a></td>
