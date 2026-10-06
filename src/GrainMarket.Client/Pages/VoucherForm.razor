@@ -22,7 +22,7 @@
                 <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:140px;")" />
             </div>
 
-            <div style="display:flex; flex-direction:column; gap:10px; background:var(--brand-surface); border:1px solid #e2e2e2; border-radius:4px; padding:10px 12px;">
+            <div style="display:flex; flex-direction:column; gap:10px; border:1px solid #e2e2e2; border-radius:4px; padding:10px 12px;">
             <div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label style="@LabelStyle flex:0 0 40px;">From:</label>
@@ -82,10 +82,22 @@
                 <label style="@LabelStyle flex:0 0 90px;">Description:</label>
                 <input @bind="_description" style="@($"{FieldStyle}flex:1 1 auto;")" />
             </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                @if (_editingVoucherId is not null)
+                {
+                    <button class="btn secondary" @onclick="ResetFormToNew">Cancel</button>
+                }
+                <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">@(_editingVoucherId is null ? "Save" : "Update")</button>
+                @if (_lastSavedVoucherId is not null)
+                {
+                    <a class="btn secondary" href="print/voucher/@_lastSavedVoucherId" target="_blank">Print</a>
+                }
+            </div>
         </div>
     </div>
 
-    <div style="display:flex; flex-direction:column; height:100%;">
+    <div>
         @if (_gridVouchers is null)
         {
             <p>Loading…</p>
@@ -121,18 +133,6 @@
                 </table>
             </div>
         }
-
-        <div style="position:sticky; bottom:0; background:var(--brand-panel); margin-top:12px; padding:12px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.08); display:flex; justify-content:flex-end; gap:10px;">
-            @if (_editingVoucherId is not null)
-            {
-                <button class="btn secondary" @onclick="ResetFormToNew">Cancel</button>
-            }
-            <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">@(_editingVoucherId is null ? "Save" : "Update")</button>
-            @if (_lastSavedVoucherId is not null)
-            {
-                <a class="btn secondary" href="print/voucher/@_lastSavedVoucherId" target="_blank">Print</a>
-            }
-        </div>
     </div>
 </div>
 
@@ -147,7 +147,7 @@
     private string? _nextVoucherNo;
     private string? _error;
 
-    private const string FieldStyle = "padding:6px 8px;border:1px solid #ccc;border-radius:3px;box-sizing:border-box;";
+    private const string FieldStyle = "padding:6px 8px;border:1px solid #ccc;border-radius:3px;box-sizing:border-box;text-align:left;";
     private const string LabelStyle = "font-weight:600;color:#444;font-size:0.92rem;white-space:nowrap;";
 
     private string? _searchVoucherNo;
