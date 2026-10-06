@@ -39,11 +39,11 @@
                 <div style="margin-top:6px; margin-left:98px; margin-right:140px;">
                 @if (_fromType == LedgerPartyRefType.Party)
                 {
-                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
+                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_fromPartyId ?? 0)" ValueChanged="@(async v => { _fromPartyId = v; await FocusAmountAsync(); })" Placeholder="Search party…" />
                 }
                 else
                 {
-                    <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_fromType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_fromAccountId ?? 0)" ValueChanged="@(v => _fromAccountId = v)" Placeholder="@PlaceholderFor(_fromType)" />
+                    <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_fromType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_fromAccountId ?? 0)" ValueChanged="@(async v => { _fromAccountId = v; await FocusAmountAsync(); })" Placeholder="@PlaceholderFor(_fromType)" />
                 }
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
@@ -65,11 +65,11 @@
                 <div style="margin-top:6px; margin-left:98px; margin-right:140px;">
                 @if (_toType == LedgerPartyRefType.Party)
                 {
-                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
+                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_toPartyId ?? 0)" ValueChanged="@(async v => { _toPartyId = v; await FocusAmountAsync(); })" Placeholder="Search party…" />
                 }
                 else
                 {
-                    <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_toType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_toAccountId ?? 0)" ValueChanged="@(v => _toAccountId = v)" Placeholder="@PlaceholderFor(_toType)" />
+                    <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_toType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_toAccountId ?? 0)" ValueChanged="@(async v => { _toAccountId = v; await FocusAmountAsync(); })" Placeholder="@PlaceholderFor(_toType)" />
                 }
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
@@ -81,7 +81,7 @@
 
             <div style="display:flex; align-items:center; gap:8px;">
                 <label style="@LabelStyle flex:0 0 90px;">Amount:</label>
-                <input type="number" step="0.01" @bind="_amount" style="@($"{FieldStyle}width:150px;")" />
+                <input @ref="_amountInputRef" type="number" step="0.01" @bind="_amount" style="@($"{FieldStyle}width:150px;")" />
                 <label style="@LabelStyle flex:0 0 60px; margin-left:12px; text-align:right;">Ref No:</label>
                 <input @bind="_refNo" style="@($"{FieldStyle}width:140px;margin-left:auto;")" />
             </div>
@@ -167,6 +167,8 @@
     // the form resets for the next entry.
     private int? _lastSavedVoucherId;
 
+    private ElementReference _amountInputRef;
+
     private DateTime _date = DateTime.Today;
     private int _seasonId;
     private decimal _amount;
@@ -231,6 +233,14 @@
     {
         var family = AccountsFor(_toType);
         if (!family.Any(a => a.Id == _toAccountId)) _toAccountId = family.FirstOrDefault()?.Id;
+    }
+
+    // Picking who/what the From or To side is lands you on Amount next — the usual next thing to
+    // type — rather than leaving focus on the picker (or wherever the browser happens to put it)
+    // after a selection closes it.
+    private async Task FocusAmountAsync()
+    {
+        await _amountInputRef.FocusAsync();
     }
 
     protected override async Task OnInitializedAsync()
