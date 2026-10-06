@@ -57,8 +57,11 @@
                 }
             </table>
             <hr />
-            @if (_voucher.VoucherType == VoucherType.Journal)
+            @if (_voucher.VoucherType == VoucherType.Journal && _voucher.DebitAccountId is not null)
             {
+                <!-- Old-style journal voucher, raised before General Voucher gained party/account
+                     picking via FromType/ToType — still carries its own DebitAccountId/CreditAccountId
+                     pair instead. -->
                 <table style="width:100%;">
                     <tr>
                         <td>Debit Account: <b>@_voucher.DebitAccountName</b></td>
@@ -69,6 +72,23 @@
                         <tr>
                             <td>@(_voucher.DebitDescription ?? "—")</td>
                             <td style="text-align:right;">@(_voucher.CreditDescription ?? "—")</td>
+                        </tr>
+                    }
+                </table>
+            }
+            else if (_voucher.VoucherType == VoucherType.Journal)
+            {
+                <!-- General Voucher convention: Dr the To side, Cr the From side. -->
+                <table style="width:100%;">
+                    <tr>
+                        <td>Credit: <b>@(_voucher.FromPartyName ?? _voucher.FromAccountName ?? _voucher.FromType?.ToString())</b></td>
+                        <td style="text-align:right;">Debit: <b>@(_voucher.ToPartyName ?? _voucher.ToAccountName ?? _voucher.ToType?.ToString())</b></td>
+                    </tr>
+                    @if (_voucher.CreditDescription is { Length: > 0 } || _voucher.DebitDescription is { Length: > 0 })
+                    {
+                        <tr>
+                            <td>@(_voucher.CreditDescription ?? "—")</td>
+                            <td style="text-align:right;">@(_voucher.DebitDescription ?? "—")</td>
                         </tr>
                     }
                 </table>

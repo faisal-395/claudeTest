@@ -1,88 +1,387 @@
 @page "/journal"
+@using GrainMarket.Application.Common
 @inject ApiClient Api
 
 <RequireAuth>
-    <h1 class="page-title">Journal Voucher</h1>
+<div class="theme-journal">
+<div style="background:var(--brand-heading-bg); text-align:center; padding:8px 0; margin:-12px 0 6px; border-radius:4px;">
+    <h3 style="margin:0; color:var(--brand-primary); font-size:1.4rem; font-weight:600;">General Voucher</h3>
+</div>
+<div style="display:grid;grid-template-columns:4fr 5fr;gap:20px;align-items:start;">
+    <div>
+        @if (_error is not null)
+        {
+            <div class="error-banner">@_error</div>
+        }
 
-    @if (_error is not null)
-    {
-        <div class="error-banner">@_error</div>
-    }
-    @if (_successMessage is not null)
-    {
-        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
-    }
+        <div style="display:flex; flex-direction:column; gap:12px; background:var(--brand-panel); padding:16px 20px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+            <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <label style="@LabelStyle flex:0 0 90px;">Voucher #:</label>
+                    <div class="batch-readonly-figure" style="width:150px;">@(DisplayedVoucherNo ?? "…")</div>
+                </div>
+                <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:140px;margin-left:auto;")" title="Type a voucher # and press Enter to find and edit it." />
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <label style="@LabelStyle flex:0 0 90px;">Date:</label>
+                <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:150px;")" />
+            </div>
 
-    <div class="form-grid">
-        <div><label>Date</label><input type="date" @bind="_date" /></div>
-        <div>
-            <label>Season</label>
-            <select @bind="_seasonId">
-                @if (_seasons is not null) { @foreach (var s in _seasons) { <option value="@s.Id">@s.Name</option> } }
-            </select>
-        </div>
-        <div><label>Amount</label><input type="number" step="0.01" @bind="_amount" /></div>
-        <div><label>Ref No</label><input @bind="_refNo" /></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+            <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <label style="@LabelStyle flex:0 0 60px;">Credit:</label>
+                    <select @bind="_creditType" @bind:after="OnCreditTypeChanged" style="@($"{FieldStyle}width:140px;")">
+                        <option value="@LedgerPartyRefType.Party">Party</option>
+                        <option value="@LedgerPartyRefType.Account">Account</option>
+                        <option value="@LedgerPartyRefType.Cash">Cash</option>
+                        <option value="@LedgerPartyRefType.Bank">Bank</option>
+                    </select>
+                </div>
+                <div style="margin-top:6px;">
+                @if (_creditType == LedgerPartyRefType.Party)
+                {
+                    <SearchSelect @ref="_creditPartySearchRef" TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_creditPartyId ?? 0)" ValueChanged="@(async v => { _creditPartyId = v; await FocusAmountAsync(); })" Placeholder="Search party…" />
+                }
+                else
+                {
+                    <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_creditType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_creditAccountId ?? 0)" ValueChanged="@(async v => { _creditAccountId = v; await FocusAmountAsync(); })" Placeholder="@PlaceholderFor(_creditType)" />
+                }
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                    <label style="@LabelStyle flex:0 0 60px;">Balance:</label>
+                    <div class="batch-readonly-figure" style="width:140px; text-align:right;">Rs @((_creditType == LedgerPartyRefType.Party ? SelectedCreditPartyBalance : SelectedCreditAccountBalance)?.ToString("N2") ?? "0.00")</div>
+                </div>
+                <div style="margin-top:6px;">
+                    <label style="@LabelStyle">Description:</label>
+                    <input @bind="_creditDescription" style="@($"{FieldStyle}width:100%;margin-top:4px;")" />
+                </div>
+            </div>
 
-        <div>
-            <label>Debit Account</label>
-            <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" @bind-Value="_debitAccountId" Placeholder="Search account…" />
-        </div>
-        <div><label>Debit Description</label><input @bind="_debitDescription" /></div>
+            <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <label style="@LabelStyle flex:0 0 60px;">Debit:</label>
+                    <select @bind="_debitType" @bind:after="OnDebitTypeChanged" style="@($"{FieldStyle}width:140px;")">
+                        <option value="@LedgerPartyRefType.Party">Party</option>
+                        <option value="@LedgerPartyRefType.Account">Account</option>
+                        <option value="@LedgerPartyRefType.Cash">Cash</option>
+                        <option value="@LedgerPartyRefType.Bank">Bank</option>
+                    </select>
+                </div>
+                <div style="margin-top:6px;">
+                @if (_debitType == LedgerPartyRefType.Party)
+                {
+                    <SearchSelect @ref="_debitPartySearchRef" TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_debitPartyId ?? 0)" ValueChanged="@(async v => { _debitPartyId = v; await FocusAmountAsync(); })" Placeholder="Search party…" />
+                }
+                else
+                {
+                    <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_debitType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_debitAccountId ?? 0)" ValueChanged="@(async v => { _debitAccountId = v; await FocusAmountAsync(); })" Placeholder="@PlaceholderFor(_debitType)" />
+                }
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                    <label style="@LabelStyle flex:0 0 60px;">Balance:</label>
+                    <div class="batch-readonly-figure" style="width:140px; text-align:right;">Rs @((_debitType == LedgerPartyRefType.Party ? SelectedDebitPartyBalance : SelectedDebitAccountBalance)?.ToString("N2") ?? "0.00")</div>
+                </div>
+                <div style="margin-top:6px;">
+                    <label style="@LabelStyle">Description:</label>
+                    <input @bind="_debitDescription" style="@($"{FieldStyle}width:100%;margin-top:4px;")" />
+                </div>
+            </div>
+            </div>
 
-        <div>
-            <label>Credit Account</label>
-            <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" @bind-Value="_creditAccountId" Placeholder="Search account…" />
-        </div>
-        <div><label>Credit Description</label><input @bind="_creditDescription" /></div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <label style="@LabelStyle flex:0 0 90px;">Amount:</label>
+                <input @ref="_amountInputRef" type="number" step="0.01" @bind="_amount" style="@($"{FieldStyle}width:150px;")" />
+                <label style="@LabelStyle flex:0 0 60px; margin-left:12px; text-align:right;">Ref No:</label>
+                <input @bind="_refNo" style="@($"{FieldStyle}width:140px;margin-left:auto;")" />
+            </div>
 
-        <div style="grid-column: span 2;">
-            @if (_debitAccountId == _creditAccountId)
-            {
-                <div class="invalid-total">Debit and credit accounts must be different.</div>
-            }
-            <button class="btn" disabled="@(_amount <= 0 || _debitAccountId == _creditAccountId)" @onclick="SaveAsync">Save Journal</button>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                @if (_editingVoucherId is not null)
+                {
+                    <button class="btn secondary" @onclick="ResetFormToNew">Cancel</button>
+                }
+                <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">@(_editingVoucherId is null ? "Save" : "Update")</button>
+                @if (_lastSavedVoucherId is not null)
+                {
+                    <a class="btn secondary" href="print/voucher/@_lastSavedVoucherId" target="_blank">Print</a>
+                }
+            </div>
         </div>
     </div>
+
+    <div>
+        @if (_gridVouchers is null)
+        {
+            <p>Loading…</p>
+        }
+        else if (_gridVouchers.Count == 0)
+        {
+            <p style="color:#777;">No General Vouchers on @_date.ToString("yyyy-MM-dd").</p>
+        }
+        else
+        {
+            <div class="batch-results-grid-wrapper" style="max-height:65vh;overflow-y:auto;">
+                <table class="data-grid">
+                    <thead><tr><th>Voucher #</th><th>Credit</th><th>Debit</th><th style="text-align:right;">Amount</th><th>Ref No</th></tr></thead>
+                    <tbody>
+                        @foreach (var v in _gridVouchers)
+                        {
+                            <tr>
+                                <td><a href="print/voucher/@v.Id">@v.VoucherNo</a></td>
+                                <td>@(v.FromPartyName ?? v.FromAccountName ?? v.FromType?.ToString())</td>
+                                <td>@(v.ToPartyName ?? v.ToAccountName ?? v.ToType?.ToString())</td>
+                                <td style="text-align:right;">@v.Amount.ToString("N2")</td>
+                                <td>@(v.RefNo ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr style="font-weight:600;">
+                            <td colspan="3">Total</td>
+                            <td style="text-align:right;">@_gridVouchers.Sum(v => v.Amount).ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+</div>
 </RequireAuth>
 
 @code {
     private List<SeasonDto>? _seasons;
+    private List<PartyDto>? _parties;
     private List<ChartOfAccountDto>? _accounts;
+    private List<VoucherDto>? _gridVouchers;
+    private string? _nextVoucherNo;
     private string? _error;
-    private string? _successMessage;
+
+    private const string FieldStyle = "padding:6px 8px;border:1px solid #ccc;border-radius:3px;box-sizing:border-box;text-align:left;";
+    private const string LabelStyle = "font-weight:600;color:#444;font-size:0.92rem;white-space:nowrap;";
+
+    private string? _searchVoucherNo;
+    private int? _editingVoucherId;
+    private string? _editingVoucherNo;
+
+    // Keeps the Print button usable right after Save — ResetFormToNew() clears _editingVoucherId,
+    // so without this the id of the voucher that was just created/updated would be lost the moment
+    // the form resets for the next entry.
+    private int? _lastSavedVoucherId;
+
+    private ElementReference _amountInputRef;
+    private SearchSelect<PartyDto>? _creditPartySearchRef;
+    private SearchSelect<PartyDto>? _debitPartySearchRef;
+    private bool _focusCreditPending = true;
 
     private DateTime _date = DateTime.Today;
     private int _seasonId;
     private decimal _amount;
     private string? _refNo;
-    private int _debitAccountId;
-    private string? _debitDescription;
-    private int _creditAccountId;
+
+    // Credit = the voucher's "From" side, Debit = its "To" side (same Dr-To/Cr-From convention
+    // Payment/Receipt already post with — see VoucherService) — just named Credit/Debit here since
+    // a General Voucher has no natural "From"/"To" direction of its own. Each side keeps its own
+    // description (Voucher.CreditDescription/DebitDescription), unlike Payment/Receipt's one shared
+    // Description.
+    private LedgerPartyRefType _creditType;
+    private int? _creditPartyId;
+    private int? _creditAccountId;
     private string? _creditDescription;
+    private LedgerPartyRefType _debitType;
+    private int? _debitPartyId;
+    private int? _debitAccountId;
+    private string? _debitDescription;
+
+    private string? DisplayedVoucherNo => _editingVoucherId is not null ? _editingVoucherNo : _nextVoucherNo;
+
+    private decimal? SelectedCreditPartyBalance => _parties?.FirstOrDefault(p => p.Id == _creditPartyId)?.CurrentBalance;
+    private decimal? SelectedCreditAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _creditAccountId)?.CurrentBalance;
+    private decimal? SelectedDebitPartyBalance => _parties?.FirstOrDefault(p => p.Id == _debitPartyId)?.CurrentBalance;
+    private decimal? SelectedDebitAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _debitAccountId)?.CurrentBalance;
+
+    // Same Cash/Bank-family narrowing as VoucherForm's AccountsFor — see its comment for why this
+    // is found by NAME ("Cash"/"Bank") rather than a fixed account code, and only returns the
+    // group's children, never the group itself.
+    private List<ChartOfAccountDto> AccountsFor(LedgerPartyRefType type)
+    {
+        if (_accounts is null) return new();
+        if (type == LedgerPartyRefType.Account) return _accounts;
+
+        var groupName = type == LedgerPartyRefType.Cash ? "Cash" : "Bank";
+        var group = _accounts.FirstOrDefault(a => string.Equals(a.Name, groupName, StringComparison.OrdinalIgnoreCase));
+        if (group is null) return new();
+        return _accounts.Where(a => a.ParentAccountId == group.Id).ToList();
+    }
+
+    private static string PlaceholderFor(LedgerPartyRefType type) => type switch
+    {
+        LedgerPartyRefType.Cash => "Search cash account…",
+        LedgerPartyRefType.Bank => "Search bank account…",
+        _ => "Search account…"
+    };
+
+    private void OnCreditTypeChanged()
+    {
+        var family = AccountsFor(_creditType);
+        if (!family.Any(a => a.Id == _creditAccountId)) _creditAccountId = family.FirstOrDefault()?.Id;
+    }
+
+    private void OnDebitTypeChanged()
+    {
+        var family = AccountsFor(_debitType);
+        if (!family.Any(a => a.Id == _debitAccountId)) _debitAccountId = family.FirstOrDefault()?.Id;
+    }
+
+    // Picking who/what either side is lands you on Amount next, same as VoucherForm.
+    private async Task FocusAmountAsync()
+    {
+        await _amountInputRef.FocusAsync();
+    }
 
     protected override async Task OnInitializedAsync()
     {
+        ResetFormToNew();
+
         try
         {
             _seasons = await Api.GetSeasonsAsync();
+            _parties = await Api.GetPartiesAsync();
             _accounts = await Api.GetChartOfAccountsAsync();
-            if (_seasons.Count > 0) _seasonId = _seasons[0].Id;
-            if (_accounts.Count > 0) { _debitAccountId = _accounts[0].Id; _creditAccountId = _accounts.Count > 1 ? _accounts[1].Id : _accounts[0].Id; }
+            ResetFormToNew();
+            await PeekVoucherNoAsync();
+            await LoadGridVouchersAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    // Fires after every render, but only acts when ResetFormToNew (open, new-entry reset, or
+    // Cancel) actually asked for it — moves focus to the Credit party picker so typing can start
+    // immediately instead of leaving focus wherever the browser happened to put it.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusCreditPending) return;
+        _focusCreditPending = false;
+
+        if (_creditPartySearchRef is not null) await _creditPartySearchRef.FocusAsync();
+    }
+
+    private void OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") SearchGridVoucher();
+    }
+
+    // Looks up the entered number only among the vouchers currently shown in the grid (same date
+    // as the form's own Date field) — never the full voucher history — and loads it into the form
+    // fields for editing in place via UpdateJournalAsync.
+    private void SearchGridVoucher()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_searchVoucherNo)) return;
+
+        var match = _gridVouchers?.FirstOrDefault(v => string.Equals(v.VoucherNo, _searchVoucherNo.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (match is null)
+        {
+            _error = $"No General Voucher numbered \"{_searchVoucherNo}\" found on {_date:yyyy-MM-dd}.";
+            return;
+        }
+
+        _editingVoucherId = match.Id;
+        _editingVoucherNo = match.VoucherNo;
+        _date = match.Date;
+        _seasonId = match.SeasonId;
+        _refNo = match.RefNo;
+        _amount = match.Amount;
+        _creditType = match.FromType ?? _creditType;
+        _creditPartyId = match.FromPartyId;
+        _creditAccountId = match.FromAccountId;
+        _creditDescription = match.CreditDescription;
+        _debitType = match.ToType ?? _debitType;
+        _debitPartyId = match.ToPartyId;
+        _debitAccountId = match.ToAccountId;
+        _debitDescription = match.DebitDescription;
+    }
+
+    private void ResetFormToNew()
+    {
+        _focusCreditPending = true;
+        _editingVoucherId = null;
+        _editingVoucherNo = null;
+        _searchVoucherNo = _nextVoucherNo;
+        _date = DateTime.Today;
+        if (_seasons?.Count > 0) _seasonId = _seasons[0].Id;
+        _amount = 0;
+        _refNo = null;
+        _creditDescription = null;
+        _debitDescription = null;
+
+        // No natural default direction for a General Voucher (unlike Payment/Receipt, which always
+        // involve Cash/Bank on one side) — defaults both sides to Party, the most common case for a
+        // free-form Credit/Debit entry.
+        _creditType = LedgerPartyRefType.Party;
+        _debitType = LedgerPartyRefType.Party;
+        if (_parties?.Count > 0) { _creditPartyId = _parties[0].Id; _debitPartyId = _parties[0].Id; }
+        _creditAccountId = AccountsFor(_creditType).FirstOrDefault()?.Id;
+        _debitAccountId = AccountsFor(_debitType).FirstOrDefault()?.Id;
+    }
+
+    // Read-only preview of what the next voucher number will be — never consumes it. The server
+    // only actually generates (and advances) the number inside CreateJournalAsync when the voucher
+    // is saved, so just opening this page never skips a number.
+    private async Task PeekVoucherNoAsync()
+    {
+        var next = await Api.PeekNextJournalNoAsync();
+        _nextVoucherNo = next.VoucherNo;
+        if (_editingVoucherId is null) _searchVoucherNo = _nextVoucherNo;
+    }
+
+    private async Task LoadGridVouchersAsync()
+    {
+        var all = await Api.GetVouchersAsync(VoucherType.Journal);
+        _gridVouchers = all.Where(v => v.Date.Date == _date.Date).OrderByDescending(v => v.Id).ToList();
+    }
+
+    // Re-fetches parties/accounts so every Credit/Debit balance figure on screen reflects the
+    // voucher that was just saved.
+    private async Task RefreshBalancesAsync()
+    {
+        _parties = await Api.GetPartiesAsync();
+        _accounts = await Api.GetChartOfAccountsAsync();
     }
 
     private async Task SaveAsync()
     {
         _error = null;
-        _successMessage = null;
-        var request = new CreateJournalRequest(_date, _seasonId, _amount, _refNo, _debitAccountId, _debitDescription, _creditAccountId, _creditDescription);
         try
         {
-            var result = await Api.CreateJournalAsync(request);
-            _successMessage = $"Journal Voucher {result.VoucherNo} saved.";
-            _amount = 0; _refNo = null; _debitDescription = null; _creditDescription = null;
+            if (_editingVoucherId is not null)
+            {
+                var request = new UpdatePaymentOrReceiptRequest(
+                    _date, _seasonId, _amount, _refNo, null,
+                    _creditType, _creditPartyId, _creditAccountId,
+                    _debitType, _debitPartyId, _debitAccountId,
+                    _creditDescription, _debitDescription);
+                var saved = await Api.UpdateJournalAsync(_editingVoucherId.Value, request);
+                _lastSavedVoucherId = saved.Id;
+                await RefreshBalancesAsync();
+                ResetFormToNew();
+            }
+            else
+            {
+                var request = new CreatePaymentOrReceiptRequest(
+                    VoucherType.Journal, _date, _seasonId, _amount, _refNo, null,
+                    _creditType, _creditPartyId, _creditAccountId,
+                    _debitType, _debitPartyId, _debitAccountId,
+                    _creditDescription, _debitDescription);
+                var saved = await Api.CreateJournalAsync(request);
+                _lastSavedVoucherId = saved.Id;
+                await RefreshBalancesAsync();
+                ResetFormToNew();
+                await PeekVoucherNoAsync();
+            }
+            await LoadGridVouchersAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }

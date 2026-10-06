@@ -60,8 +60,8 @@
                             <td>@v.VoucherType</td>
                             <td>@v.VoucherNo</td>
                             <td>@v.Date.ToString("yyyy-MM-dd")</td>
-                            <td>@(v.VoucherType == VoucherType.Journal ? v.DebitAccountName : (v.FromPartyName ?? v.FromAccountName ?? v.FromType?.ToString()))</td>
-                            <td>@(v.VoucherType == VoucherType.Journal ? v.CreditAccountName : (v.ToPartyName ?? v.ToAccountName ?? v.ToType?.ToString()))</td>
+                            <td>@(v.DebitAccountId is not null ? v.DebitAccountName : (v.FromPartyName ?? v.FromAccountName ?? v.FromType?.ToString()))</td>
+                            <td>@(v.CreditAccountId is not null ? v.CreditAccountName : (v.ToPartyName ?? v.ToAccountName ?? v.ToType?.ToString()))</td>
                             <td>@v.Amount.ToString("N2")</td>
                             <td>@(v.Description ?? "—")</td>
                             <td>@(v.IsCancelled ? "Cancelled" : "Open")</td>

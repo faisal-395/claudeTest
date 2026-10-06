@@ -43,6 +43,11 @@ public class VouchersController : ControllerBase
     public async Task<ActionResult<NextVoucherNoDto>> PeekNextReceiptNo(CancellationToken ct)
         => Ok(await _service.PeekNextVoucherNoAsync(VoucherType.Receipt, ct));
 
+    [ModulePermission(ModuleName.Journal, PermissionAction.Create)]
+    [HttpGet("journal/next-voucher-no")]
+    public async Task<ActionResult<NextVoucherNoDto>> PeekNextJournalNo(CancellationToken ct)
+        => Ok(await _service.PeekNextVoucherNoAsync(VoucherType.Journal, ct));
+
     [ModulePermission(ModuleName.Payment, PermissionAction.Create)]
     [HttpPost("payment")]
     public async Task<ActionResult<VoucherDto>> CreatePayment(CreatePaymentOrReceiptRequest request, CancellationToken ct)
@@ -68,11 +73,16 @@ public class VouchersController : ControllerBase
 
     [ModulePermission(ModuleName.Journal, PermissionAction.Create)]
     [HttpPost("journal")]
-    public async Task<ActionResult<VoucherDto>> CreateJournal(CreateJournalRequest request, CancellationToken ct)
+    public async Task<ActionResult<VoucherDto>> CreateJournal(CreatePaymentOrReceiptRequest request, CancellationToken ct)
     {
-        var result = await _service.CreateJournalAsync(request, ct);
+        var result = await _service.CreatePaymentOrReceiptAsync(request with { VoucherType = VoucherType.Journal }, ct);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
+
+    [ModulePermission(ModuleName.Journal, PermissionAction.Edit)]
+    [HttpPut("journal/{id:int}")]
+    public async Task<ActionResult<VoucherDto>> UpdateJournal(int id, UpdatePaymentOrReceiptRequest request, CancellationToken ct)
+        => Ok(await _service.UpdatePaymentOrReceiptAsync(id, request, ct));
 
     [ModulePermission(ModuleName.Payment, PermissionAction.Delete)]
     [HttpPost("{id:int}/cancel")]

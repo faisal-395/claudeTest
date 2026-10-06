@@ -60,6 +60,8 @@ public class VoucherService : IVoucherService
             Amount = request.Amount,
             RefNo = request.RefNo,
             Description = request.Description,
+            CreditDescription = request.CreditDescription,
+            DebitDescription = request.DebitDescription,
             FromType = request.FromType,
             FromPartyId = request.FromType == LedgerPartyRefType.Party ? request.FromPartyId : null,
             FromAccountId = request.FromType is LedgerPartyRefType.Account or LedgerPartyRefType.Cash or LedgerPartyRefType.Bank
@@ -73,14 +75,14 @@ public class VoucherService : IVoucherService
         _db.Vouchers.Add(voucher);
         await _db.SaveChangesAsync(ct);
 
-        var sourceType = request.VoucherType == VoucherType.Payment ? LedgerSourceType.Payment : LedgerSourceType.Receipt;
+        var sourceType = SourceTypeFor(request.VoucherType);
         // The voucher number itself is surfaced separately (LedgerRowDto.ReferenceNo, resolved from
         // SourceId), so the description here is just the human-readable text.
         var description = request.Description ?? request.VoucherType.ToString();
 
-        // Convention: Dr the "To" side, Cr the "From" side, for both Payment and Receipt.
-        await PostRefAsync(request.ToType, voucher.ToPartyId, voucher.ToAccountId, voucher.Date, request.Amount, 0m, sourceType, voucher.Id, description, ct);
-        await PostRefAsync(request.FromType, voucher.FromPartyId, voucher.FromAccountId, voucher.Date, 0m, request.Amount, sourceType, voucher.Id, description, ct);
+        // Convention: Dr the "To" side, Cr the "From" side, for Payment, Receipt, and Journal alike.
+        await PostRefAsync(request.ToType, voucher.ToPartyId, voucher.ToAccountId, voucher.Date, request.Amount, 0m, sourceType, voucher.Id, request.DebitDescription ?? description, ct);
+        await PostRefAsync(request.FromType, voucher.FromPartyId, voucher.FromAccountId, voucher.Date, 0m, request.Amount, sourceType, voucher.Id, request.CreditDescription ?? description, ct);
 
         await _db.SaveChangesAsync(ct);
         return await GetByIdAsync(voucher.Id, ct);
@@ -89,15 +91,15 @@ public class VoucherService : IVoucherService
     public async Task<VoucherDto> UpdatePaymentOrReceiptAsync(int id, UpdatePaymentOrReceiptRequest request, CancellationToken ct = default)
     {
         var voucher = await LoadAsync(id, ct);
-        if (voucher.VoucherType is not (VoucherType.Payment or VoucherType.Receipt))
-            throw new InvalidCalculationException("Only a Payment or Receipt voucher can be edited here.");
+        if (voucher.VoucherType is not (VoucherType.Payment or VoucherType.Receipt or VoucherType.Journal) || voucher.FromType is null)
+            throw new InvalidCalculationException("Only a Payment, Receipt, or Journal voucher raised with a From/To party or account can be edited here.");
         if (voucher.IsCancelled)
             throw new InvalidCalculationException("A cancelled voucher cannot be edited.");
 
         await EnsureRefValidAsync(request.FromType, request.FromPartyId, request.FromAccountId, ct);
         await EnsureRefValidAsync(request.ToType, request.ToPartyId, request.ToAccountId, ct);
 
-        var sourceType = voucher.VoucherType == VoucherType.Payment ? LedgerSourceType.Payment : LedgerSourceType.Receipt;
+        var sourceType = SourceTypeFor(voucher.VoucherType);
         var reversalReason = $"Reversal: {voucher.VoucherNo} edited";
 
         // Reverse the existing postings before anything on the voucher is mutated — mirrors
@@ -117,6 +119,8 @@ public class VoucherService : IVoucherService
         voucher.Amount = request.Amount;
         voucher.RefNo = request.RefNo;
         voucher.Description = request.Description;
+        voucher.CreditDescription = request.CreditDescription;
+        voucher.DebitDescription = request.DebitDescription;
         voucher.FromType = request.FromType;
         voucher.FromPartyId = request.FromType == LedgerPartyRefType.Party ? request.FromPartyId : null;
         voucher.FromAccountId = request.FromType is LedgerPartyRefType.Account or LedgerPartyRefType.Cash or LedgerPartyRefType.Bank
@@ -130,42 +134,11 @@ public class VoucherService : IVoucherService
         await _db.SaveChangesAsync(ct);
 
         var description = request.Description ?? voucher.VoucherType.ToString();
-        await PostRefAsync(request.ToType, voucher.ToPartyId, voucher.ToAccountId, voucher.Date, request.Amount, 0m, sourceType, voucher.Id, description, ct);
-        await PostRefAsync(request.FromType, voucher.FromPartyId, voucher.FromAccountId, voucher.Date, 0m, request.Amount, sourceType, voucher.Id, description, ct);
+        await PostRefAsync(request.ToType, voucher.ToPartyId, voucher.ToAccountId, voucher.Date, request.Amount, 0m, sourceType, voucher.Id, request.DebitDescription ?? description, ct);
+        await PostRefAsync(request.FromType, voucher.FromPartyId, voucher.FromAccountId, voucher.Date, 0m, request.Amount, sourceType, voucher.Id, request.CreditDescription ?? description, ct);
 
         await _db.SaveChangesAsync(ct);
         return await GetByIdAsync(id, ct);
-    }
-
-    public async Task<VoucherDto> CreateJournalAsync(CreateJournalRequest request, CancellationToken ct = default)
-    {
-        if (!await _db.ChartOfAccounts.AnyAsync(a => a.Id == request.DebitAccountId && !a.IsDeleted, ct))
-            throw new NotFoundException(nameof(ChartOfAccount), request.DebitAccountId);
-        if (!await _db.ChartOfAccounts.AnyAsync(a => a.Id == request.CreditAccountId && !a.IsDeleted, ct))
-            throw new NotFoundException(nameof(ChartOfAccount), request.CreditAccountId);
-
-        var voucher = new Voucher
-        {
-            VoucherType = VoucherType.Journal,
-            VoucherNo = await _numberGenerator.NextAsync("JV", ct),
-            Date = request.Date,
-            SeasonId = request.SeasonId,
-            Amount = request.Amount,
-            RefNo = request.RefNo,
-            DebitAccountId = request.DebitAccountId,
-            DebitDescription = request.DebitDescription,
-            CreditAccountId = request.CreditAccountId,
-            CreditDescription = request.CreditDescription
-        };
-
-        _db.Vouchers.Add(voucher);
-        await _db.SaveChangesAsync(ct);
-
-        await _ledger.PostAccountEntryAsync(request.DebitAccountId, voucher.Date, request.Amount, 0, LedgerSourceType.Journal, voucher.Id, request.DebitDescription ?? "Journal Entry", ct);
-        await _ledger.PostAccountEntryAsync(request.CreditAccountId, voucher.Date, 0, request.Amount, LedgerSourceType.Journal, voucher.Id, request.CreditDescription ?? "Journal Entry", ct);
-
-        await _db.SaveChangesAsync(ct);
-        return await GetByIdAsync(voucher.Id, ct);
     }
 
     public async Task CancelAsync(int id, CancellationToken ct = default)
@@ -177,14 +150,19 @@ public class VoucherService : IVoucherService
         voucher.UpdatedAtUtc = _clock.UtcNow;
 
         var reason = $"Reversal: {voucher.VoucherNo} cancelled";
-        if (voucher.VoucherType == VoucherType.Journal)
+
+        // A Journal voucher raised before General Voucher gained party/account picking via
+        // FromType/ToType is the only case still carrying DebitAccountId/CreditAccountId instead —
+        // reverse that pair directly. Every other voucher (Payment, Receipt, and a Journal entry
+        // raised the new way) goes through the shared FromType/ToType path below.
+        if (voucher.VoucherType == VoucherType.Journal && voucher.FromType is null)
         {
             await _ledger.PostAccountEntryAsync(voucher.DebitAccountId!.Value, voucher.Date, 0, voucher.Amount, LedgerSourceType.Journal, voucher.Id, reason, ct);
             await _ledger.PostAccountEntryAsync(voucher.CreditAccountId!.Value, voucher.Date, voucher.Amount, 0, LedgerSourceType.Journal, voucher.Id, reason, ct);
         }
         else
         {
-            var sourceType = voucher.VoucherType == VoucherType.Payment ? LedgerSourceType.Payment : LedgerSourceType.Receipt;
+            var sourceType = SourceTypeFor(voucher.VoucherType);
             await PostRefAsync(voucher.ToType!.Value, voucher.ToPartyId, voucher.ToAccountId, voucher.Date, 0m, voucher.Amount, sourceType, voucher.Id, reason, ct);
             await PostRefAsync(voucher.FromType!.Value, voucher.FromPartyId, voucher.FromAccountId, voucher.Date, voucher.Amount, 0m, sourceType, voucher.Id, reason, ct);
         }
@@ -196,7 +174,16 @@ public class VoucherService : IVoucherService
     {
         VoucherType.Payment => "PV",
         VoucherType.Receipt => "RV",
-        _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Only Payment or Receipt have a reservable voucher number.")
+        VoucherType.Journal => "JV",
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown voucher type.")
+    };
+
+    private static LedgerSourceType SourceTypeFor(VoucherType type) => type switch
+    {
+        VoucherType.Payment => LedgerSourceType.Payment,
+        VoucherType.Receipt => LedgerSourceType.Receipt,
+        VoucherType.Journal => LedgerSourceType.Journal,
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown voucher type.")
     };
 
     // Cash and Bank are no longer a single fixed account each — a site can set up several (e.g.

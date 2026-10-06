@@ -7,7 +7,7 @@ public class CreatePaymentOrReceiptRequestValidator : AbstractValidator<CreatePa
 {
     public CreatePaymentOrReceiptRequestValidator()
     {
-        RuleFor(x => x.VoucherType).Must(t => t is VoucherType.Payment or VoucherType.Receipt);
+        RuleFor(x => x.VoucherType).Must(t => t is VoucherType.Payment or VoucherType.Receipt or VoucherType.Journal);
         RuleFor(x => x.SeasonId).GreaterThan(0);
         RuleFor(x => x.Amount).GreaterThan(0);
 
@@ -20,7 +20,9 @@ public class CreatePaymentOrReceiptRequestValidator : AbstractValidator<CreatePa
             .Must(x => !(x.FromType == x.ToType && x.FromType == LedgerPartyRefType.Cash))
             .WithMessage("From and To cannot both be Cash.")
             .Must(x => !(x.FromType == x.ToType && x.FromType == LedgerPartyRefType.Bank))
-            .WithMessage("From and To cannot both be Bank.");
+            .WithMessage("From and To cannot both be Bank.")
+            .Must(x => !VoucherSides.AreTheSame(x.FromType, x.FromPartyId, x.FromAccountId, x.ToType, x.ToPartyId, x.ToAccountId))
+            .WithMessage("From and To must be different.");
     }
 }
 
@@ -40,20 +42,20 @@ public class UpdatePaymentOrReceiptRequestValidator : AbstractValidator<UpdatePa
             .Must(x => !(x.FromType == x.ToType && x.FromType == LedgerPartyRefType.Cash))
             .WithMessage("From and To cannot both be Cash.")
             .Must(x => !(x.FromType == x.ToType && x.FromType == LedgerPartyRefType.Bank))
-            .WithMessage("From and To cannot both be Bank.");
+            .WithMessage("From and To cannot both be Bank.")
+            .Must(x => !VoucherSides.AreTheSame(x.FromType, x.FromPartyId, x.FromAccountId, x.ToType, x.ToPartyId, x.ToAccountId))
+            .WithMessage("From and To must be different.");
     }
 }
 
-public class CreateJournalRequestValidator : AbstractValidator<CreateJournalRequest>
+/// <summary>Shared by Create/UpdatePaymentOrReceiptRequestValidator — generalizes the old Journal
+/// page's "Debit and credit accounts must be different" check across every voucher type and every
+/// LedgerPartyRefType, not just Account.</summary>
+internal static class VoucherSides
 {
-    public CreateJournalRequestValidator()
+    public static bool AreTheSame(LedgerPartyRefType fromType, int? fromPartyId, int? fromAccountId, LedgerPartyRefType toType, int? toPartyId, int? toAccountId)
     {
-        RuleFor(x => x.SeasonId).GreaterThan(0);
-        RuleFor(x => x.Amount).GreaterThan(0);
-        RuleFor(x => x.DebitAccountId).GreaterThan(0);
-        RuleFor(x => x.CreditAccountId).GreaterThan(0);
-        RuleFor(x => x)
-            .Must(x => x.DebitAccountId != x.CreditAccountId)
-            .WithMessage("Debit and credit accounts must be different.");
+        if (fromType != toType) return false;
+        return fromType == LedgerPartyRefType.Party ? fromPartyId == toPartyId : fromAccountId == toAccountId;
     }
 }

@@ -7,7 +7,8 @@ namespace GrainMarket.Domain.Entities;
 /// Reports, Ledger, etc.). The others each override Global only within their own page, so
 /// e.g. Sale Invoice can have its own form heading/textbox/button colors without touching the
 /// sidebar or Purchase's colors. Voucher covers both Payment and Receipt — they share the same
-/// VoucherForm.razor, so one scope colors both.</summary>
+/// VoucherForm.razor, so one scope colors both. Journal (the General Voucher page) has its own
+/// scope, separate from Voucher.</summary>
 public enum ThemeScope
 {
     Global = 0,
@@ -15,7 +16,8 @@ public enum ThemeScope
     Purchase = 2,
     Kachi = 3,
     Pakki = 4,
-    Voucher = 5
+    Voucher = 5,
+    Journal = 6
 }
 
 /// <summary>Where the app's navigation lives — a single, app-wide choice (there's only ever one
