@@ -64,25 +64,19 @@
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    // Same Cash/Bank-family narrowing as VoucherForm's AccountsFor — see its comment for why Cash
-    // recognizes an account parented to either "Cash" (the group) or "Cash in Hand" (a specific
-    // account that happens to sit in that group).
+    // Same Cash/Bank-family narrowing as VoucherForm's AccountsFor — found by NAME ("Cash"/"Bank")
+    // rather than DomainConstants.CashAccountCode/BankAccountCode, since Code is a plain editable
+    // text field in Setup > Chart of Accounts and a renamed/recoded seed row would otherwise
+    // silently break a lookup keyed on one specific code value.
     private List<ChartOfAccountDto> AccountsFor(LedgerPartyRefType type)
     {
         if (_accounts is null) return new();
         if (type == LedgerPartyRefType.Account) return _accounts;
 
-        if (type == LedgerPartyRefType.Bank)
-        {
-            var bank = _accounts.FirstOrDefault(a => a.Code == DomainConstants.BankAccountCode);
-            if (bank is null) return new();
-            return _accounts.Where(a => a.Id == bank.Id || a.ParentAccountId == bank.Id).ToList();
-        }
-
-        var cashInHand = _accounts.FirstOrDefault(a => a.Code == DomainConstants.CashAccountCode);
-        if (cashInHand is null) return new();
-        var cashGroupId = cashInHand.ParentAccountId;
-        return _accounts.Where(a => a.Id == cashInHand.Id || a.ParentAccountId == cashGroupId || a.ParentAccountId == cashInHand.Id).ToList();
+        var groupName = type == LedgerPartyRefType.Cash ? "Cash" : "Bank";
+        var group = _accounts.FirstOrDefault(a => string.Equals(a.Name, groupName, StringComparison.OrdinalIgnoreCase));
+        if (group is null) return new();
+        return _accounts.Where(a => a.Id == group.Id || a.ParentAccountId == group.Id).ToList();
     }
 
     private static string PlaceholderFor(LedgerPartyRefType type) => type switch

@@ -187,41 +187,26 @@
     private decimal? SelectedToPartyBalance => _parties?.FirstOrDefault(p => p.Id == _toPartyId)?.CurrentBalance;
     private decimal? SelectedToAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _toAccountId)?.CurrentBalance;
 
-    // Cash and Bank are no longer single fixed accounts — a site can have several (e.g. "Cash in
-    // Hand" and "Dasti Cash", or any number of bank accounts) — and Cash/Bank here just narrow the
-    // same account picker used for "Account" down to the relevant family; "Account" itself still
-    // offers every chart-of-account row.
+    // Cash and Bank are no longer single fixed accounts — a site can have several (e.g. "Cash In
+    // Hand" and "Patty Cash", or any number of bank accounts) under a top-level "Cash"/"Bank"
+    // group account (set up from Setup > Chart of Accounts, Parent Account = "Cash"/"Bank"); Cash/
+    // Bank here just narrow the same account picker used for "Account" down to that family —
+    // "Account" itself still offers every chart-of-account row.
     //
-    // Bank: "Bank" (DomainConstants.BankAccountCode) is itself a plain category name, so it (plus
-    // whatever a site adds as its children) is the Bank family.
-    //
-    // Cash: "Cash in Hand" (DomainConstants.CashAccountCode) is a specific account, not a
-    // category — it's a sibling of any other cash account (e.g. "Dasti Cash"), not their parent.
-    // The AddCashAccountGroup migration gives it a proper parent named "Cash"; the Cash family is
-    // that parent's children (found via "Cash in Hand".ParentAccountId, since the "Cash" row has
-    // no fixed code of its own) — "Cash in Hand" included, since it's one of them.
+    // Found by NAME rather than DomainConstants.CashAccountCode/BankAccountCode: Code is a plain
+    // editable text field in Setup > Chart of Accounts, so a renamed or recoded seed row would
+    // silently break a lookup keyed on one specific code value. The group account itself is also
+    // included as a fallback-selectable entry (matters only if nothing has been added under it
+    // yet), not just its children.
     private List<ChartOfAccountDto> AccountsFor(LedgerPartyRefType type)
     {
         if (_accounts is null) return new();
         if (type == LedgerPartyRefType.Account) return _accounts;
 
-        if (type == LedgerPartyRefType.Bank)
-        {
-            var bank = _accounts.FirstOrDefault(a => a.Code == DomainConstants.BankAccountCode);
-            if (bank is null) return new();
-            return _accounts.Where(a => a.Id == bank.Id || a.ParentAccountId == bank.Id).ToList();
-        }
-
-        var cashInHand = _accounts.FirstOrDefault(a => a.Code == DomainConstants.CashAccountCode);
-        if (cashInHand is null) return new();
-
-        // Setup > Chart of Accounts offers both "Cash" (the group) and "Cash in Hand" (a specific
-        // account that happens to sit in that group) as valid parents — someone adding a new cash
-        // account like "Petty Cash" could reasonably pick either one. Treat both as meaning "this is
-        // a cash account" instead of only recognizing accounts parented to the group, so it shows up
-        // here either way.
-        var cashGroupId = cashInHand.ParentAccountId;
-        return _accounts.Where(a => a.Id == cashInHand.Id || a.ParentAccountId == cashGroupId || a.ParentAccountId == cashInHand.Id).ToList();
+        var groupName = type == LedgerPartyRefType.Cash ? "Cash" : "Bank";
+        var group = _accounts.FirstOrDefault(a => string.Equals(a.Name, groupName, StringComparison.OrdinalIgnoreCase));
+        if (group is null) return new();
+        return _accounts.Where(a => a.Id == group.Id || a.ParentAccountId == group.Id).ToList();
     }
 
     private static string PlaceholderFor(LedgerPartyRefType type) => type switch
