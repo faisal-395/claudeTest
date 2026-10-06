@@ -36,7 +36,7 @@
                         <option value="@LedgerPartyRefType.Account">Account</option>
                     </select>
                 </div>
-                <div style="margin-top:6px; margin-left:98px; max-width:280px;">
+                <div style="margin-top:6px; margin-left:98px; margin-right:140px;">
                 @if (_fromType == LedgerPartyRefType.Party)
                 {
                     <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
@@ -62,7 +62,7 @@
                         <option value="@LedgerPartyRefType.Account">Account</option>
                     </select>
                 </div>
-                <div style="margin-top:6px; margin-left:98px; max-width:280px;">
+                <div style="margin-top:6px; margin-left:98px; margin-right:140px;">
                 @if (_toType == LedgerPartyRefType.Party)
                 {
                     <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
