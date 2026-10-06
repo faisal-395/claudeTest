@@ -4,16 +4,18 @@ namespace GrainMarket.Domain.Entities;
 
 /// <summary>Which part of the app a row of brand colors applies to. Global is the app-wide
 /// fallback — the persistent sidebar/nav, and any page that isn't one of the other scopes (Setup,
-/// Reports, Ledger, vouchers, etc.). The others each override Global only within their own page, so
+/// Reports, Ledger, etc.). The others each override Global only within their own page, so
 /// e.g. Sale Invoice can have its own form heading/textbox/button colors without touching the
-/// sidebar or Purchase's colors.</summary>
+/// sidebar or Purchase's colors. Voucher covers both Payment and Receipt — they share the same
+/// VoucherForm.razor, so one scope colors both.</summary>
 public enum ThemeScope
 {
     Global = 0,
     SaleInvoice = 1,
     Purchase = 2,
     Kachi = 3,
-    Pakki = 4
+    Pakki = 4,
+    Voucher = 5
 }
 
 /// <summary>Where the app's navigation lives — a single, app-wide choice (there's only ever one

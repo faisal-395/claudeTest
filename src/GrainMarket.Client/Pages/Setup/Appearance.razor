@@ -4,7 +4,7 @@
 
 <RequireAuth>
     <h1 class="page-title">Appearance</h1>
-    <p style="color:#777;">Brand colors used across the app. <b>Global</b> covers the sidebar and any screen not listed below; Sale Invoice, Purchase, Kachi and Pakki each have their own colors that override Global only on their own screen. Changes apply immediately and are remembered for everyone.</p>
+    <p style="color:#777;">Brand colors used across the app. <b>Global</b> covers the sidebar and any screen not listed below; Sale Invoice, Purchase, Kachi, Pakki and Voucher (Payment and Receipt) each have their own colors that override Global only on their own screen. Changes apply immediately and are remembered for everyone.</p>
 
     @if (_error is not null)
     {
@@ -233,6 +233,7 @@
             ThemeScope.Purchase => "Purchase",
             ThemeScope.Kachi => "Kachi",
             ThemeScope.Pakki => "Pakki",
+            ThemeScope.Voucher => "Voucher (Payment & Receipt)",
             _ => "Global (sidebar & everything else)"
         };
 

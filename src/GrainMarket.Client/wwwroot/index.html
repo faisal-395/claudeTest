@@ -25,16 +25,16 @@
         // CSS custom property overrides, by writing a <style> block instead of setting properties
         // directly on <html>. Global's colors become plain `:root` rules (the sidebar, and any page
         // with no more specific scope, use these); every other scope's colors are written under its
-        // own class selector (.theme-sale-invoice, .theme-purchase, .theme-kachi, .theme-pakki) and
-        // CSS cascading automatically confines them to the matching page — see app.css's big
-        // :root comment for how that wrapper-class-per-page wiring works.
+        // own class selector (.theme-sale-invoice, .theme-purchase, .theme-kachi, .theme-pakki,
+        // .theme-voucher) and CSS cascading automatically confines them to the matching page — see
+        // app.css's big :root comment for how that wrapper-class-per-page wiring works.
         // Called once after login (see MainLayout.razor) and again right after a Setup > Appearance
         // save, so a color change is visible instantly for the person making it. Takes the
         // AppearanceSettingsDto list as-is (Blazor's JS interop serializes C# properties to
         // camelCase) rather than positional arguments, so adding another themed property later is a
         // one-line change to PROPERTY_TO_VAR here, not a signature change everywhere this is called.
         var THEME_STYLE_ELEMENT_ID = 'brand-theme-overrides';
-        var SCOPE_TO_SELECTOR = { 0: ':root', 1: '.theme-sale-invoice', 2: '.theme-purchase', 3: '.theme-kachi', 4: '.theme-pakki' };
+        var SCOPE_TO_SELECTOR = { 0: ':root', 1: '.theme-sale-invoice', 2: '.theme-purchase', 3: '.theme-kachi', 4: '.theme-pakki', 5: '.theme-voucher' };
         var PROPERTY_TO_VAR = {
             primaryColor: '--brand-primary',
             accentColor: '--brand-accent',
