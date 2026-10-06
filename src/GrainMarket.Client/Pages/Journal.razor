@@ -3,7 +3,7 @@
 @inject ApiClient Api
 
 <RequireAuth>
-<div class="theme-journal">
+<div class="theme-journal" style="padding:0 40px;">
 <div style="background:var(--brand-heading-bg); text-align:center; padding:8px 0; margin:-12px 0 6px; border-radius:4px;">
     <h3 style="margin:0; color:var(--brand-primary); font-size:1.4rem; font-weight:600;">Journal Voucher</h3>
 </div>
@@ -15,16 +15,16 @@
         }
 
         <div style="display:flex; flex-direction:column; gap:12px; background:var(--brand-panel); padding:16px 20px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-            <div style="display:flex; gap:20px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label style="@LabelStyle flex:0 0 90px;">Voucher #:</label>
                     <div class="batch-readonly-figure" style="width:150px;">@(DisplayedVoucherNo ?? "…")</div>
                 </div>
-                <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:140px;margin-left:auto;")" title="Type a voucher # and press Enter to find and edit it." />
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <label style="@LabelStyle flex:0 0 90px;">Date:</label>
-                <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:150px;")" />
+                <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:140px;")" title="Type a voucher # and press Enter to find and edit it." />
+                <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+                    <label style="@LabelStyle flex:0 0 auto;">Date:</label>
+                    <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:150px;")" />
+                </div>
             </div>
 
             <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px;">
@@ -86,8 +86,8 @@
             <div style="display:flex; align-items:center; gap:8px;">
                 <label style="@LabelStyle flex:0 0 90px;">Amount:</label>
                 <input @ref="_amountInputRef" type="number" step="0.01" @bind="_amount" style="@($"{FieldStyle}width:150px;")" />
-                <label style="@LabelStyle flex:0 0 60px; margin-left:12px; text-align:right;">Ref No:</label>
-                <input @bind="_refNo" style="@($"{FieldStyle}width:140px;margin-left:auto;")" />
+                <label style="@LabelStyle flex:0 0 60px; margin-left:20px;">Ref No:</label>
+                <input @bind="_refNo" style="@($"{FieldStyle}width:140px;")" />
             </div>
 
             <div style="display:flex; justify-content:flex-end; gap:10px;">
