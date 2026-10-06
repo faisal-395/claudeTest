@@ -65,10 +65,10 @@ public class AppearanceSettingsService : IAppearanceSettingsService
     }
 
     // Every scope otherwise shares the same class-level defaults (AppearanceSettings' own property
-    // initializers) — Kachi, Pakki, SaleInvoice, Purchase, Payment, and Receipt are the exceptions,
-    // matching the legacy software's own look (green/blue/purple/red/red/green respectively) for a
-    // brand-new row, while staying fully editable afterwards from Setup > Appearance like any other
-    // scope's colors.
+    // initializers) — Kachi, Pakki, SaleInvoice, Purchase, Payment, Receipt, and Expense are the
+    // exceptions, matching the legacy software's own look (green/blue/purple/red/red/green/red
+    // respectively) for a brand-new row, while staying fully editable afterwards from Setup >
+    // Appearance like any other scope's colors.
     // HeadingBackgroundColor is kept light enough on every one of them to pass the
     // PrimaryColor/HeadingBackgroundColor contrast check against the default (dark) PrimaryColor —
     // see UpdateAppearanceSettingsRequestValidator; the other fields (ProductPanelColor,
@@ -117,6 +117,11 @@ public class AppearanceSettingsService : IAppearanceSettingsService
                 settings.HeadingBackgroundColor = "#A5D6A7";
                 settings.GridHeaderColor = "#B7C2D1";
                 settings.GridBackgroundColor = "#D3DAE3";
+                break;
+            // Only the heading was asked for here — Expense's form panel stays the class default
+            // white, same as Payment/Receipt.
+            case ThemeScope.Expense:
+                settings.HeadingBackgroundColor = "#F4A7A7";
                 break;
         }
         return settings;

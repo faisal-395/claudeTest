@@ -34,7 +34,7 @@
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label style="@LabelStyle flex:0 0 90px;">From:</label>
                     <div style="flex:1; min-width:0;">
-                        <SearchSelect @ref="_fromSearchRef" TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_paidFromAccountId ?? 0)" ValueChanged="@(async v => { _paidFromAccountId = v; await FocusAmountAsync(); })" Placeholder="Search account…" />
+                        <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_paidFromAccountId ?? 0)" ValueChanged="@(async v => { _paidFromAccountId = v; await FocusAmountAsync(); })" Placeholder="Search account…" />
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
@@ -47,7 +47,7 @@
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label style="@LabelStyle flex:0 0 90px;">To:</label>
                     <div style="flex:1; min-width:0;">
-                        <SearchSelect TItem="ChartOfAccountDto" Items="@ExpenseAccounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@_expenseAccountId" ValueChanged="@(v => _expenseAccountId = v)" Placeholder="Search expense account…" />
+                        <SearchSelect @ref="_toSearchRef" TItem="ChartOfAccountDto" Items="@ExpenseAccounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@_expenseAccountId" ValueChanged="@(v => _expenseAccountId = v)" Placeholder="Search expense account…" />
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
@@ -131,8 +131,8 @@
     private const string LabelStyle = "font-weight:600;color:#444;font-size:0.92rem;white-space:nowrap;";
 
     private ElementReference _amountInputRef;
-    private SearchSelect<ChartOfAccountDto>? _fromSearchRef;
-    private bool _focusFromPending = true;
+    private SearchSelect<ChartOfAccountDto>? _toSearchRef;
+    private bool _focusToPending = true;
 
     private string? _searchExpenseNo;
     private int? _editingExpenseId;
@@ -173,10 +173,10 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!_focusFromPending) return;
-        _focusFromPending = false;
+        if (!_focusToPending) return;
+        _focusToPending = false;
 
-        if (_fromSearchRef is not null) await _fromSearchRef.FocusAsync();
+        if (_toSearchRef is not null) await _toSearchRef.FocusAsync();
     }
 
     private void OnSearchKeyDown(KeyboardEventArgs e)
@@ -211,7 +211,7 @@
 
     private void ResetFormToNew()
     {
-        _focusFromPending = true;
+        _focusToPending = true;
         _editingExpenseId = null;
         _editingExpenseNo = null;
         _searchExpenseNo = _nextExpenseNo;
