@@ -27,7 +27,7 @@ public class StockService : IStockService
 
     public async Task<List<StockDto>> GetStockAsync(CancellationToken ct = default)
     {
-        var products = await _db.Products
+        var products = await _db.Products.Include(p => p.ProductType)
             .Where(p => !p.IsDeleted && p.IsActive && p.Category == DomainConstants.ProductCategoryInput)
             .OrderBy(p => p.Name)
             .ToListAsync(ct);
@@ -46,7 +46,7 @@ public class StockService : IStockService
         {
             var onHandQty = onHand.GetValueOrDefault(p.Id);
             var purchasedQty = purchased.GetValueOrDefault(p.Id);
-            return new StockDto(p.Id, p.Name, p.NameUrdu, p.BaseUnit, purchasedQty, purchasedQty - onHandQty, onHandQty);
+            return new StockDto(p.Id, p.Name, p.NameUrdu, p.ProductTypeId, p.ProductType?.Name, p.BaseUnit, purchasedQty, purchasedQty - onHandQty, onHandQty);
         }).ToList();
     }
 

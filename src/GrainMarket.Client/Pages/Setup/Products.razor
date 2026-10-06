@@ -3,7 +3,13 @@
 @inject ApiClient Api
 
 <RequireAuth>
-    <h1 class="page-title">Products</h1>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title" style="margin-bottom:4px;">Products</h1>
+        <div style="display:flex;gap:16px;">
+            <a href="setup/product-types">Manage Product Types</a>
+            <a href="setup/product-units">Manage Units</a>
+        </div>
+    </div>
 
     @if (_error is not null)
     {
@@ -26,12 +32,34 @@
                 <option value="@DomainConstants.ProductCategoryInput">Input (Purchase/Sale)</option>
             </select>
         </div>
+        @if (_category == DomainConstants.ProductCategoryInput)
+        {
+            <div>
+                <label>Product Type</label>
+                <select value="@(_productTypeId?.ToString() ?? "")" @onchange="@(e => _productTypeId = int.TryParse(e.Value?.ToString(), out var v) ? v : null)">
+                    <option value="">—</option>
+                    @foreach (var t in _productTypes ?? new())
+                    {
+                        <option value="@t.Id">@t.Name</option>
+                    }
+                </select>
+            </div>
+        }
         <div>
             <label>Unit</label>
-            <input @bind="_baseUnit" list="unit-suggestions" maxlength="10" placeholder="kg" />
-            <datalist id="unit-suggestions">
-                <option value="kg" /><option value="Litre" /><option value="Bag" /><option value="Pack" /><option value="Pcs" />
-            </datalist>
+            @if (_category == DomainConstants.ProductCategoryGrain)
+            {
+                <input value="kg" disabled />
+            }
+            else
+            {
+                <select value="@_baseUnit" @onchange="@(e => _baseUnit = e.Value?.ToString() ?? "")">
+                    @foreach (var u in _units ?? new())
+                    {
+                        <option value="@u.Name">@u.Name</option>
+                    }
+                </select>
+            }
         </div>
         <div>
             <label>Default Rate</label>
@@ -62,7 +90,7 @@
     {
         <table class="data-grid">
             <thead>
-                <tr><th>Name</th><th>Urdu</th><th>Category</th><th>Unit</th><th>Rate</th><th>Sale Price</th><th>Markup %</th><th>Active</th><th></th></tr>
+                <tr><th>Name</th><th>Urdu</th><th>Category</th><th>Product Type</th><th>Unit</th><th>Rate</th><th>Sale Price</th><th>Markup %</th><th>Active</th><th></th></tr>
             </thead>
             <tbody>
                 @foreach (var p in _products)
@@ -71,6 +99,7 @@
                         <td>@p.Name</td>
                         <td class="rtl-urdu">@p.NameUrdu</td>
                         <td>@p.Category</td>
+                        <td>@(p.ProductTypeName ?? "—")</td>
                         <td>@p.BaseUnit</td>
                         <td>@p.DefaultRate.ToString("N2")</td>
                         <td>@(p.SalePrice is { } sp ? sp.ToString("N2") : "—")</td>
@@ -89,18 +118,31 @@
 
 @code {
     private List<ProductDto>? _products;
+    private List<ProductTypeDto>? _productTypes;
+    private List<ProductUnitDto>? _units;
     private int? _editingId;
     private string? _error;
 
     private string _name = "";
     private string? _nameUrdu;
     private string _category = DomainConstants.ProductCategoryGrain;
+    private int? _productTypeId;
     private string _baseUnit = "kg";
     private decimal _defaultRate;
     private decimal? _salePrice;
     private decimal? _saleMarkupPercent;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _productTypes = await Api.GetProductTypesAsync();
+            _units = await Api.GetProductUnitsAsync();
+            if (_units.Count > 0) _baseUnit = _units[0].Name;
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
@@ -111,15 +153,25 @@
     private void OnCategoryChanged(ChangeEventArgs e)
     {
         _category = e.Value?.ToString() ?? DomainConstants.ProductCategoryGrain;
-        // Grain always weighs in kg for Kachi/Pakki — reset the unit so it doesn't silently carry
-        // over an Input unit (Litre, Bag, …) left over from a previous edit. Still editable after.
-        if (_category == DomainConstants.ProductCategoryGrain) _baseUnit = "kg";
+        // Grain always weighs in kg for Kachi/Pakki, and has no Product Type — reset both so they
+        // don't silently carry over an Input value (unit, product type) left over from a previous
+        // edit. Still editable after switching back to Input.
+        if (_category == DomainConstants.ProductCategoryGrain)
+        {
+            _baseUnit = "kg";
+            _productTypeId = null;
+        }
+        else if (_units?.Count > 0)
+        {
+            _baseUnit = _units[0].Name;
+        }
     }
 
     private void Edit(ProductDto p)
     {
         _editingId = p.Id;
         _name = p.Name; _nameUrdu = p.NameUrdu; _category = p.Category ?? DomainConstants.ProductCategoryGrain;
+        _productTypeId = p.ProductTypeId;
         _baseUnit = p.BaseUnit; _defaultRate = p.DefaultRate;
         _salePrice = p.SalePrice; _saleMarkupPercent = p.SaleMarkupPercent;
     }
@@ -128,13 +180,15 @@
     {
         _editingId = null;
         _name = ""; _nameUrdu = null; _category = DomainConstants.ProductCategoryGrain;
+        _productTypeId = null;
         _baseUnit = "kg"; _defaultRate = 0; _salePrice = null; _saleMarkupPercent = null;
     }
 
     private async Task SaveAsync()
     {
         _error = null;
-        var request = new UpsertProductRequest(_name, _nameUrdu, _category, _baseUnit, _defaultRate, true, _salePrice, _saleMarkupPercent);
+        var productTypeId = _category == DomainConstants.ProductCategoryInput ? _productTypeId : null;
+        var request = new UpsertProductRequest(_name, _nameUrdu, _category, productTypeId, _baseUnit, _defaultRate, true, _salePrice, _saleMarkupPercent);
         try
         {
             if (_editingId is null) await Api.CreateProductAsync(request);

@@ -18,7 +18,7 @@ public class ProductService : IProductService
 
     public async Task<List<ProductDto>> GetAllAsync(bool includeInactive = false, string? category = null, CancellationToken ct = default)
     {
-        var query = _db.Products.Where(p => !p.IsDeleted);
+        var query = _db.Products.Include(p => p.ProductType).Where(p => !p.IsDeleted);
         if (!includeInactive) query = query.Where(p => p.IsActive);
         if (category is not null) query = query.Where(p => p.Category == category);
         var products = await query.OrderBy(p => p.Name).ToListAsync(ct);
@@ -27,7 +27,7 @@ public class ProductService : IProductService
 
     public async Task<ProductDto> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, ct)
+        var product = await _db.Products.Include(p => p.ProductType).FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, ct)
             ?? throw new NotFoundException(nameof(Product), id);
         return ToDto(product);
     }
@@ -39,6 +39,7 @@ public class ProductService : IProductService
             Name = request.Name,
             NameUrdu = request.NameUrdu,
             Category = request.Category,
+            ProductTypeId = request.ProductTypeId,
             BaseUnit = request.BaseUnit,
             DefaultRate = request.DefaultRate,
             IsActive = request.IsActive,
@@ -47,7 +48,7 @@ public class ProductService : IProductService
         };
         _db.Products.Add(product);
         await _db.SaveChangesAsync(ct);
-        return ToDto(product);
+        return await GetByIdAsync(product.Id, ct);
     }
 
     public async Task<ProductDto> UpdateAsync(int id, UpsertProductRequest request, CancellationToken ct = default)
@@ -58,6 +59,7 @@ public class ProductService : IProductService
         product.Name = request.Name;
         product.NameUrdu = request.NameUrdu;
         product.Category = request.Category;
+        product.ProductTypeId = request.ProductTypeId;
         product.BaseUnit = request.BaseUnit;
         product.DefaultRate = request.DefaultRate;
         product.IsActive = request.IsActive;
@@ -66,7 +68,7 @@ public class ProductService : IProductService
         product.UpdatedAtUtc = _clock.UtcNow;
 
         await _db.SaveChangesAsync(ct);
-        return ToDto(product);
+        return await GetByIdAsync(product.Id, ct);
     }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
@@ -78,5 +80,7 @@ public class ProductService : IProductService
         await _db.SaveChangesAsync(ct);
     }
 
-    private static ProductDto ToDto(Product p) => new(p.Id, p.Name, p.NameUrdu, p.Category, p.BaseUnit, p.DefaultRate, p.IsActive, p.SalePrice, p.SaleMarkupPercent);
+    private static ProductDto ToDto(Product p) => new(
+        p.Id, p.Name, p.NameUrdu, p.Category, p.ProductTypeId, p.ProductType?.Name,
+        p.BaseUnit, p.DefaultRate, p.IsActive, p.SalePrice, p.SaleMarkupPercent);
 }

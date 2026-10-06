@@ -17,6 +17,8 @@ using GrainMarket.Application.MultiSale;
 using GrainMarket.Application.Pakkis;
 using GrainMarket.Application.Parties;
 using GrainMarket.Application.Products;
+using GrainMarket.Application.ProductTypes;
+using GrainMarket.Application.ProductUnits;
 using GrainMarket.Application.Purchases;
 using GrainMarket.Application.Recovery;
 using GrainMarket.Application.Roles;
@@ -76,6 +78,12 @@ public class ApiClient
     public Task<ProductDto> CreateProductAsync(UpsertProductRequest request) => PostAsync<UpsertProductRequest, ProductDto>("api/products", request);
     public Task<ProductDto> UpdateProductAsync(int id, UpsertProductRequest request) => PutAsync<UpsertProductRequest, ProductDto>($"api/products/{id}", request);
     public Task DeleteProductAsync(int id) => DeleteAsync($"api/products/{id}");
+
+    public Task<List<ProductTypeDto>> GetProductTypesAsync() => GetAsync<List<ProductTypeDto>>("api/product-types");
+    public Task<ProductTypeDto> CreateProductTypeAsync(CreateProductTypeRequest request) => PostAsync<CreateProductTypeRequest, ProductTypeDto>("api/product-types", request);
+
+    public Task<List<ProductUnitDto>> GetProductUnitsAsync() => GetAsync<List<ProductUnitDto>>("api/product-units");
+    public Task<ProductUnitDto> CreateProductUnitAsync(CreateProductUnitRequest request) => PostAsync<CreateProductUnitRequest, ProductUnitDto>("api/product-units", request);
 
     public Task<List<UnitConversionDto>> GetUnitConversionsAsync() => GetAsync<List<UnitConversionDto>>("api/unit-conversions");
     public Task<UnitConversionDto> CreateUnitConversionAsync(UpsertUnitConversionRequest request) => PostAsync<UpsertUnitConversionRequest, UnitConversionDto>("api/unit-conversions", request);

@@ -14,6 +14,8 @@ public class AppDbContext : DbContext, IApplicationDbContext
 
     public DbSet<Party> Parties => Set<Party>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductType> ProductTypes => Set<ProductType>();
+    public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
     public DbSet<UnitConversion> UnitConversions => Set<UnitConversion>();
     public DbSet<ChartOfAccount> ChartOfAccounts => Set<ChartOfAccount>();
     public DbSet<ChartOfAccountRole> ChartOfAccountRoles => Set<ChartOfAccountRole>();

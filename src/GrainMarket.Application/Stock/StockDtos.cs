@@ -1,7 +1,7 @@
 namespace GrainMarket.Application.Stock;
 
 public record StockDto(
-    int ProductId, string ProductName, string? NameUrdu, string BaseUnit,
+    int ProductId, string ProductName, string? NameUrdu, int? ProductTypeId, string? ProductTypeName, string BaseUnit,
     decimal PurchasedQty, decimal SoldQty, decimal OnHandQty);
 
 /// <summary>Sale Invoice's price suggestion for a product, priced on LIFO cost — always the single

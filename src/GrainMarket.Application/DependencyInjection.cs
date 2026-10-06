@@ -17,6 +17,8 @@ using GrainMarket.Application.MultiSale;
 using GrainMarket.Application.Pakkis;
 using GrainMarket.Application.Parties;
 using GrainMarket.Application.Products;
+using GrainMarket.Application.ProductTypes;
+using GrainMarket.Application.ProductUnits;
 using GrainMarket.Application.Purchases;
 using GrainMarket.Application.Recovery;
 using GrainMarket.Application.Roles;
@@ -43,6 +45,8 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IPartyService, PartyService>();
         services.AddScoped<IProductService, ProductService>();
+        services.AddScoped<IProductTypeService, ProductTypeService>();
+        services.AddScoped<IProductUnitService, ProductUnitService>();
         services.AddScoped<IUnitConversionService, UnitConversionService>();
         services.AddScoped<IChartOfAccountService, ChartOfAccountService>();
         services.AddScoped<IAccountTypeService, AccountTypeService>();

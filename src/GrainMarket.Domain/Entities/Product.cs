@@ -8,6 +8,11 @@ public class Product : BaseEntity
     public string? NameUrdu { get; set; }
     public string? Category { get; set; }
 
+    /// <summary>What kind of Input product this is (Seed, Fertilizer, Pesticide, …) — only set
+    /// when Category is "Input"; null for a Grain product.</summary>
+    public int? ProductTypeId { get; set; }
+    public ProductType? ProductType { get; set; }
+
     /// <summary>Display/counting unit — always "kg" for a Grain product (Kachi/Pakki weigh in
     /// kilograms). An Input product (pesticide, fertilizer, seed) can use any short unit label
     /// (Litre, Bag, Pack, Pcs, …); it's purely descriptive and doesn't affect any calculation.</summary>

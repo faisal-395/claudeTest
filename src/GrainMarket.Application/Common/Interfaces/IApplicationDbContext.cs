@@ -11,6 +11,8 @@ public interface IApplicationDbContext
 {
     DbSet<Party> Parties { get; }
     DbSet<Product> Products { get; }
+    DbSet<ProductType> ProductTypes { get; }
+    DbSet<ProductUnit> ProductUnits { get; }
     DbSet<UnitConversion> UnitConversions { get; }
     DbSet<ChartOfAccount> ChartOfAccounts { get; }
     DbSet<ChartOfAccountRole> ChartOfAccountRoles { get; }
