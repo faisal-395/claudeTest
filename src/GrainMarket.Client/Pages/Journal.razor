@@ -17,16 +17,17 @@
     <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
         <div style="display:flex; align-items:center; gap:8px;">
             <label style="@LabelStyle flex:0 0 90px;">Voucher #:</label>
-            <div class="batch-readonly-figure" style="width:150px;">@(DisplayedVoucherNo ?? "…")</div>
+            <div class="batch-readonly-figure" style="width:90px;">@(DisplayedVoucherNo ?? "…")</div>
         </div>
-        <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:140px;")" title="Type a voucher # and press Enter to find and edit it." />
+        <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:90px;")" title="Type a voucher # and press Enter to find and edit it." />
+        <div style="display:flex; align-items:center; gap:8px;">
+            <label style="@LabelStyle flex:0 0 auto;">Date:</label>
+            <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:175px;")" />
+        </div>
     </div>
 
     <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; align-items:center;">
-        <div style="display:flex; align-items:center; gap:8px;">
-            <label style="@LabelStyle flex:0 0 auto;">Date:</label>
-            <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:150px;")" />
-        </div>
+        <div></div>
         <div>
             @if (CreditAndDebitAreSame)
             {
