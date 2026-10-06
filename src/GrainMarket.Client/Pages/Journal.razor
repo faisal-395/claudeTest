@@ -20,9 +20,18 @@
             <div class="batch-readonly-figure" style="width:150px;">@(DisplayedVoucherNo ?? "…")</div>
         </div>
         <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:140px;")" title="Type a voucher # and press Enter to find and edit it." />
-        <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; align-items:center;">
+        <div style="display:flex; align-items:center; gap:8px;">
             <label style="@LabelStyle flex:0 0 auto;">Date:</label>
             <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:150px;")" />
+        </div>
+        <div>
+            @if (CreditAndDebitAreSame)
+            {
+                <div class="invalid-total" style="margin:0;">Credit and Debit must be different.</div>
+            }
         </div>
     </div>
 
@@ -31,7 +40,7 @@
         <div style="display:flex; align-items:center; gap:8px;">
             <label style="@LabelStyle flex:0 0 60px;">Credit:</label>
             <div style="flex:1; min-width:0;">
-                <SearchSelect @ref="_creditSearchRef" TItem="PartyOrAccountOption" Items="CombinedOptions" IdSelector="@(o => o.Key)" TextSelector="@(o => o.Text)" Value="@CreditSelectedKey" ValueChanged="OnCreditSelected" Placeholder="Search party or account…" />
+                <SearchSelect @ref="_creditSearchRef" TItem="PartyOrAccountOption" Items="CreditOptions" IdSelector="@(o => o.Key)" TextSelector="@(o => o.Text)" Value="@CreditSelectedKey" ValueChanged="OnCreditSelected" Placeholder="Search party or account…" />
             </div>
             <div class="batch-readonly-figure" style="width:55px; text-align:center;" title="Code">@(CreditCode ?? "—")</div>
             <div class="batch-readonly-figure" style="width:110px; text-align:right;">Rs @((_creditType == LedgerPartyRefType.Party ? SelectedCreditPartyBalance : SelectedCreditAccountBalance)?.ToString("N2") ?? "0.00")</div>
@@ -46,7 +55,7 @@
         <div style="display:flex; align-items:center; gap:8px;">
             <label style="@LabelStyle flex:0 0 60px;">Debit:</label>
             <div style="flex:1; min-width:0;">
-                <SearchSelect @ref="_debitSearchRef" TItem="PartyOrAccountOption" Items="CombinedOptions" IdSelector="@(o => o.Key)" TextSelector="@(o => o.Text)" Value="@DebitSelectedKey" ValueChanged="OnDebitSelected" Placeholder="Search party or account…" />
+                <SearchSelect @ref="_debitSearchRef" TItem="PartyOrAccountOption" Items="DebitOptions" IdSelector="@(o => o.Key)" TextSelector="@(o => o.Text)" Value="@DebitSelectedKey" ValueChanged="OnDebitSelected" Placeholder="Search party or account…" />
             </div>
             <div class="batch-readonly-figure" style="width:55px; text-align:center;" title="Code">@(DebitCode ?? "—")</div>
             <div class="batch-readonly-figure" style="width:110px; text-align:right;">Rs @((_debitType == LedgerPartyRefType.Party ? SelectedDebitPartyBalance : SelectedDebitAccountBalance)?.ToString("N2") ?? "0.00")</div>
@@ -64,11 +73,6 @@
         <label style="@LabelStyle flex:0 0 60px; margin-left:20px;">Ref No:</label>
         <input @bind="_refNo" style="@($"{FieldStyle}width:140px;")" />
     </div>
-
-    @if (CreditAndDebitAreSame)
-    {
-        <div class="invalid-total">Credit and Debit must be different.</div>
-    }
 </div>
 
 <div class="batch-results-grid-wrapper-scroll" style="margin-top:8px;">
@@ -198,6 +202,13 @@
     private string? CreditCode => CombinedOptions.FirstOrDefault(o => o.Key == CreditSelectedKey)?.Code;
     private string? DebitCode => CombinedOptions.FirstOrDefault(o => o.Key == DebitSelectedKey)?.Code;
 
+    // Whatever is already picked on the OTHER side is dropped from this side's own search list,
+    // so the same party/account can't be selected on both sides — except when it's also already
+    // this side's own current value (keeps that selection visible/intact instead of blanking the
+    // search box out from under it; CreditAndDebitAreSame still flags that state as invalid).
+    private List<PartyOrAccountOption> CreditOptions => CombinedOptions.Where(o => o.Key != DebitSelectedKey || o.Key == CreditSelectedKey).ToList();
+    private List<PartyOrAccountOption> DebitOptions => CombinedOptions.Where(o => o.Key != CreditSelectedKey || o.Key == DebitSelectedKey).ToList();
+
     private async Task OnCreditSelected(int key)
     {
         var opt = CombinedOptions.FirstOrDefault(o => o.Key == key);
@@ -302,13 +313,14 @@
 
         // No natural default direction for a Journal Voucher (unlike Payment/Receipt, which always
         // involve Cash/Bank on one side) — defaults both sides to Party, the most common case for a
-        // free-form Credit/Debit entry.
+        // free-form Credit/Debit entry. Defaults to two DIFFERENT parties (when at least two
+        // exist) so a fresh form doesn't open already showing the "must be different" warning.
         _creditType = LedgerPartyRefType.Party;
         _debitType = LedgerPartyRefType.Party;
         _creditAccountId = null;
         _debitAccountId = null;
         _creditPartyId = _parties?.Count > 0 ? _parties[0].Id : null;
-        _debitPartyId = _parties?.Count > 0 ? _parties[0].Id : null;
+        _debitPartyId = _parties?.Count > 1 ? _parties[1].Id : _creditPartyId;
     }
 
     // Read-only preview of what the next voucher number will be — never consumes it. The server
