@@ -12,13 +12,13 @@
         <div style="display:flex; flex-direction:column; gap:12px; background:var(--brand-panel); padding:16px 20px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
             <div style="display:flex; gap:20px; flex-wrap:wrap;">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <label style="@LabelStyle">Voucher #:</label>
+                    <label style="@LabelStyle flex:0 0 90px;">Voucher #:</label>
                     <div class="batch-readonly-figure" style="width:100px;">@(DisplayedVoucherNo ?? "…")</div>
                 </div>
                 <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:100px;")" title="Type a voucher # and press Enter to find and edit it." />
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-                <label style="@LabelStyle">Date:</label>
+                <label style="@LabelStyle flex:0 0 90px;">Date:</label>
                 <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:140px;")" />
             </div>
 
@@ -73,27 +73,19 @@
             </div>
 
             <div style="display:flex; align-items:center; gap:8px;">
-                <label style="@LabelStyle flex:0 0 70px;">Amount:</label>
+                <label style="@LabelStyle flex:0 0 90px;">Amount:</label>
                 <input type="number" step="0.01" @bind="_amount" style="@($"{FieldStyle}flex:1 1 auto;")" />
                 <label style="@LabelStyle flex:0 0 60px; margin-left:12px; text-align:right;">Ref No:</label>
                 <input @bind="_refNo" style="@($"{FieldStyle}width:140px;")" />
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-                <label style="@LabelStyle flex:0 0 70px;">Description:</label>
+                <label style="@LabelStyle flex:0 0 90px;">Description:</label>
                 <input @bind="_description" style="@($"{FieldStyle}flex:1 1 auto;")" />
-            </div>
-
-            <div>
-                <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">@(_editingVoucherId is null ? "Save" : "Update") @Title</button>
-                @if (_editingVoucherId is not null)
-                {
-                    <button class="btn secondary" @onclick="ResetFormToNew">Cancel Edit / New Voucher</button>
-                }
             </div>
         </div>
     </div>
 
-    <div>
+    <div style="display:flex; flex-direction:column; height:100%;">
         @if (_gridVouchers is null)
         {
             <p>Loading…</p>
@@ -129,6 +121,18 @@
                 </table>
             </div>
         }
+
+        <div style="position:sticky; bottom:0; background:var(--brand-panel); margin-top:12px; padding:12px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.08); display:flex; justify-content:flex-end; gap:10px;">
+            @if (_editingVoucherId is not null)
+            {
+                <button class="btn secondary" @onclick="ResetFormToNew">Cancel</button>
+            }
+            <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">@(_editingVoucherId is null ? "Save" : "Update")</button>
+            @if (_lastSavedVoucherId is not null)
+            {
+                <a class="btn secondary" href="print/voucher/@_lastSavedVoucherId" target="_blank">Print</a>
+            }
+        </div>
     </div>
 </div>
 
@@ -149,6 +153,11 @@
     private string? _searchVoucherNo;
     private int? _editingVoucherId;
     private string? _editingVoucherNo;
+
+    // Keeps the Print button usable right after Save — ResetFormToNew() clears _editingVoucherId,
+    // so without this the id of the voucher that was just created/updated would be lost the moment
+    // the form resets for the next entry.
+    private int? _lastSavedVoucherId;
 
     private DateTime _date = DateTime.Today;
     private int _seasonId;
@@ -171,19 +180,34 @@
     private decimal? SelectedToAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _toAccountId)?.CurrentBalance;
 
     // Cash and Bank are no longer single fixed accounts — a site can have several (e.g. "Cash in
-    // Hand" and "Dasti Cash", or any number of bank accounts), set up in Setup > Chart of Accounts
-    // as children of the seeded "Cash in Hand"/"Bank" root account (via ParentAccountId). Cash/Bank
-    // here just narrow the same account picker used for "Account" down to that family; "Account"
-    // itself still offers every chart-of-account row.
+    // Hand" and "Dasti Cash", or any number of bank accounts) — and Cash/Bank here just narrow the
+    // same account picker used for "Account" down to the relevant family; "Account" itself still
+    // offers every chart-of-account row.
+    //
+    // Bank: "Bank" (DomainConstants.BankAccountCode) is itself a plain category name, so it (plus
+    // whatever a site adds as its children) is the Bank family.
+    //
+    // Cash: "Cash in Hand" (DomainConstants.CashAccountCode) is a specific account, not a
+    // category — it's a sibling of any other cash account (e.g. "Dasti Cash"), not their parent.
+    // The AddCashAccountGroup migration gives it a proper parent named "Cash"; the Cash family is
+    // that parent's children (found via "Cash in Hand".ParentAccountId, since the "Cash" row has
+    // no fixed code of its own) — "Cash in Hand" included, since it's one of them.
     private List<ChartOfAccountDto> AccountsFor(LedgerPartyRefType type)
     {
         if (_accounts is null) return new();
         if (type == LedgerPartyRefType.Account) return _accounts;
 
-        var rootCode = type == LedgerPartyRefType.Cash ? DomainConstants.CashAccountCode : DomainConstants.BankAccountCode;
-        var root = _accounts.FirstOrDefault(a => a.Code == rootCode);
-        if (root is null) return new();
-        return _accounts.Where(a => a.Id == root.Id || a.ParentAccountId == root.Id).ToList();
+        if (type == LedgerPartyRefType.Bank)
+        {
+            var bank = _accounts.FirstOrDefault(a => a.Code == DomainConstants.BankAccountCode);
+            if (bank is null) return new();
+            return _accounts.Where(a => a.Id == bank.Id || a.ParentAccountId == bank.Id).ToList();
+        }
+
+        var cashInHand = _accounts.FirstOrDefault(a => a.Code == DomainConstants.CashAccountCode);
+        var cashGroupId = cashInHand?.ParentAccountId;
+        if (cashGroupId is null) return cashInHand is null ? new() : new() { cashInHand };
+        return _accounts.Where(a => a.ParentAccountId == cashGroupId).ToList();
     }
 
     private static string PlaceholderFor(LedgerPartyRefType type) => type switch
@@ -323,7 +347,8 @@
                     _date, _seasonId, _amount, _refNo, _description,
                     _fromType, _fromPartyId, _fromAccountId,
                     _toType, _toPartyId, _toAccountId);
-                await Api.UpdateVoucherAsync(_editingVoucherId.Value, request);
+                var saved = await Api.UpdateVoucherAsync(_editingVoucherId.Value, request);
+                _lastSavedVoucherId = saved.Id;
                 await RefreshBalancesAsync();
                 ResetFormToNew();
             }
@@ -333,7 +358,8 @@
                     VoucherKind, _date, _seasonId, _amount, _refNo, _description,
                     _fromType, _fromPartyId, _fromAccountId,
                     _toType, _toPartyId, _toAccountId);
-                await (VoucherKind == VoucherType.Payment ? Api.CreatePaymentAsync(request) : Api.CreateReceiptAsync(request));
+                var saved = await (VoucherKind == VoucherType.Payment ? Api.CreatePaymentAsync(request) : Api.CreateReceiptAsync(request));
+                _lastSavedVoucherId = saved.Id;
                 await RefreshBalancesAsync();
                 ResetFormToNew();
                 await PeekVoucherNoAsync();
