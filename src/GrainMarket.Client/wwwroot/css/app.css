@@ -13,9 +13,10 @@
    index.html's applyTheme injects a <style> block that redefines these variables per ThemeScope:
    plain `:root` rules for Global (sidebar, and any page with no more specific scope), and
    `.theme-sale-invoice` / `.theme-purchase` / `.theme-kachi` / `.theme-pakki` / `.theme-voucher` /
-   `.theme-journal` rules that only apply within that page's own wrapper element — Sale Invoice's
-   form heading/textbox/button colors can differ from Purchase's, Kachi's, Pakki's, Voucher's
-   (Payment and Receipt share this one scope), the Journal Voucher page's, and the
+   `.theme-journal` / `.theme-expense` rules that only apply within that page's own wrapper
+   element — Sale Invoice's form heading/textbox/button colors can differ from Purchase's,
+   Kachi's, Pakki's, Voucher's (Payment and Receipt share this one scope), the Journal Voucher
+   page's, the Expense Voucher page's, and the
    persistent sidebar, without any of them touching each other. CSS custom properties cascade normally, so a page with its own scope class
    overrides just the variables Setup > Appearance actually changed for it; anything left alone
    still falls through to the Global value in effect on <html>.

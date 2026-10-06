@@ -20,6 +20,9 @@ public class ExpenseService : IExpenseService
         _numberGenerator = numberGenerator;
     }
 
+    public async Task<NextExpenseNoDto> PeekNextExpenseNoAsync(CancellationToken ct = default) =>
+        new(await _numberGenerator.PeekNextAsync("EX", 0, ct));
+
     public async Task<List<ExpenseDto>> GetAllAsync(CancellationToken ct = default)
     {
         var rows = await _db.Expenses.Include(e => e.ExpenseAccount).Include(e => e.PaidFromAccount)
@@ -55,6 +58,7 @@ public class ExpenseService : IExpenseService
             ExpenseAccountId = request.ExpenseAccountId,
             Amount = request.Amount,
             Description = request.Description,
+            RefNo = request.RefNo,
             PaidFrom = request.PaidFrom,
             PaidFromAccountId = paidFromAccountId
         };
@@ -80,6 +84,6 @@ public class ExpenseService : IExpenseService
     }
 
     private static ExpenseDto ToDto(Expense e) => new(
-        e.Id, e.ExpenseNo, e.Date, e.ExpenseAccountId, e.ExpenseAccount.Name, e.Amount, e.Description,
+        e.Id, e.ExpenseNo, e.Date, e.ExpenseAccountId, e.ExpenseAccount.Name, e.Amount, e.Description, e.RefNo,
         e.PaidFrom, e.PaidFromAccountId, e.PaidFromAccount?.Name);
 }

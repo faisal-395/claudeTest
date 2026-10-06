@@ -3,105 +3,224 @@
 @inject ApiClient Api
 
 <RequireAuth>
-    <h1 class="page-title">Expense</h1>
+<div class="theme-expense">
+<div style="background:var(--brand-heading-bg); text-align:center; padding:8px 0; margin:-12px 0 6px; border-radius:4px;">
+    <h3 style="margin:0; color:var(--brand-primary); font-size:1.4rem; font-weight:600;">Expense Voucher</h3>
+</div>
+<div style="display:grid;grid-template-columns:minmax(0,4fr) minmax(0,5fr);gap:20px;align-items:start;">
+    <div>
+        @if (_error is not null)
+        {
+            <div class="error-banner">@_error</div>
+        }
+        @if (_successMessage is not null)
+        {
+            <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+        }
 
-    @if (_error is not null)
-    {
-        <div class="error-banner">@_error</div>
-    }
-    @if (_successMessage is not null)
-    {
-        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
-    }
+        <div style="display:flex; flex-direction:column; gap:12px; background:var(--brand-panel); padding:16px 20px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <label style="@LabelStyle flex:0 0 90px;">Voucher #:</label>
+                <div class="batch-readonly-figure" style="width:150px;">@(_nextExpenseNo ?? "…")</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <label style="@LabelStyle flex:0 0 90px;">Date:</label>
+                <input type="date" @bind="_date" @bind:after="LoadGridAsync" style="@($"{FieldStyle}width:150px;")" />
+            </div>
 
-    <div class="form-grid">
-        <div><label>Date</label><input type="date" @bind="_date" /></div>
-        <div>
-            <label>Expense Account</label>
-            <SearchSelect TItem="ChartOfAccountDto" Items="@(_accounts?.Where(a => a.AccountTypeId == DomainConstants.ExpenseAccountTypeId))" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" @bind-Value="_expenseAccountId" Placeholder="Search expense account…" />
-        </div>
-        <div><label>Amount</label><input type="number" step="0.01" @bind="_amount" /></div>
-        <div>
-            <label>Paid From</label>
-            <select @bind="_paidFrom" @bind:after="OnPaidFromChanged">
-                <option value="@LedgerPartyRefType.Cash">Cash</option>
-                <option value="@LedgerPartyRefType.Bank">Bank</option>
-                <option value="@LedgerPartyRefType.Account">Other Account</option>
-            </select>
-        </div>
-        <div>
-            <label>@(_paidFrom == LedgerPartyRefType.Account ? "Account" : _paidFrom == LedgerPartyRefType.Cash ? "Cash Account" : "Bank Account")</label>
-            <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_paidFrom)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_paidFromAccountId ?? 0)" ValueChanged="@(v => _paidFromAccountId = v)" Placeholder="@PlaceholderFor(_paidFrom)" />
-        </div>
-        <div style="grid-column: span 2;"><label>Description</label><input @bind="_description" style="width:100%;" /></div>
-        <div style="grid-column: span 2;">
-            <button class="btn" disabled="@(_amount <= 0)" @onclick="SaveAsync">Save Expense</button>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+            <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <label style="@LabelStyle flex:0 0 90px;">From:</label>
+                    <div style="flex:1; min-width:0;">
+                        <SearchSelect @ref="_fromSearchRef" TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_paidFromAccountId ?? 0)" ValueChanged="@(async v => { _paidFromAccountId = v; await FocusAmountAsync(); })" Placeholder="Search account…" />
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                    <label style="@LabelStyle flex:0 0 90px;">Balance:</label>
+                    <div class="batch-readonly-figure" style="width:150px; text-align:right;">Rs @(SelectedFromBalance?.ToString("N2") ?? "0.00")</div>
+                </div>
+            </div>
+
+            <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <label style="@LabelStyle flex:0 0 90px;">To:</label>
+                    <div style="flex:1; min-width:0;">
+                        <SearchSelect TItem="ChartOfAccountDto" Items="@ExpenseAccounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@_expenseAccountId" ValueChanged="@(v => _expenseAccountId = v)" Placeholder="Search expense account…" />
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                    <label style="@LabelStyle flex:0 0 90px;">Balance:</label>
+                    <div class="batch-readonly-figure" style="width:150px; text-align:right;">Rs @(SelectedToBalance?.ToString("N2") ?? "0.00")</div>
+                </div>
+            </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px;">
+                <label style="@LabelStyle flex:0 0 90px;">Amount:</label>
+                <input @ref="_amountInputRef" type="number" step="0.01" @bind="_amount" style="@($"{FieldStyle}width:150px;")" />
+                <label style="@LabelStyle flex:0 0 60px; margin-left:12px; text-align:right;">Ref No:</label>
+                <input @bind="_refNo" style="@($"{FieldStyle}width:140px;margin-left:auto;")" />
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <label style="@LabelStyle flex:0 0 90px;">Description:</label>
+                <input @bind="_description" style="@($"{FieldStyle}flex:1 1 auto;")" />
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn" disabled="@(_amount <= 0 || _expenseAccountId <= 0 || _paidFromAccountId is null)" @onclick="SaveAsync">Save</button>
+            </div>
         </div>
     </div>
+
+    <div>
+        @if (_expenses is null)
+        {
+            <p>Loading…</p>
+        }
+        else if (GridLines.Count == 0)
+        {
+            <p style="color:#777;">No Expense Vouchers on @_date.ToString("yyyy-MM-dd").</p>
+        }
+        else
+        {
+            <div class="batch-results-grid-wrapper" style="max-height:65vh;overflow-y:auto;">
+                <table class="data-grid">
+                    <thead><tr><th>Id</th><th>Title</th><th>V#</th><th>Description</th><th style="text-align:right;">Debit</th><th style="text-align:right;">Credit</th></tr></thead>
+                    <tbody>
+                        @foreach (var line in GridLines)
+                        {
+                            <tr>
+                                <td>@(line.Id?.ToString() ?? "—")</td>
+                                <td>@line.Title</td>
+                                <td>@line.ExpenseNo</td>
+                                <td>@(line.Description ?? "—")</td>
+                                <td style="text-align:right;">@(line.Debit > 0 ? line.Debit.ToString("N2") : "")</td>
+                                <td style="text-align:right;">@(line.Credit > 0 ? line.Credit.ToString("N2") : "")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr style="font-weight:600;">
+                            <td colspan="4">Total</td>
+                            <td style="text-align:right;">@GridLines.Sum(l => l.Debit).ToString("N2")</td>
+                            <td style="text-align:right;">@GridLines.Sum(l => l.Credit).ToString("N2")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+</div>
 </RequireAuth>
 
 @code {
     private List<ChartOfAccountDto>? _accounts;
+    private List<ExpenseDto>? _expenses;
+    private string? _nextExpenseNo;
     private string? _error;
     private string? _successMessage;
 
+    private const string FieldStyle = "padding:6px 8px;border:1px solid #ccc;border-radius:3px;box-sizing:border-box;text-align:left;";
+    private const string LabelStyle = "font-weight:600;color:#444;font-size:0.92rem;white-space:nowrap;";
+
+    private ElementReference _amountInputRef;
+    private SearchSelect<ChartOfAccountDto>? _fromSearchRef;
+    private bool _focusFromPending = true;
+
     private DateTime _date = DateTime.Today;
     private int _expenseAccountId;
-    private decimal _amount;
-    private LedgerPartyRefType _paidFrom = LedgerPartyRefType.Cash;
     private int? _paidFromAccountId;
+    private decimal _amount;
+    private string? _refNo;
     private string? _description;
+
+    private List<ChartOfAccountDto> ExpenseAccounts => (_accounts ?? new()).Where(a => a.AccountTypeId == DomainConstants.ExpenseAccountTypeId).ToList();
+
+    private decimal? SelectedFromBalance => _accounts?.FirstOrDefault(a => a.Id == _paidFromAccountId)?.CurrentBalance;
+    private decimal? SelectedToBalance => _accounts?.FirstOrDefault(a => a.Id == _expenseAccountId)?.CurrentBalance;
+
+    private async Task FocusAmountAsync()
+    {
+        await _amountInputRef.FocusAsync();
+    }
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             _accounts = await Api.GetChartOfAccountsAsync();
-            var firstExpense = _accounts.FirstOrDefault(a => a.AccountTypeId == DomainConstants.ExpenseAccountTypeId);
-            if (firstExpense is not null) _expenseAccountId = firstExpense.Id;
-            _paidFromAccountId = AccountsFor(_paidFrom).FirstOrDefault()?.Id;
+
+            // "From" defaults to Cash in Hand, matching the legacy software's convention — found by
+            // NAME, not a fixed account code, same reasoning as every other Cash/Bank lookup in this
+            // app (Code is a plain editable Setup > Chart of Accounts field).
+            _paidFromAccountId = _accounts.FirstOrDefault(a => string.Equals(a.Name, "Cash in Hand", StringComparison.OrdinalIgnoreCase))?.Id
+                ?? _accounts.FirstOrDefault()?.Id;
+            _expenseAccountId = ExpenseAccounts.FirstOrDefault()?.Id ?? 0;
+
+            await PeekExpenseNoAsync();
+            await LoadGridAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
-    // Same Cash/Bank-family narrowing as VoucherForm's AccountsFor — found by NAME ("Cash"/"Bank")
-    // rather than DomainConstants.CashAccountCode/BankAccountCode, since Code is a plain editable
-    // text field in Setup > Chart of Accounts and a renamed/recoded seed row would otherwise
-    // silently break a lookup keyed on one specific code value.
-    private List<ChartOfAccountDto> AccountsFor(LedgerPartyRefType type)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_accounts is null) return new();
-        if (type == LedgerPartyRefType.Account) return _accounts;
+        if (!_focusFromPending) return;
+        _focusFromPending = false;
 
-        var groupName = type == LedgerPartyRefType.Cash ? "Cash" : "Bank";
-        var group = _accounts.FirstOrDefault(a => string.Equals(a.Name, groupName, StringComparison.OrdinalIgnoreCase));
-        if (group is null) return new();
-        return _accounts.Where(a => a.ParentAccountId == group.Id).ToList();
+        if (_fromSearchRef is not null) await _fromSearchRef.FocusAsync();
     }
 
-    private static string PlaceholderFor(LedgerPartyRefType type) => type switch
+    private async Task PeekExpenseNoAsync()
     {
-        LedgerPartyRefType.Cash => "Search cash account…",
-        LedgerPartyRefType.Bank => "Search bank account…",
-        _ => "Search account…"
-    };
+        var next = await Api.PeekNextExpenseNoAsync();
+        _nextExpenseNo = next.ExpenseNo;
+    }
 
-    private void OnPaidFromChanged()
+    private async Task LoadGridAsync()
     {
-        var family = AccountsFor(_paidFrom);
-        if (!family.Any(a => a.Id == _paidFromAccountId)) _paidFromAccountId = family.FirstOrDefault()?.Id;
+        var all = await Api.GetExpensesAsync();
+        _expenses = all.Where(e => e.Date.Date == _date.Date).OrderByDescending(e => e.Id).ToList();
+    }
+
+    // Re-fetches accounts so every From/To balance figure on screen reflects the expense that was
+    // just saved — _accounts was otherwise only loaded once, on page open.
+    private async Task RefreshBalancesAsync()
+    {
+        _accounts = await Api.GetChartOfAccountsAsync();
+    }
+
+    // Register-style display (same two-rows-per-entry convention as the Journal Voucher grid):
+    // every expense becomes a Debit leg (the Expense Account being charged) and a Credit leg
+    // (wherever it was paid from), sharing the same ExpenseNo — matches the legacy software's
+    // Id/Title/V#/Description/Debit/Credit register exactly.
+    private record GridLine(int VoucherId, string ExpenseNo, int? Id, string Title, string? Description, decimal Debit, decimal Credit);
+
+    private List<GridLine> GridLines => _expenses?.SelectMany(ToGridLines).ToList() ?? new();
+
+    private static IEnumerable<GridLine> ToGridLines(ExpenseDto e)
+    {
+        yield return new GridLine(e.Id, e.ExpenseNo, e.ExpenseAccountId, e.ExpenseAccountName, e.Description, e.Amount, 0m);
+        yield return new GridLine(e.Id, e.ExpenseNo, e.PaidFromAccountId, e.PaidFromAccountName ?? e.PaidFrom.ToString(), e.Description, 0m, e.Amount);
     }
 
     private async Task SaveAsync()
     {
         _error = null;
         _successMessage = null;
-        var request = new CreateExpenseRequest(_date, _expenseAccountId, _amount, _description, _paidFrom, _paidFromAccountId);
         try
         {
+            var request = new CreateExpenseRequest(_date, _expenseAccountId, _amount, _description, _refNo, LedgerPartyRefType.Account, _paidFromAccountId);
             var result = await Api.CreateExpenseAsync(request);
             _successMessage = $"Expense {result.ExpenseNo} saved.";
-            _amount = 0; _description = null;
+            _amount = 0;
+            _description = null;
+            _refNo = null;
+            await RefreshBalancesAsync();
+            await PeekExpenseNoAsync();
+            await LoadGridAsync();
         }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }

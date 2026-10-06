@@ -162,6 +162,7 @@ public class ApiClient
     // --- Expense -----------------------------------------------------------------------------------
     public Task<List<ExpenseDto>> GetExpensesAsync() => GetAsync<List<ExpenseDto>>("api/expenses");
     public Task<ExpenseDto> CreateExpenseAsync(CreateExpenseRequest request) => PostAsync<CreateExpenseRequest, ExpenseDto>("api/expenses", request);
+    public Task<NextExpenseNoDto> PeekNextExpenseNoAsync() => GetAsync<NextExpenseNoDto>("api/expenses/next-expense-no");
 
     // --- Ledger / Recovery / Trading -----------------------------------------------------------------
     public Task<PartyLedgerDto> GetPartyLedgerAsync(int partyId, DateTime? from = null, DateTime? to = null) =>
