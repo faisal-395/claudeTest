@@ -15,10 +15,7 @@
                     <label style="@LabelStyle">Voucher #:</label>
                     <div class="batch-readonly-figure" style="width:100px;">@(DisplayedVoucherNo ?? "…")</div>
                 </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <label style="@LabelStyle">Search:</label>
-                    <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:100px;")" placeholder="# then Enter" title="Type a voucher # and press Enter to find and edit it." />
-                </div>
+                <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:100px;")" title="Type a voucher # and press Enter to find and edit it." />
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
                 <label style="@LabelStyle">Date:</label>
@@ -29,7 +26,7 @@
             <div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label style="@LabelStyle flex:0 0 40px;">From:</label>
-                    <select @bind="_fromType" style="@($"{FieldStyle}width:150px;")">
+                    <select @bind="_fromType" @bind:after="OnFromTypeChanged" style="@($"{FieldStyle}width:150px;")">
                         <option value="@LedgerPartyRefType.Cash">Cash</option>
                         <option value="@LedgerPartyRefType.Bank">Bank</option>
                         <option value="@LedgerPartyRefType.Party">Party</option>
@@ -37,19 +34,14 @@
                     </select>
                 </div>
                 <div style="margin-top:6px; margin-left:48px; max-width:280px;">
-                @if (_fromType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
-                {
-                    <div class="batch-readonly-figure">@(FixedAccountFor(_fromType)?.Name ?? "…")</div>
-                    <div class="batch-readonly-figure" style="margin-top:6px; text-align:right;">Balance: Rs @(FixedAccountFor(_fromType)?.CurrentBalance.ToString("N2") ?? "0.00")</div>
-                }
-                else if (_fromType == LedgerPartyRefType.Party)
+                @if (_fromType == LedgerPartyRefType.Party)
                 {
                     <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
                     <div class="batch-readonly-figure" style="margin-top:6px; text-align:right;">Balance: Rs @(SelectedFromPartyBalance?.ToString("N2") ?? "0.00")</div>
                 }
                 else
                 {
-                    <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_fromAccountId ?? 0)" ValueChanged="@(v => _fromAccountId = v)" Placeholder="Search account…" />
+                    <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_fromType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_fromAccountId ?? 0)" ValueChanged="@(v => _fromAccountId = v)" Placeholder="@PlaceholderFor(_fromType)" />
                     <div class="batch-readonly-figure" style="margin-top:6px; text-align:right;">Balance: Rs @(SelectedFromAccountBalance?.ToString("N2") ?? "0.00")</div>
                 }
                 </div>
@@ -58,7 +50,7 @@
             <div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label style="@LabelStyle flex:0 0 40px;">To:</label>
-                    <select @bind="_toType" style="@($"{FieldStyle}width:150px;")">
+                    <select @bind="_toType" @bind:after="OnToTypeChanged" style="@($"{FieldStyle}width:150px;")">
                         <option value="@LedgerPartyRefType.Cash">Cash</option>
                         <option value="@LedgerPartyRefType.Bank">Bank</option>
                         <option value="@LedgerPartyRefType.Party">Party</option>
@@ -66,19 +58,14 @@
                     </select>
                 </div>
                 <div style="margin-top:6px; margin-left:48px; max-width:280px;">
-                @if (_toType is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank)
-                {
-                    <div class="batch-readonly-figure">@(FixedAccountFor(_toType)?.Name ?? "…")</div>
-                    <div class="batch-readonly-figure" style="margin-top:6px; text-align:right;">Balance: Rs @(FixedAccountFor(_toType)?.CurrentBalance.ToString("N2") ?? "0.00")</div>
-                }
-                else if (_toType == LedgerPartyRefType.Party)
+                @if (_toType == LedgerPartyRefType.Party)
                 {
                     <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
                     <div class="batch-readonly-figure" style="margin-top:6px; text-align:right;">Balance: Rs @(SelectedToPartyBalance?.ToString("N2") ?? "0.00")</div>
                 }
                 else
                 {
-                    <SearchSelect TItem="ChartOfAccountDto" Items="_accounts" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_toAccountId ?? 0)" ValueChanged="@(v => _toAccountId = v)" Placeholder="Search account…" />
+                    <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_toType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_toAccountId ?? 0)" ValueChanged="@(v => _toAccountId = v)" Placeholder="@PlaceholderFor(_toType)" />
                     <div class="batch-readonly-figure" style="margin-top:6px; text-align:right;">Balance: Rs @(SelectedToAccountBalance?.ToString("N2") ?? "0.00")</div>
                 }
                 </div>
@@ -183,8 +170,44 @@
     private decimal? SelectedToPartyBalance => _parties?.FirstOrDefault(p => p.Id == _toPartyId)?.CurrentBalance;
     private decimal? SelectedToAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _toAccountId)?.CurrentBalance;
 
-    private ChartOfAccountDto? FixedAccountFor(LedgerPartyRefType type) =>
-        _accounts?.FirstOrDefault(a => a.Code == (type == LedgerPartyRefType.Cash ? DomainConstants.CashAccountCode : DomainConstants.BankAccountCode));
+    // Cash and Bank are no longer single fixed accounts — a site can have several (e.g. "Cash in
+    // Hand" and "Dasti Cash", or any number of bank accounts), set up in Setup > Chart of Accounts
+    // as children of the seeded "Cash in Hand"/"Bank" root account (via ParentAccountId). Cash/Bank
+    // here just narrow the same account picker used for "Account" down to that family; "Account"
+    // itself still offers every chart-of-account row.
+    private List<ChartOfAccountDto> AccountsFor(LedgerPartyRefType type)
+    {
+        if (_accounts is null) return new();
+        if (type == LedgerPartyRefType.Account) return _accounts;
+
+        var rootCode = type == LedgerPartyRefType.Cash ? DomainConstants.CashAccountCode : DomainConstants.BankAccountCode;
+        var root = _accounts.FirstOrDefault(a => a.Code == rootCode);
+        if (root is null) return new();
+        return _accounts.Where(a => a.Id == root.Id || a.ParentAccountId == root.Id).ToList();
+    }
+
+    private static string PlaceholderFor(LedgerPartyRefType type) => type switch
+    {
+        LedgerPartyRefType.Cash => "Search cash account…",
+        LedgerPartyRefType.Bank => "Search bank account…",
+        _ => "Search account…"
+    };
+
+    // Switching From/To between Cash/Bank/Account can leave the previously-selected account id
+    // pointing at one that's no longer in the newly-chosen family (or at none at all, the first
+    // time Cash/Bank is picked) — default it to the first account in that family instead of
+    // showing an empty picker.
+    private void OnFromTypeChanged()
+    {
+        var family = AccountsFor(_fromType);
+        if (!family.Any(a => a.Id == _fromAccountId)) _fromAccountId = family.FirstOrDefault()?.Id;
+    }
+
+    private void OnToTypeChanged()
+    {
+        var family = AccountsFor(_toType);
+        if (!family.Any(a => a.Id == _toAccountId)) _toAccountId = family.FirstOrDefault()?.Id;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -245,7 +268,7 @@
     {
         _editingVoucherId = null;
         _editingVoucherNo = null;
-        _searchVoucherNo = null;
+        _searchVoucherNo = _nextVoucherNo;
         _date = DateTime.Today;
         if (_seasons?.Count > 0) _seasonId = _seasons[0].Id;
         _amount = 0;
@@ -259,7 +282,8 @@
         _fromType = VoucherKind == VoucherType.Receipt ? LedgerPartyRefType.Party : LedgerPartyRefType.Cash;
         _toType = VoucherKind == VoucherType.Receipt ? LedgerPartyRefType.Cash : LedgerPartyRefType.Party;
         if (_parties?.Count > 0) { _fromPartyId = _parties[0].Id; _toPartyId = _parties[0].Id; }
-        if (_accounts?.Count > 0) { _fromAccountId = _accounts[0].Id; _toAccountId = _accounts[0].Id; }
+        _fromAccountId = AccountsFor(_fromType).FirstOrDefault()?.Id;
+        _toAccountId = AccountsFor(_toType).FirstOrDefault()?.Id;
     }
 
     // Read-only preview of what the next voucher number will be — never consumes it. The server
@@ -269,6 +293,7 @@
     {
         var next = VoucherKind == VoucherType.Payment ? await Api.PeekNextPaymentNoAsync() : await Api.PeekNextReceiptNoAsync();
         _nextVoucherNo = next.VoucherNo;
+        if (_editingVoucherId is null) _searchVoucherNo = _nextVoucherNo;
     }
 
     private async Task LoadGridVouchersAsync()

@@ -199,12 +199,16 @@ public class VoucherService : IVoucherService
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Only Payment or Receipt have a reservable voucher number.")
     };
 
+    // Cash and Bank are no longer a single fixed account each — a site can set up several (e.g.
+    // "Cash in Hand" and "Dasti Cash", or any number of bank accounts) as children of the seeded
+    // root account, and the client lets the user pick which one. explicitAccountId is that choice;
+    // the code-based lookup is only a fallback for requests that don't supply one.
     private async Task<int?> ResolveAccountIdAsync(LedgerPartyRefType type, int? explicitAccountId, CancellationToken ct)
     {
         return type switch
         {
-            LedgerPartyRefType.Cash => await GetAccountIdByCodeAsync(DomainConstants.CashAccountCode, ct),
-            LedgerPartyRefType.Bank => await GetAccountIdByCodeAsync(DomainConstants.BankAccountCode, ct),
+            LedgerPartyRefType.Cash => explicitAccountId ?? await GetAccountIdByCodeAsync(DomainConstants.CashAccountCode, ct),
+            LedgerPartyRefType.Bank => explicitAccountId ?? await GetAccountIdByCodeAsync(DomainConstants.BankAccountCode, ct),
             LedgerPartyRefType.Account => explicitAccountId,
             _ => null
         };
@@ -228,6 +232,13 @@ public class VoucherService : IVoucherService
         {
             if (accountId is null || !await _db.ChartOfAccounts.AnyAsync(a => a.Id == accountId && !a.IsDeleted, ct))
                 throw new NotFoundException(nameof(ChartOfAccount), accountId ?? 0);
+        }
+        else if (type is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank && accountId is not null)
+        {
+            // Cash/Bank may omit the account (falls back to the seeded root account in
+            // ResolveAccountIdAsync), but a specific choice must be a real, non-deleted account.
+            if (!await _db.ChartOfAccounts.AnyAsync(a => a.Id == accountId && !a.IsDeleted, ct))
+                throw new NotFoundException(nameof(ChartOfAccount), accountId.Value);
         }
     }
 
