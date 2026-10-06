@@ -3,150 +3,121 @@
 @inject ApiClient Api
 
 <RequireAuth>
-<div class="theme-journal" style="padding:0 40px;">
-<div style="background:var(--brand-heading-bg); text-align:center; padding:8px 0; margin:-12px 0 6px; border-radius:4px;">
-    <h3 style="margin:0; color:var(--brand-primary); font-size:1.4rem; font-weight:600;">Journal Voucher</h3>
+<div class="theme-journal batch-page-fill" style="padding:0 40px;">
+@if (_error is not null)
+{
+    <div class="error-banner" style="position:fixed; top:10px; right:20px; z-index:50; max-width:420px; box-shadow:0 2px 10px rgba(0,0,0,0.25);">@_error</div>
+}
+
+<div style="background:var(--brand-heading-bg); text-align:center; padding:6px 0; margin:-12px 0 6px; border-radius:4px;">
+    <h3 style="margin:0; color:var(--brand-primary); font-size:1.3rem; font-weight:600;">Journal Voucher</h3>
 </div>
-<div>
-    <div>
-        @if (_error is not null)
-        {
-            <div class="error-banner">@_error</div>
-        }
 
-        <div style="display:flex; flex-direction:column; gap:12px; background:var(--brand-panel); padding:16px 20px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-            <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <label style="@LabelStyle flex:0 0 90px;">Voucher #:</label>
-                    <div class="batch-readonly-figure" style="width:150px;">@(DisplayedVoucherNo ?? "…")</div>
-                </div>
-                <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:140px;")" title="Type a voucher # and press Enter to find and edit it." />
-                <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
-                    <label style="@LabelStyle flex:0 0 auto;">Date:</label>
-                    <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:150px;")" />
-                </div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px;">
-            <div style="background:var(--brand-credit-panel-bg); color:var(--brand-credit-panel-text); padding:10px 12px; border-radius:4px;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <label style="@LabelStyle flex:0 0 60px;">Credit:</label>
-                    <select @bind="_creditType" @bind:after="OnCreditTypeChanged" style="@($"{FieldStyle}width:120px;")">
-                        <option value="@LedgerPartyRefType.Party">Party</option>
-                        <option value="@LedgerPartyRefType.Account">Account</option>
-                        <option value="@LedgerPartyRefType.Cash">Cash</option>
-                        <option value="@LedgerPartyRefType.Bank">Bank</option>
-                    </select>
-                    <div class="batch-readonly-figure" style="width:120px; text-align:right; margin-left:auto;">Rs @((_creditType == LedgerPartyRefType.Party ? SelectedCreditPartyBalance : SelectedCreditAccountBalance)?.ToString("N2") ?? "0.00")</div>
-                </div>
-                <div style="margin-top:6px;">
-                @if (_creditType == LedgerPartyRefType.Party)
-                {
-                    <SearchSelect @ref="_creditPartySearchRef" TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_creditPartyId ?? 0)" ValueChanged="@(async v => { _creditPartyId = v; await FocusAmountAsync(); })" Placeholder="Search party…" />
-                }
-                else
-                {
-                    <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_creditType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_creditAccountId ?? 0)" ValueChanged="@(async v => { _creditAccountId = v; await FocusAmountAsync(); })" Placeholder="@PlaceholderFor(_creditType)" />
-                }
-                </div>
-                <div style="margin-top:6px;">
-                    <label style="@LabelStyle">Description:</label>
-                    <input @bind="_creditDescription" style="@($"{FieldStyle}width:100%;margin-top:4px;")" />
-                </div>
-            </div>
-
-            <div style="background:var(--brand-debit-panel-bg); color:var(--brand-debit-panel-text); padding:10px 12px; border-radius:4px;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <label style="@LabelStyle flex:0 0 60px;">Debit:</label>
-                    <select @bind="_debitType" @bind:after="OnDebitTypeChanged" style="@($"{FieldStyle}width:120px;")">
-                        <option value="@LedgerPartyRefType.Party">Party</option>
-                        <option value="@LedgerPartyRefType.Account">Account</option>
-                        <option value="@LedgerPartyRefType.Cash">Cash</option>
-                        <option value="@LedgerPartyRefType.Bank">Bank</option>
-                    </select>
-                    <div class="batch-readonly-figure" style="width:120px; text-align:right; margin-left:auto;">Rs @((_debitType == LedgerPartyRefType.Party ? SelectedDebitPartyBalance : SelectedDebitAccountBalance)?.ToString("N2") ?? "0.00")</div>
-                </div>
-                <div style="margin-top:6px;">
-                @if (_debitType == LedgerPartyRefType.Party)
-                {
-                    <SearchSelect @ref="_debitPartySearchRef" TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_debitPartyId ?? 0)" ValueChanged="@(async v => { _debitPartyId = v; await FocusAmountAsync(); })" Placeholder="Search party…" />
-                }
-                else
-                {
-                    <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_debitType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_debitAccountId ?? 0)" ValueChanged="@(async v => { _debitAccountId = v; await FocusAmountAsync(); })" Placeholder="@PlaceholderFor(_debitType)" />
-                }
-                </div>
-                <div style="margin-top:6px;">
-                    <label style="@LabelStyle">Description:</label>
-                    <input @bind="_debitDescription" style="@($"{FieldStyle}width:100%;margin-top:4px;")" />
-                </div>
-            </div>
-            </div>
-
-            <div style="display:flex; align-items:center; gap:8px;">
-                <label style="@LabelStyle flex:0 0 90px;">Amount:</label>
-                <input @ref="_amountInputRef" type="number" step="0.01" @bind="_amount" style="@($"{FieldStyle}width:150px;")" />
-                <label style="@LabelStyle flex:0 0 60px; margin-left:20px;">Ref No:</label>
-                <input @bind="_refNo" style="@($"{FieldStyle}width:140px;")" />
-            </div>
-
-            @if (CreditAndDebitAreSame)
-            {
-                <div class="invalid-total">Credit and Debit must be different.</div>
-            }
-
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-                @if (_editingVoucherId is not null)
-                {
-                    <button class="btn secondary" @onclick="ResetFormToNew">Cancel</button>
-                }
-                <button class="btn" disabled="@(_amount <= 0 || CreditAndDebitAreSame)" @onclick="SaveAsync">@(_editingVoucherId is null ? "Save" : "Update")</button>
-                @if (_lastSavedVoucherId is not null)
-                {
-                    <a class="btn secondary" href="print/voucher/@_lastSavedVoucherId" target="_blank">Print</a>
-                }
-            </div>
+<div style="display:flex; flex-direction:column; gap:8px; background:var(--brand-panel); padding:10px 14px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+    <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <label style="@LabelStyle flex:0 0 90px;">Voucher #:</label>
+            <div class="batch-readonly-figure" style="width:150px;">@(DisplayedVoucherNo ?? "…")</div>
+        </div>
+        <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:140px;")" title="Type a voucher # and press Enter to find and edit it." />
+        <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+            <label style="@LabelStyle flex:0 0 auto;">Date:</label>
+            <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:150px;")" />
         </div>
     </div>
 
-    <div style="margin-top:20px;">
-        @if (_gridVouchers is null)
-        {
-            <p>Loading…</p>
-        }
-        else if (_gridVouchers.Count == 0)
-        {
-            <p style="color:#777;">No Journal Vouchers on @_date.ToString("yyyy-MM-dd").</p>
-        }
-        else
-        {
-            <div class="batch-results-grid-wrapper" style="max-height:65vh;overflow-y:auto;">
-                <table class="data-grid">
-                    <thead><tr><th>Id</th><th>Title</th><th>V#</th><th>Description</th><th style="text-align:right;">Credit</th><th style="text-align:right;">Debit</th></tr></thead>
-                    <tbody>
-                        @foreach (var line in GridLines)
-                        {
-                            <tr>
-                                <td>@(line.Id?.ToString() ?? "—")</td>
-                                <td>@line.Title</td>
-                                <td><a href="print/voucher/@line.VoucherId">@line.VoucherNo</a></td>
-                                <td>@(line.Description ?? "—")</td>
-                                <td style="text-align:right;">@(line.Credit > 0 ? line.Credit.ToString("N2") : "")</td>
-                                <td style="text-align:right;">@(line.Debit > 0 ? line.Debit.ToString("N2") : "")</td>
-                            </tr>
-                        }
-                    </tbody>
-                    <tfoot>
-                        <tr style="font-weight:600;">
-                            <td colspan="4">Total</td>
-                            <td style="text-align:right;">@GridLines.Sum(l => l.Credit).ToString("N2")</td>
-                            <td style="text-align:right;">@GridLines.Sum(l => l.Debit).ToString("N2")</td>
-                        </tr>
-                    </tfoot>
-                </table>
+    <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px;">
+    <div style="background:var(--brand-credit-panel-bg); color:var(--brand-credit-panel-text); padding:8px 10px; border-radius:4px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <label style="@LabelStyle flex:0 0 60px;">Credit:</label>
+            <div style="flex:1; min-width:0;">
+                <SearchSelect @ref="_creditSearchRef" TItem="PartyOrAccountOption" Items="CombinedOptions" IdSelector="@(o => o.Key)" TextSelector="@(o => o.Text)" Value="@CreditSelectedKey" ValueChanged="OnCreditSelected" Placeholder="Search party or account…" />
             </div>
-        }
+            <div class="batch-readonly-figure" style="width:55px; text-align:center;" title="Code">@(CreditCode ?? "—")</div>
+            <div class="batch-readonly-figure" style="width:110px; text-align:right;">Rs @((_creditType == LedgerPartyRefType.Party ? SelectedCreditPartyBalance : SelectedCreditAccountBalance)?.ToString("N2") ?? "0.00")</div>
+        </div>
+        <div style="margin-top:4px;">
+            <label style="@LabelStyle">Description:</label>
+            <input @bind="_creditDescription" style="@($"{FieldStyle}width:100%;margin-top:4px;")" />
+        </div>
     </div>
+
+    <div style="background:var(--brand-debit-panel-bg); color:var(--brand-debit-panel-text); padding:8px 10px; border-radius:4px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <label style="@LabelStyle flex:0 0 60px;">Debit:</label>
+            <div style="flex:1; min-width:0;">
+                <SearchSelect @ref="_debitSearchRef" TItem="PartyOrAccountOption" Items="CombinedOptions" IdSelector="@(o => o.Key)" TextSelector="@(o => o.Text)" Value="@DebitSelectedKey" ValueChanged="OnDebitSelected" Placeholder="Search party or account…" />
+            </div>
+            <div class="batch-readonly-figure" style="width:55px; text-align:center;" title="Code">@(DebitCode ?? "—")</div>
+            <div class="batch-readonly-figure" style="width:110px; text-align:right;">Rs @((_debitType == LedgerPartyRefType.Party ? SelectedDebitPartyBalance : SelectedDebitAccountBalance)?.ToString("N2") ?? "0.00")</div>
+        </div>
+        <div style="margin-top:4px;">
+            <label style="@LabelStyle">Description:</label>
+            <input @bind="_debitDescription" style="@($"{FieldStyle}width:100%;margin-top:4px;")" />
+        </div>
+    </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px;">
+        <label style="@LabelStyle flex:0 0 90px;">Amount:</label>
+        <input @ref="_amountInputRef" type="number" step="0.01" @bind="_amount" style="@($"{FieldStyle}width:150px;")" />
+        <label style="@LabelStyle flex:0 0 60px; margin-left:20px;">Ref No:</label>
+        <input @bind="_refNo" style="@($"{FieldStyle}width:140px;")" />
+    </div>
+
+    @if (CreditAndDebitAreSame)
+    {
+        <div class="invalid-total">Credit and Debit must be different.</div>
+    }
+</div>
+
+<div class="batch-results-grid-wrapper-scroll" style="margin-top:8px;">
+    @if (_gridVouchers is null)
+    {
+        <p>Loading…</p>
+    }
+    else if (_gridVouchers.Count == 0)
+    {
+        <p style="color:#777;">No Journal Vouchers on @_date.ToString("yyyy-MM-dd").</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>Id</th><th>Title</th><th>V#</th><th>Description</th><th style="text-align:right;">Credit</th><th style="text-align:right;">Debit</th></tr></thead>
+            <tbody>
+                @foreach (var line in GridLines)
+                {
+                    <tr>
+                        <td>@(line.Id?.ToString() ?? "—")</td>
+                        <td>@line.Title</td>
+                        <td><a href="print/voucher/@line.VoucherId">@line.VoucherNo</a></td>
+                        <td>@(line.Description ?? "—")</td>
+                        <td style="text-align:right;">@(line.Credit > 0 ? line.Credit.ToString("N2") : "")</td>
+                        <td style="text-align:right;">@(line.Debit > 0 ? line.Debit.ToString("N2") : "")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr style="font-weight:600;">
+                    <td colspan="4">Total</td>
+                    <td style="text-align:right;">@GridLines.Sum(l => l.Credit).ToString("N2")</td>
+                    <td style="text-align:right;">@GridLines.Sum(l => l.Debit).ToString("N2")</td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+</div>
+
+<div style="display:flex; justify-content:flex-end; gap:10px; background:var(--brand-panel); padding:8px 0; border-top:1px solid #d8e2da; box-shadow:0 -4px 10px rgba(0,0,0,0.05);">
+    @if (_editingVoucherId is not null)
+    {
+        <button class="btn secondary" @onclick="ResetFormToNew">Cancel</button>
+    }
+    <button class="btn" disabled="@(_amount <= 0 || CreditAndDebitAreSame)" @onclick="SaveAsync">@(_editingVoucherId is null ? "Save" : "Update")</button>
+    @if (_lastSavedVoucherId is not null)
+    {
+        <a class="btn secondary" href="print/voucher/@_lastSavedVoucherId" target="_blank">Print</a>
+    }
 </div>
 </div>
 </RequireAuth>
@@ -172,8 +143,8 @@
     private int? _lastSavedVoucherId;
 
     private ElementReference _amountInputRef;
-    private SearchSelect<PartyDto>? _creditPartySearchRef;
-    private SearchSelect<PartyDto>? _debitPartySearchRef;
+    private SearchSelect<PartyOrAccountOption>? _creditSearchRef;
+    private SearchSelect<PartyOrAccountOption>? _debitSearchRef;
     private bool _focusCreditPending = true;
 
     private DateTime _date = DateTime.Today;
@@ -207,37 +178,44 @@
     private bool CreditAndDebitAreSame => _creditType == _debitType &&
         (_creditType == LedgerPartyRefType.Party ? _creditPartyId == _debitPartyId : _creditAccountId == _debitAccountId);
 
-    // Same Cash/Bank-family narrowing as VoucherForm's AccountsFor — see its comment for why this
-    // is found by NAME ("Cash"/"Bank") rather than a fixed account code, and only returns the
-    // group's children, never the group itself.
-    private List<ChartOfAccountDto> AccountsFor(LedgerPartyRefType type)
-    {
-        if (_accounts is null) return new();
-        if (type == LedgerPartyRefType.Account) return _accounts;
+    // One search box finds either a Party or a Chart-of-Accounts row (so Cash/Bank/any other
+    // account is reachable here too, with no separate type picker) — Key is a synthetic id for
+    // SearchSelect (which needs a single int identity space), built as Id*2 for a Party and
+    // Id*2+1 for an Account so the two entities' ids, which both start from 1, never collide. Code
+    // is what the small readonly box beside the search shows once something is picked: the
+    // account's real Code for an Account, or just its database Id for a Party (parties have no
+    // separate code column).
+    private record PartyOrAccountOption(int Key, bool IsParty, int RefId, string Text, string Code);
 
-        var groupName = type == LedgerPartyRefType.Cash ? "Cash" : "Bank";
-        var group = _accounts.FirstOrDefault(a => string.Equals(a.Name, groupName, StringComparison.OrdinalIgnoreCase));
-        if (group is null) return new();
-        return _accounts.Where(a => a.ParentAccountId == group.Id).ToList();
+    private List<PartyOrAccountOption> CombinedOptions =>
+        (_parties ?? new()).Select(p => new PartyOrAccountOption(p.Id * 2, true, p.Id, DisplayText.Party(p), p.Id.ToString()))
+            .Concat((_accounts ?? new()).Select(a => new PartyOrAccountOption(a.Id * 2 + 1, false, a.Id, DisplayText.Account(a), a.Code)))
+            .ToList();
+
+    private int CreditSelectedKey => _creditType == LedgerPartyRefType.Party ? (_creditPartyId ?? 0) * 2 : (_creditAccountId ?? 0) * 2 + 1;
+    private int DebitSelectedKey => _debitType == LedgerPartyRefType.Party ? (_debitPartyId ?? 0) * 2 : (_debitAccountId ?? 0) * 2 + 1;
+
+    private string? CreditCode => CombinedOptions.FirstOrDefault(o => o.Key == CreditSelectedKey)?.Code;
+    private string? DebitCode => CombinedOptions.FirstOrDefault(o => o.Key == DebitSelectedKey)?.Code;
+
+    private async Task OnCreditSelected(int key)
+    {
+        var opt = CombinedOptions.FirstOrDefault(o => o.Key == key);
+        if (opt is null) return;
+        _creditType = opt.IsParty ? LedgerPartyRefType.Party : LedgerPartyRefType.Account;
+        _creditPartyId = opt.IsParty ? opt.RefId : null;
+        _creditAccountId = opt.IsParty ? null : opt.RefId;
+        await FocusAmountAsync();
     }
 
-    private static string PlaceholderFor(LedgerPartyRefType type) => type switch
+    private async Task OnDebitSelected(int key)
     {
-        LedgerPartyRefType.Cash => "Search cash account…",
-        LedgerPartyRefType.Bank => "Search bank account…",
-        _ => "Search account…"
-    };
-
-    private void OnCreditTypeChanged()
-    {
-        var family = AccountsFor(_creditType);
-        if (!family.Any(a => a.Id == _creditAccountId)) _creditAccountId = family.FirstOrDefault()?.Id;
-    }
-
-    private void OnDebitTypeChanged()
-    {
-        var family = AccountsFor(_debitType);
-        if (!family.Any(a => a.Id == _debitAccountId)) _debitAccountId = family.FirstOrDefault()?.Id;
+        var opt = CombinedOptions.FirstOrDefault(o => o.Key == key);
+        if (opt is null) return;
+        _debitType = opt.IsParty ? LedgerPartyRefType.Party : LedgerPartyRefType.Account;
+        _debitPartyId = opt.IsParty ? opt.RefId : null;
+        _debitAccountId = opt.IsParty ? null : opt.RefId;
+        await FocusAmountAsync();
     }
 
     // Picking who/what either side is lands you on Amount next, same as VoucherForm.
@@ -263,14 +241,14 @@
     }
 
     // Fires after every render, but only acts when ResetFormToNew (open, new-entry reset, or
-    // Cancel) actually asked for it — moves focus to the Credit party picker so typing can start
+    // Cancel) actually asked for it — moves focus to the Credit picker so typing can start
     // immediately instead of leaving focus wherever the browser happened to put it.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!_focusCreditPending) return;
         _focusCreditPending = false;
 
-        if (_creditPartySearchRef is not null) await _creditPartySearchRef.FocusAsync();
+        if (_creditSearchRef is not null) await _creditSearchRef.FocusAsync();
     }
 
     private void OnSearchKeyDown(KeyboardEventArgs e)
@@ -327,9 +305,10 @@
         // free-form Credit/Debit entry.
         _creditType = LedgerPartyRefType.Party;
         _debitType = LedgerPartyRefType.Party;
-        if (_parties?.Count > 0) { _creditPartyId = _parties[0].Id; _debitPartyId = _parties[0].Id; }
-        _creditAccountId = AccountsFor(_creditType).FirstOrDefault()?.Id;
-        _debitAccountId = AccountsFor(_debitType).FirstOrDefault()?.Id;
+        _creditAccountId = null;
+        _debitAccountId = null;
+        _creditPartyId = _parties?.Count > 0 ? _parties[0].Id : null;
+        _debitPartyId = _parties?.Count > 0 ? _parties[0].Id : null;
     }
 
     // Read-only preview of what the next voucher number will be — never consumes it. The server
