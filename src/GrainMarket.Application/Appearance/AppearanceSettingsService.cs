@@ -65,11 +65,15 @@ public class AppearanceSettingsService : IAppearanceSettingsService
     }
 
     // Every scope otherwise shares the same class-level defaults (AppearanceSettings' own property
-    // initializers) — Kachi and Pakki are the one exception, matching the legacy software's own
-    // blue (Pakki)/green (Kachi) look for a brand-new row, while staying fully editable afterwards
-    // from Setup > Appearance like any other scope's colors. Kept light enough to pass the
+    // initializers) — Kachi, Pakki, and SaleInvoice are the exceptions, matching the legacy
+    // software's own look (green/blue/purple respectively) for a brand-new row, while staying
+    // fully editable afterwards from Setup > Appearance like any other scope's colors.
+    // HeadingBackgroundColor is kept light enough on every one of them to pass the
     // PrimaryColor/HeadingBackgroundColor contrast check against the default (dark) PrimaryColor —
-    // see UpdateAppearanceSettingsRequestValidator.
+    // see UpdateAppearanceSettingsRequestValidator; the other fields (ProductPanelColor,
+    // GridHeaderColor, GridBackgroundColor) each get their own auto-computed contrast text color
+    // (see index.html's applyTheme) so they can stay closer to the legacy screenshot's actual
+    // saturation.
     private static AppearanceSettings NewDefaultsFor(ThemeScope scope)
     {
         var settings = new AppearanceSettings { Scope = scope };
@@ -86,6 +90,12 @@ public class AppearanceSettingsService : IAppearanceSettingsService
                 settings.PanelColor = "#E3F2FD";
                 settings.GridHeaderColor = "#90CAF9";
                 settings.GridBackgroundColor = "#F2F8FD";
+                break;
+            case ThemeScope.SaleInvoice:
+                settings.HeadingBackgroundColor = "#C5AEE0";
+                settings.ProductPanelColor = "#D9C7EC";
+                settings.GridHeaderColor = "#B7C2D1";
+                settings.GridBackgroundColor = "#D3DAE3";
                 break;
         }
         return settings;
