@@ -15,17 +15,17 @@
                     <label style="@LabelStyle flex:0 0 90px;">Voucher #:</label>
                     <div class="batch-readonly-figure" style="width:100px;">@(DisplayedVoucherNo ?? "…")</div>
                 </div>
-                <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:100px;")" title="Type a voucher # and press Enter to find and edit it." />
+                <input @bind="_searchVoucherNo" @bind:event="oninput" @onkeydown="OnSearchKeyDown" style="@($"{FieldStyle}width:140px;")" title="Type a voucher # and press Enter to find and edit it." />
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
                 <label style="@LabelStyle flex:0 0 90px;">Date:</label>
                 <input type="date" @bind="_date" @bind:after="LoadGridVouchersAsync" style="@($"{FieldStyle}width:140px;")" />
             </div>
 
-            <div style="display:flex; flex-direction:column; gap:10px; border:1px solid #e2e2e2; border-radius:4px; padding:10px 12px;">
+            <div style="display:flex; flex-direction:column; gap:10px;">
             <div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <label style="@LabelStyle flex:0 0 40px;">From:</label>
+                    <label style="@LabelStyle flex:0 0 90px;">From:</label>
                     <select @bind="_fromType" @bind:after="OnFromTypeChanged" style="@($"{FieldStyle}width:150px;")">
                         <option value="@LedgerPartyRefType.Cash">Cash</option>
                         <option value="@LedgerPartyRefType.Bank">Bank</option>
@@ -33,7 +33,7 @@
                         <option value="@LedgerPartyRefType.Account">Account</option>
                     </select>
                 </div>
-                <div style="margin-top:6px; margin-left:48px; max-width:280px;">
+                <div style="margin-top:6px; margin-left:98px; max-width:280px;">
                 @if (_fromType == LedgerPartyRefType.Party)
                 {
                     <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_fromPartyId ?? 0)" ValueChanged="@(v => _fromPartyId = v)" Placeholder="Search party…" />
@@ -49,7 +49,7 @@
 
             <div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <label style="@LabelStyle flex:0 0 40px;">To:</label>
+                    <label style="@LabelStyle flex:0 0 90px;">To:</label>
                     <select @bind="_toType" @bind:after="OnToTypeChanged" style="@($"{FieldStyle}width:150px;")">
                         <option value="@LedgerPartyRefType.Cash">Cash</option>
                         <option value="@LedgerPartyRefType.Bank">Bank</option>
@@ -57,7 +57,7 @@
                         <option value="@LedgerPartyRefType.Account">Account</option>
                     </select>
                 </div>
-                <div style="margin-top:6px; margin-left:48px; max-width:280px;">
+                <div style="margin-top:6px; margin-left:98px; max-width:280px;">
                 @if (_toType == LedgerPartyRefType.Party)
                 {
                     <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_toPartyId ?? 0)" ValueChanged="@(v => _toPartyId = v)" Placeholder="Search party…" />
