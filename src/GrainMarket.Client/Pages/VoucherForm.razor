@@ -39,7 +39,7 @@
                 <div style="margin-top:6px; margin-left:98px; margin-right:140px;">
                 @if (_fromType == LedgerPartyRefType.Party)
                 {
-                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_fromPartyId ?? 0)" ValueChanged="@(async v => { _fromPartyId = v; await FocusAmountAsync(); })" Placeholder="Search party…" />
+                    <SearchSelect @ref="_fromPartySearchRef" TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_fromPartyId ?? 0)" ValueChanged="@(async v => { _fromPartyId = v; await FocusAmountAsync(); })" Placeholder="Search party…" />
                 }
                 else
                 {
@@ -65,7 +65,7 @@
                 <div style="margin-top:6px; margin-left:98px; margin-right:140px;">
                 @if (_toType == LedgerPartyRefType.Party)
                 {
-                    <SearchSelect TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_toPartyId ?? 0)" ValueChanged="@(async v => { _toPartyId = v; await FocusAmountAsync(); })" Placeholder="Search party…" />
+                    <SearchSelect @ref="_toPartySearchRef" TItem="PartyDto" Items="_parties" IdSelector="@(p => p.Id)" TextSelector="@DisplayText.Party" Value="@(_toPartyId ?? 0)" ValueChanged="@(async v => { _toPartyId = v; await FocusAmountAsync(); })" Placeholder="Search party…" />
                 }
                 else
                 {
@@ -168,6 +168,9 @@
     private int? _lastSavedVoucherId;
 
     private ElementReference _amountInputRef;
+    private SearchSelect<PartyDto>? _fromPartySearchRef;
+    private SearchSelect<PartyDto>? _toPartySearchRef;
+    private bool _focusPartyPending = true;
 
     private DateTime _date = DateTime.Today;
     private int _seasonId;
@@ -263,6 +266,19 @@
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
+    // Fires after every render, but only acts when ResetFormToNew (open, new-entry reset, or
+    // Cancel) actually asked for it — moves focus to whichever side defaults to Party for this
+    // VoucherKind (Payment's "To", Receipt's "From") so typing can start immediately instead of
+    // leaving focus wherever the browser happened to put it.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusPartyPending) return;
+        _focusPartyPending = false;
+
+        var partyRef = VoucherKind == VoucherType.Receipt ? _fromPartySearchRef : _toPartySearchRef;
+        if (partyRef is not null) await partyRef.FocusAsync();
+    }
+
     private void OnSearchKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") SearchGridVoucher();
@@ -300,6 +316,7 @@
 
     private void ResetFormToNew()
     {
+        _focusPartyPending = true;
         _editingVoucherId = null;
         _editingVoucherNo = null;
         _searchVoucherNo = _nextVoucherNo;

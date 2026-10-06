@@ -6,7 +6,7 @@
 @typeparam TItem
 
 <div class="search-select" tabindex="-1" @onfocusout="HandleFocusOut">
-    <input class="search-select-input" type="text" autocomplete="off"
+    <input @ref="_inputRef" class="search-select-input" type="text" autocomplete="off"
            value="@_displayText"
            placeholder="@Placeholder"
            @oninput="OnInput"
@@ -49,6 +49,11 @@
     private bool _open;
     private int _highlighted;
     private int? _lastValue;
+    private ElementReference _inputRef;
+
+    // Lets a parent move keyboard focus here programmatically (e.g. VoucherForm focusing the
+    // party picker as soon as the form opens).
+    public async Task FocusAsync() => await _inputRef.FocusAsync();
 
     protected override void OnParametersSet()
     {
