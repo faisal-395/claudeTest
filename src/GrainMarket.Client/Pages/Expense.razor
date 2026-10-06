@@ -76,7 +76,7 @@
         var groupName = type == LedgerPartyRefType.Cash ? "Cash" : "Bank";
         var group = _accounts.FirstOrDefault(a => string.Equals(a.Name, groupName, StringComparison.OrdinalIgnoreCase));
         if (group is null) return new();
-        return _accounts.Where(a => a.Id == group.Id || a.ParentAccountId == group.Id).ToList();
+        return _accounts.Where(a => a.ParentAccountId == group.Id).ToList();
     }
 
     private static string PlaceholderFor(LedgerPartyRefType type) => type switch

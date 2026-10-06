@@ -195,9 +195,10 @@
     //
     // Found by NAME rather than DomainConstants.CashAccountCode/BankAccountCode: Code is a plain
     // editable text field in Setup > Chart of Accounts, so a renamed or recoded seed row would
-    // silently break a lookup keyed on one specific code value. The group account itself is also
-    // included as a fallback-selectable entry (matters only if nothing has been added under it
-    // yet), not just its children.
+    // silently break a lookup keyed on one specific code value. Only the group's CHILDREN are
+    // offered here, never the group account itself — that's already represented by the main
+    // From/To dropdown's "Cash"/"Bank" option, so listing it again in this second picker would be
+    // redundant.
     private List<ChartOfAccountDto> AccountsFor(LedgerPartyRefType type)
     {
         if (_accounts is null) return new();
@@ -206,7 +207,7 @@
         var groupName = type == LedgerPartyRefType.Cash ? "Cash" : "Bank";
         var group = _accounts.FirstOrDefault(a => string.Equals(a.Name, groupName, StringComparison.OrdinalIgnoreCase));
         if (group is null) return new();
-        return _accounts.Where(a => a.Id == group.Id || a.ParentAccountId == group.Id).ToList();
+        return _accounts.Where(a => a.ParentAccountId == group.Id).ToList();
     }
 
     private static string PlaceholderFor(LedgerPartyRefType type) => type switch
