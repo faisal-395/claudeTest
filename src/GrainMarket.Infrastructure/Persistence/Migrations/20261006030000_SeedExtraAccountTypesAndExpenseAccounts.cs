@@ -62,6 +62,32 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                 ) AS v(""Code"", ""Name"", ""NameUrdu"")
                 WHERE NOT EXISTS (SELECT 1 FROM ""ChartOfAccounts"" c WHERE c.""Code"" = v.""Code"");
             ");
+
+            // Every one of the 12 new types above gets its own matching ChartOfAccount leaf row
+            // (same name), filed under ITS OWN new type rather than lumped under Expense — so each
+            // new type is immediately usable, not just an empty category with nothing under it.
+            // Account name doubles as the join key back to the type row just inserted, since both
+            // are identical for every one of these twelve.
+            migrationBuilder.Sql(@"
+                INSERT INTO ""ChartOfAccounts"" (""Code"", ""Name"", ""NameUrdu"", ""AccountTypeId"", ""ParentAccountId"", ""IsProtected"", ""IsActive"", ""CreatedAtUtc"", ""IsDeleted"")
+                SELECT v.""Code"", v.""Name"", v.""NameUrdu"", d.""Id"", NULL, FALSE, TRUE, NOW(), FALSE
+                FROM (VALUES
+                    ('1100', 'Accounts Receivable', N'قابل وصول رقوم'),
+                    ('2100', 'Accounts Payable', N'قابل ادا رقوم'),
+                    ('1200', 'Accumulated Depreciation', N'جمع شدہ فرسودگی'),
+                    ('1300', 'Fixed Assets', N'فکسڈ اثاثے'),
+                    ('2200', 'Notes Payable', N'قابل ادا نوٹس'),
+                    ('1400', 'Notes Receivable', N'قابل وصول نوٹس'),
+                    ('2300', 'Payable to GOVT (Tax)', N'حکومت کو قابل ادا (ٹیکس)'),
+                    ('3100', 'Profit', N'منافع'),
+                    ('4700', 'Revenue Earned', N'حاصل شدہ آمدنی'),
+                    ('4800', 'Sale Fee', N'فروخت فیس'),
+                    ('9100', 'Party', N'پارٹی'),
+                    ('9200', 'Stock', N'اسٹاک')
+                ) AS v(""Code"", ""Name"", ""NameUrdu"")
+                JOIN ""AccountTypeDefinitions"" d ON d.""Name"" = v.""Name""
+                WHERE NOT EXISTS (SELECT 1 FROM ""ChartOfAccounts"" c WHERE c.""Code"" = v.""Code"");
+            ");
         }
 
         /// <inheritdoc />
@@ -69,7 +95,9 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.Sql(@"
                 DELETE FROM ""ChartOfAccounts""
-                WHERE ""Code"" IN ('5200','5300','5400','5500','5600','5700','5800','5900')
+                WHERE ""Code"" IN (
+                    '5200','5300','5400','5500','5600','5700','5800','5900',
+                    '1100','2100','1200','1300','2200','1400','2300','3100','4700','4800','9100','9200')
                   AND NOT EXISTS (SELECT 1 FROM ""LedgerEntries"" l WHERE l.""ChartOfAccountId"" = ""ChartOfAccounts"".""Id"");
             ");
 
