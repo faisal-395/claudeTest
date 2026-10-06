@@ -5,7 +5,7 @@
 <RequireAuth>
 <div class="theme-journal">
 <div style="background:var(--brand-heading-bg); text-align:center; padding:8px 0; margin:-12px 0 6px; border-radius:4px;">
-    <h3 style="margin:0; color:var(--brand-primary); font-size:1.4rem; font-weight:600;">General Voucher</h3>
+    <h3 style="margin:0; color:var(--brand-primary); font-size:1.4rem; font-weight:600;">Journal Voucher</h3>
 </div>
 <div>
     <div>
@@ -31,12 +31,13 @@
             <div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label style="@LabelStyle flex:0 0 60px;">Credit:</label>
-                    <select @bind="_creditType" @bind:after="OnCreditTypeChanged" style="@($"{FieldStyle}width:140px;")">
+                    <select @bind="_creditType" @bind:after="OnCreditTypeChanged" style="@($"{FieldStyle}width:120px;")">
                         <option value="@LedgerPartyRefType.Party">Party</option>
                         <option value="@LedgerPartyRefType.Account">Account</option>
                         <option value="@LedgerPartyRefType.Cash">Cash</option>
                         <option value="@LedgerPartyRefType.Bank">Bank</option>
                     </select>
+                    <div class="batch-readonly-figure" style="width:120px; text-align:right; margin-left:auto;">Rs @((_creditType == LedgerPartyRefType.Party ? SelectedCreditPartyBalance : SelectedCreditAccountBalance)?.ToString("N2") ?? "0.00")</div>
                 </div>
                 <div style="margin-top:6px;">
                 @if (_creditType == LedgerPartyRefType.Party)
@@ -48,10 +49,6 @@
                     <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_creditType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_creditAccountId ?? 0)" ValueChanged="@(async v => { _creditAccountId = v; await FocusAmountAsync(); })" Placeholder="@PlaceholderFor(_creditType)" />
                 }
                 </div>
-                <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                    <label style="@LabelStyle flex:0 0 60px;">Balance:</label>
-                    <div class="batch-readonly-figure" style="width:140px; text-align:right;">Rs @((_creditType == LedgerPartyRefType.Party ? SelectedCreditPartyBalance : SelectedCreditAccountBalance)?.ToString("N2") ?? "0.00")</div>
-                </div>
                 <div style="margin-top:6px;">
                     <label style="@LabelStyle">Description:</label>
                     <input @bind="_creditDescription" style="@($"{FieldStyle}width:100%;margin-top:4px;")" />
@@ -61,12 +58,13 @@
             <div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label style="@LabelStyle flex:0 0 60px;">Debit:</label>
-                    <select @bind="_debitType" @bind:after="OnDebitTypeChanged" style="@($"{FieldStyle}width:140px;")">
+                    <select @bind="_debitType" @bind:after="OnDebitTypeChanged" style="@($"{FieldStyle}width:120px;")">
                         <option value="@LedgerPartyRefType.Party">Party</option>
                         <option value="@LedgerPartyRefType.Account">Account</option>
                         <option value="@LedgerPartyRefType.Cash">Cash</option>
                         <option value="@LedgerPartyRefType.Bank">Bank</option>
                     </select>
+                    <div class="batch-readonly-figure" style="width:120px; text-align:right; margin-left:auto;">Rs @((_debitType == LedgerPartyRefType.Party ? SelectedDebitPartyBalance : SelectedDebitAccountBalance)?.ToString("N2") ?? "0.00")</div>
                 </div>
                 <div style="margin-top:6px;">
                 @if (_debitType == LedgerPartyRefType.Party)
@@ -77,10 +75,6 @@
                 {
                     <SearchSelect TItem="ChartOfAccountDto" Items="AccountsFor(_debitType)" IdSelector="@(a => a.Id)" TextSelector="@DisplayText.Account" Value="@(_debitAccountId ?? 0)" ValueChanged="@(async v => { _debitAccountId = v; await FocusAmountAsync(); })" Placeholder="@PlaceholderFor(_debitType)" />
                 }
-                </div>
-                <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                    <label style="@LabelStyle flex:0 0 60px;">Balance:</label>
-                    <div class="batch-readonly-figure" style="width:140px; text-align:right;">Rs @((_debitType == LedgerPartyRefType.Party ? SelectedDebitPartyBalance : SelectedDebitAccountBalance)?.ToString("N2") ?? "0.00")</div>
                 </div>
                 <div style="margin-top:6px;">
                     <label style="@LabelStyle">Description:</label>
@@ -117,7 +111,7 @@
         }
         else if (_gridVouchers.Count == 0)
         {
-            <p style="color:#777;">No General Vouchers on @_date.ToString("yyyy-MM-dd").</p>
+            <p style="color:#777;">No Journal Vouchers on @_date.ToString("yyyy-MM-dd").</p>
         }
         else
         {
@@ -183,7 +177,7 @@
 
     // Credit = the voucher's "From" side, Debit = its "To" side (same Dr-To/Cr-From convention
     // Payment/Receipt already post with — see VoucherService) — just named Credit/Debit here since
-    // a General Voucher has no natural "From"/"To" direction of its own. Each side keeps its own
+    // a Journal Voucher has no natural "From"/"To" direction of its own. Each side keeps its own
     // description (Voucher.CreditDescription/DebitDescription), unlike Payment/Receipt's one shared
     // Description.
     private LedgerPartyRefType _creditType;
@@ -284,7 +278,7 @@
         var match = _gridVouchers?.FirstOrDefault(v => string.Equals(v.VoucherNo, _searchVoucherNo.Trim(), StringComparison.OrdinalIgnoreCase));
         if (match is null)
         {
-            _error = $"No General Voucher numbered \"{_searchVoucherNo}\" found on {_date:yyyy-MM-dd}.";
+            _error = $"No Journal Voucher numbered \"{_searchVoucherNo}\" found on {_date:yyyy-MM-dd}.";
             return;
         }
 
@@ -317,7 +311,7 @@
         _creditDescription = null;
         _debitDescription = null;
 
-        // No natural default direction for a General Voucher (unlike Payment/Receipt, which always
+        // No natural default direction for a Journal Voucher (unlike Payment/Receipt, which always
         // involve Cash/Bank on one side) — defaults both sides to Party, the most common case for a
         // free-form Credit/Debit entry.
         _creditType = LedgerPartyRefType.Party;
