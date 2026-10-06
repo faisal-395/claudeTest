@@ -6,9 +6,11 @@ namespace GrainMarket.Domain.Entities;
 /// fallback — the persistent sidebar/nav, and any page that isn't one of the other scopes (Setup,
 /// Reports, Ledger, etc.). The others each override Global only within their own page, so
 /// e.g. Sale Invoice can have its own form heading/textbox/button colors without touching the
-/// sidebar or Purchase's colors. Voucher covers both Payment and Receipt — they share the same
-/// VoucherForm.razor, so one scope colors both. The Journal Voucher and Expense Voucher pages
-/// each have their own scope, separate from Voucher.</summary>
+/// sidebar or Purchase's colors. Payment and Receipt share the same VoucherForm.razor component
+/// but each gets its own scope (VoucherForm picks the class by VoucherKind), so they can be
+/// colored independently — matching the legacy software's red Payment / green Receipt. 5 ("Voucher")
+/// is permanently retired: it used to cover both before they were split apart; a migration
+/// (SplitPaymentReceiptThemeScopes) repurposes any existing row at that id into Payment's.</summary>
 public enum ThemeScope
 {
     Global = 0,
@@ -16,9 +18,10 @@ public enum ThemeScope
     Purchase = 2,
     Kachi = 3,
     Pakki = 4,
-    Voucher = 5,
     Journal = 6,
-    Expense = 7
+    Expense = 7,
+    Payment = 8,
+    Receipt = 9
 }
 
 /// <summary>Where the app's navigation lives — a single, app-wide choice (there's only ever one

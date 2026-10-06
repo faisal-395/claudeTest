@@ -65,9 +65,10 @@ public class AppearanceSettingsService : IAppearanceSettingsService
     }
 
     // Every scope otherwise shares the same class-level defaults (AppearanceSettings' own property
-    // initializers) — Kachi, Pakki, and SaleInvoice are the exceptions, matching the legacy
-    // software's own look (green/blue/purple respectively) for a brand-new row, while staying
-    // fully editable afterwards from Setup > Appearance like any other scope's colors.
+    // initializers) — Kachi, Pakki, SaleInvoice, Purchase, Payment, and Receipt are the exceptions,
+    // matching the legacy software's own look (green/blue/purple/red/red/green respectively) for a
+    // brand-new row, while staying fully editable afterwards from Setup > Appearance like any other
+    // scope's colors.
     // HeadingBackgroundColor is kept light enough on every one of them to pass the
     // PrimaryColor/HeadingBackgroundColor contrast check against the default (dark) PrimaryColor —
     // see UpdateAppearanceSettingsRequestValidator; the other fields (ProductPanelColor,
@@ -94,6 +95,26 @@ public class AppearanceSettingsService : IAppearanceSettingsService
             case ThemeScope.SaleInvoice:
                 settings.HeadingBackgroundColor = "#C5AEE0";
                 settings.ProductPanelColor = "#D9C7EC";
+                settings.GridHeaderColor = "#B7C2D1";
+                settings.GridBackgroundColor = "#D3DAE3";
+                break;
+            case ThemeScope.Purchase:
+                settings.HeadingBackgroundColor = "#F4A7A7";
+                settings.PanelColor = "#F2B6B6";
+                settings.ProductPanelColor = "#EF9A9A";
+                settings.GridHeaderColor = "#B7C2D1";
+                settings.GridBackgroundColor = "#D3DAE3";
+                break;
+            // Payment/Receipt's own form fields sit on a plain white panel in the legacy
+            // software — only the heading bar is colored (red for Payment, green for Receipt) —
+            // so PanelColor is deliberately left at the class default here.
+            case ThemeScope.Payment:
+                settings.HeadingBackgroundColor = "#F4A7A7";
+                settings.GridHeaderColor = "#B7C2D1";
+                settings.GridBackgroundColor = "#D3DAE3";
+                break;
+            case ThemeScope.Receipt:
+                settings.HeadingBackgroundColor = "#A5D6A7";
                 settings.GridHeaderColor = "#B7C2D1";
                 settings.GridBackgroundColor = "#D3DAE3";
                 break;

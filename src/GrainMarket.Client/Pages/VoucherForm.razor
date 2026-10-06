@@ -1,7 +1,7 @@
 @using GrainMarket.Application.Common
 @inject ApiClient Api
 
-<div class="theme-voucher">
+<div class="@(VoucherKind == VoucherType.Payment ? "theme-payment" : "theme-receipt")">
 <div style="background:var(--brand-heading-bg); text-align:center; padding:8px 0; margin:-12px 0 6px; border-radius:4px;">
     <h3 style="margin:0; color:var(--brand-primary); font-size:1.4rem; font-weight:600;">@Title</h3>
 </div>
