@@ -49,6 +49,8 @@ public class AppearanceSettingsService : IAppearanceSettingsService
         settings.SurfaceColor = request.SurfaceColor;
         settings.PanelColor = request.PanelColor;
         settings.ProductPanelColor = request.ProductPanelColor;
+        settings.CreditPanelColor = request.CreditPanelColor;
+        settings.DebitPanelColor = request.DebitPanelColor;
         settings.HeadingBackgroundColor = request.HeadingBackgroundColor;
         settings.InputBackgroundColor = request.InputBackgroundColor;
         settings.GridHeaderColor = request.GridHeaderColor;
@@ -64,7 +66,8 @@ public class AppearanceSettingsService : IAppearanceSettingsService
 
     private static AppearanceSettingsDto ToDto(AppearanceSettings s) => new(
         s.Id, s.Scope, s.PrimaryColor, s.AccentColor, s.SurfaceColor,
-        s.PanelColor, s.ProductPanelColor, s.HeadingBackgroundColor, s.InputBackgroundColor,
+        s.PanelColor, s.ProductPanelColor, s.CreditPanelColor, s.DebitPanelColor,
+        s.HeadingBackgroundColor, s.InputBackgroundColor,
         s.GridHeaderColor, s.GridBackgroundColor,
         s.LabelFontSizePx, s.GridFullBorders, s.NavigationLayout);
 }

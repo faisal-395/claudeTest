@@ -42,6 +42,8 @@
             surfaceColor: '--brand-surface',
             panelColor: '--brand-panel',
             productPanelColor: '--brand-product-panel-bg',
+            creditPanelColor: '--brand-credit-panel-bg',
+            debitPanelColor: '--brand-debit-panel-bg',
             headingBackgroundColor: '--brand-heading-bg',
             inputBackgroundColor: '--brand-input-bg',
             gridHeaderColor: '--brand-grid-header',
@@ -103,6 +105,12 @@
                 }
                 if (settings.productPanelColor) {
                     declarations.push('--brand-product-panel-text: ' + contrastTextFor(settings.productPanelColor) + ';');
+                }
+                if (settings.creditPanelColor) {
+                    declarations.push('--brand-credit-panel-text: ' + contrastTextFor(settings.creditPanelColor) + ';');
+                }
+                if (settings.debitPanelColor) {
+                    declarations.push('--brand-debit-panel-text: ' + contrastTextFor(settings.debitPanelColor) + ';');
                 }
                 declarations.push('--brand-grid-border-width: ' + (settings.gridFullBorders ? '1px' : '0') + ';');
 

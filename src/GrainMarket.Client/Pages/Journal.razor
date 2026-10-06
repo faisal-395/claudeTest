@@ -28,7 +28,7 @@
             </div>
 
             <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px;">
-            <div>
+            <div style="background:var(--brand-credit-panel-bg); color:var(--brand-credit-panel-text); padding:10px 12px; border-radius:4px;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label style="@LabelStyle flex:0 0 60px;">Credit:</label>
                     <select @bind="_creditType" @bind:after="OnCreditTypeChanged" style="@($"{FieldStyle}width:120px;")">
@@ -55,7 +55,7 @@
                 </div>
             </div>
 
-            <div>
+            <div style="background:var(--brand-debit-panel-bg); color:var(--brand-debit-panel-text); padding:10px 12px; border-radius:4px;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label style="@LabelStyle flex:0 0 60px;">Debit:</label>
                     <select @bind="_debitType" @bind:after="OnDebitTypeChanged" style="@($"{FieldStyle}width:120px;")">
@@ -117,12 +117,13 @@
         {
             <div class="batch-results-grid-wrapper" style="max-height:65vh;overflow-y:auto;">
                 <table class="data-grid">
-                    <thead><tr><th>Voucher #</th><th>Credit</th><th>Debit</th><th style="text-align:right;">Amount</th><th>Ref No</th></tr></thead>
+                    <thead><tr><th>Voucher #</th><th>Date</th><th>Credit</th><th>Debit</th><th style="text-align:right;">Amount</th><th>Ref No</th></tr></thead>
                     <tbody>
                         @foreach (var v in _gridVouchers)
                         {
                             <tr>
                                 <td><a href="print/voucher/@v.Id">@v.VoucherNo</a></td>
+                                <td>@v.Date.ToString("yyyy-MM-dd")</td>
                                 <td>@(v.FromPartyName ?? v.FromAccountName ?? v.FromType?.ToString())</td>
                                 <td>@(v.ToPartyName ?? v.ToAccountName ?? v.ToType?.ToString())</td>
                                 <td style="text-align:right;">@v.Amount.ToString("N2")</td>
@@ -132,7 +133,7 @@
                     </tbody>
                     <tfoot>
                         <tr style="font-weight:600;">
-                            <td colspan="3">Total</td>
+                            <td colspan="4">Total</td>
                             <td style="text-align:right;">@_gridVouchers.Sum(v => v.Amount).ToString("N2")</td>
                             <td></td>
                         </tr>

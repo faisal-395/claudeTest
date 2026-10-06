@@ -57,6 +57,14 @@ public class AppearanceSettings : BaseEntity
     /// PanelColor, so the two panels can look different even though they're the same page.</summary>
     public string ProductPanelColor { get; set; } = "#FFFFFF";
 
+    /// <summary>Background of the Journal Voucher page's Credit side panel — independent of
+    /// PanelColor. Defaults to a light green, matching the legacy software's convention.</summary>
+    public string CreditPanelColor { get; set; } = "#E8F5E9";
+
+    /// <summary>Background of the Journal Voucher page's Debit side panel — independent of
+    /// PanelColor. Defaults to a light pink, matching the legacy software's convention.</summary>
+    public string DebitPanelColor { get; set; } = "#FCE4EC";
+
     /// <summary>Background behind the page's own &lt;h1&gt; heading text.</summary>
     public string HeadingBackgroundColor { get; set; } = "#FFFFFF";
 

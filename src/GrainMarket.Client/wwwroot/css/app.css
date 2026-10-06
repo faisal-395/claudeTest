@@ -26,6 +26,8 @@
    applied, but no longer an editable Setup > Appearance control.
    --brand-panel: background of form/entry cards (.batch-entry-panel, .form-grid) — where the
    actual fields sit, as opposed to the page behind them (--brand-surface).
+   --brand-credit-panel-bg / --brand-debit-panel-bg: the Journal Voucher page's Credit/Debit side
+   panels — independent of --brand-panel, only meaningful on that one page.
    --brand-heading-bg: background behind the page's own <h1> heading text.
    --brand-input-bg: background shown only on a focused/selected text box — not applied to every
    text box at rest (those keep a plain, un-themed border/background).
@@ -41,6 +43,8 @@
     --brand-surface: #f7f9f7;
     --brand-panel: #ffffff;
     --brand-product-panel-bg: #ffffff;
+    --brand-credit-panel-bg: #e8f5e9;
+    --brand-debit-panel-bg: #fce4ec;
     --brand-heading-bg: #ffffff;
     --brand-input-bg: #ffffff;
     --brand-grid-header: #eef4ee;
@@ -62,6 +66,8 @@
     --brand-input-text: #1a1a1a;
     --brand-grid-header-text: #1a1a1a;
     --brand-product-panel-text: #1a1a1a;
+    --brand-credit-panel-text: #1a1a1a;
+    --brand-debit-panel-text: #1a1a1a;
     --brand-surface-text: #1a1a1a;
     --brand-panel-text: #1a1a1a;
 }

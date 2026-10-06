@@ -13,6 +13,8 @@ public class AppearanceSettingsConfiguration : IEntityTypeConfiguration<Appearan
         builder.Property(a => a.SurfaceColor).IsRequired().HasMaxLength(7);
         builder.Property(a => a.PanelColor).IsRequired().HasMaxLength(7);
         builder.Property(a => a.ProductPanelColor).IsRequired().HasMaxLength(7);
+        builder.Property(a => a.CreditPanelColor).IsRequired().HasMaxLength(7);
+        builder.Property(a => a.DebitPanelColor).IsRequired().HasMaxLength(7);
         builder.Property(a => a.HeadingBackgroundColor).IsRequired().HasMaxLength(7);
         builder.Property(a => a.InputBackgroundColor).IsRequired().HasMaxLength(7);
         builder.Property(a => a.GridHeaderColor).IsRequired().HasMaxLength(7);

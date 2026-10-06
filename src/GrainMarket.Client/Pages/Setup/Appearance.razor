@@ -105,6 +105,27 @@
                     </div>
                 </div>
 
+                @if (s.Scope == ThemeScope.Journal)
+                {
+                    <div style="font-size:0.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.03em;margin:4px 0 8px;">Credit / Debit Panels</div>
+                    <div class="form-grid" style="max-width:none;padding:0;box-shadow:none;margin-bottom:18px;">
+                        <div>
+                            <label>Credit Panel Background</label>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <input type="color" @bind="s.CreditPanelColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                                <input @bind="s.CreditPanelColor" style="width:100px;" />
+                            </div>
+                        </div>
+                        <div>
+                            <label>Debit Panel Background</label>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <input type="color" @bind="s.DebitPanelColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                                <input @bind="s.DebitPanelColor" style="width:100px;" />
+                            </div>
+                        </div>
+                    </div>
+                }
+
                 @if (s.Scope == ThemeScope.Global)
                 {
                     <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e5e5;">
@@ -123,6 +144,11 @@
                         <div style="background:@s.AccentColor;color:white;padding:6px 12px;border-radius:4px;">Button</div>
                         <div style="background:@s.PanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Invoice Info Panel</div>
                         <div style="background:@s.ProductPanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Add Product Panel</div>
+                        @if (s.Scope == ThemeScope.Journal)
+                        {
+                            <div style="background:@s.CreditPanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Credit Panel</div>
+                            <div style="background:@s.DebitPanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Debit Panel</div>
+                        }
                         <div style="background:@s.InputBackgroundColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Text Box (selected)</div>
                         <div style="background:@s.GridHeaderColor;color:#333;padding:6px 12px;border-radius:4px;font-weight:600;">Grid Header</div>
                         <div style="background:@s.GridBackgroundColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Grid Body</div>
@@ -172,7 +198,8 @@
         {
             var request = new UpdateAppearanceSettingsRequest(
                 s.PrimaryColor, s.AccentColor, s.SurfaceColor,
-                s.PanelColor, s.ProductPanelColor, s.HeadingBackgroundColor, s.InputBackgroundColor,
+                s.PanelColor, s.ProductPanelColor, s.CreditPanelColor, s.DebitPanelColor,
+                s.HeadingBackgroundColor, s.InputBackgroundColor,
                 s.GridHeaderColor, s.GridBackgroundColor,
                 s.LabelFontSizePx, s.GridFullBorders, s.NavigationLayout);
             var updated = await Api.UpdateAppearanceSettingsAsync(s.Scope, request);
@@ -192,6 +219,8 @@
         s.SurfaceColor = defaults.SurfaceColor;
         s.PanelColor = defaults.PanelColor;
         s.ProductPanelColor = defaults.ProductPanelColor;
+        s.CreditPanelColor = defaults.CreditPanelColor;
+        s.DebitPanelColor = defaults.DebitPanelColor;
         s.HeadingBackgroundColor = defaults.HeadingBackgroundColor;
         s.InputBackgroundColor = defaults.InputBackgroundColor;
         s.GridHeaderColor = defaults.GridHeaderColor;
@@ -217,6 +246,8 @@
 
         public string PanelColor { get; set; } = "#FFFFFF";
         public string ProductPanelColor { get; set; } = "#FFFFFF";
+        public string CreditPanelColor { get; set; } = "#E8F5E9";
+        public string DebitPanelColor { get; set; } = "#FCE4EC";
         public string HeadingBackgroundColor { get; set; } = "#FFFFFF";
         public string InputBackgroundColor { get; set; } = "#FFFFFF";
         public string GridHeaderColor { get; set; } = "#EEF4EE";
@@ -254,6 +285,8 @@
             SurfaceColor = dto.SurfaceColor;
             PanelColor = dto.PanelColor;
             ProductPanelColor = dto.ProductPanelColor;
+            CreditPanelColor = dto.CreditPanelColor;
+            DebitPanelColor = dto.DebitPanelColor;
             HeadingBackgroundColor = dto.HeadingBackgroundColor;
             InputBackgroundColor = dto.InputBackgroundColor;
             GridHeaderColor = dto.GridHeaderColor;
@@ -265,7 +298,8 @@
 
         public AppearanceSettingsDto ToDto() => new(
             0, Scope, PrimaryColor, AccentColor, SurfaceColor,
-            PanelColor, ProductPanelColor, HeadingBackgroundColor, InputBackgroundColor,
+            PanelColor, ProductPanelColor, CreditPanelColor, DebitPanelColor,
+            HeadingBackgroundColor, InputBackgroundColor,
             GridHeaderColor, GridBackgroundColor,
             LabelFontSizePx, GridFullBorders, NavigationLayout);
     }

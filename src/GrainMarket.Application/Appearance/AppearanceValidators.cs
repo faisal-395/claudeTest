@@ -25,6 +25,8 @@ public class UpdateAppearanceSettingsRequestValidator : AbstractValidator<Update
         RuleFor(x => x.SurfaceColor).NotEmpty().Matches(HexColorPattern).WithMessage("Surface color must be a hex code like #F7F9F7.");
         RuleFor(x => x.PanelColor).NotEmpty().Matches(HexColorPattern).WithMessage("Panel color must be a hex code like #FFFFFF.");
         RuleFor(x => x.ProductPanelColor).NotEmpty().Matches(HexColorPattern).WithMessage("Add Product panel color must be a hex code like #FFFFFF.");
+        RuleFor(x => x.CreditPanelColor).NotEmpty().Matches(HexColorPattern).WithMessage("Credit panel color must be a hex code like #E8F5E9.");
+        RuleFor(x => x.DebitPanelColor).NotEmpty().Matches(HexColorPattern).WithMessage("Debit panel color must be a hex code like #FCE4EC.");
         RuleFor(x => x.HeadingBackgroundColor).NotEmpty().Matches(HexColorPattern).WithMessage("Heading background must be a hex code like #FFFFFF.");
         RuleFor(x => x.InputBackgroundColor).NotEmpty().Matches(HexColorPattern).WithMessage("Selected text box background must be a hex code like #FFFFFF.");
         RuleFor(x => x.GridHeaderColor).NotEmpty().Matches(HexColorPattern).WithMessage("Grid header color must be a hex code like #EEF4EE.");
