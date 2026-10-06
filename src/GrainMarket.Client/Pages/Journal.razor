@@ -122,25 +122,25 @@
         {
             <div class="batch-results-grid-wrapper" style="max-height:65vh;overflow-y:auto;">
                 <table class="data-grid">
-                    <thead><tr><th>Voucher #</th><th>Date</th><th>Credit</th><th>Debit</th><th style="text-align:right;">Amount</th><th>Ref No</th></tr></thead>
+                    <thead><tr><th>Id</th><th>Title</th><th>V#</th><th>Description</th><th style="text-align:right;">Credit</th><th style="text-align:right;">Debit</th></tr></thead>
                     <tbody>
-                        @foreach (var v in _gridVouchers)
+                        @foreach (var line in GridLines)
                         {
                             <tr>
-                                <td><a href="print/voucher/@v.Id">@v.VoucherNo</a></td>
-                                <td>@v.Date.ToString("yyyy-MM-dd")</td>
-                                <td>@(v.FromPartyName ?? v.FromAccountName ?? v.FromType?.ToString())</td>
-                                <td>@(v.ToPartyName ?? v.ToAccountName ?? v.ToType?.ToString())</td>
-                                <td style="text-align:right;">@v.Amount.ToString("N2")</td>
-                                <td>@(v.RefNo ?? "—")</td>
+                                <td>@(line.Id?.ToString() ?? "—")</td>
+                                <td>@line.Title</td>
+                                <td><a href="print/voucher/@line.VoucherId">@line.VoucherNo</a></td>
+                                <td>@(line.Description ?? "—")</td>
+                                <td style="text-align:right;">@(line.Credit > 0 ? line.Credit.ToString("N2") : "")</td>
+                                <td style="text-align:right;">@(line.Debit > 0 ? line.Debit.ToString("N2") : "")</td>
                             </tr>
                         }
                     </tbody>
                     <tfoot>
                         <tr style="font-weight:600;">
                             <td colspan="4">Total</td>
-                            <td style="text-align:right;">@_gridVouchers.Sum(v => v.Amount).ToString("N2")</td>
-                            <td></td>
+                            <td style="text-align:right;">@GridLines.Sum(l => l.Credit).ToString("N2")</td>
+                            <td style="text-align:right;">@GridLines.Sum(l => l.Debit).ToString("N2")</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -346,6 +346,39 @@
     {
         var all = await Api.GetVouchersAsync(VoucherType.Journal);
         _gridVouchers = all.Where(v => v.Date.Date == _date.Date).OrderByDescending(v => v.Id).ToList();
+    }
+
+    // Register-style display (matches the legacy software's grid): every voucher becomes TWO rows,
+    // one per ledger leg, sharing the same VoucherId/VoucherNo — the Credit leg's amount lands in
+    // the Credit column with Debit left blank, and vice versa for the Debit leg. "Id"/"Title" show
+    // the party or account each leg actually posted against, not the voucher's own Id (kept
+    // separately as VoucherId for the print link). Handles old-style journal vouchers (FromType is
+    // null, posted via the legacy DebitAccountId/CreditAccountId columns) alongside new-style ones.
+    private record GridLine(int VoucherId, string VoucherNo, int? Id, string Title, string? Description, decimal Credit, decimal Debit);
+
+    private List<GridLine> GridLines => _gridVouchers?.SelectMany(ToGridLines).ToList() ?? new();
+
+    private static IEnumerable<GridLine> ToGridLines(VoucherDto v)
+    {
+        int? creditId, debitId;
+        string creditTitle, debitTitle;
+        if (v.FromType is null)
+        {
+            creditId = v.CreditAccountId;
+            creditTitle = v.CreditAccountName ?? "—";
+            debitId = v.DebitAccountId;
+            debitTitle = v.DebitAccountName ?? "—";
+        }
+        else
+        {
+            creditId = v.FromPartyId ?? v.FromAccountId;
+            creditTitle = v.FromPartyName ?? v.FromAccountName ?? v.FromType?.ToString() ?? "—";
+            debitId = v.ToPartyId ?? v.ToAccountId;
+            debitTitle = v.ToPartyName ?? v.ToAccountName ?? v.ToType?.ToString() ?? "—";
+        }
+
+        yield return new GridLine(v.Id, v.VoucherNo, creditId, creditTitle, v.CreditDescription ?? v.Description, v.Amount, 0m);
+        yield return new GridLine(v.Id, v.VoucherNo, debitId, debitTitle, v.DebitDescription ?? v.Description, 0m, v.Amount);
     }
 
     // Re-fetches parties/accounts so every Credit/Debit balance figure on screen reflects the
