@@ -217,7 +217,8 @@
         _creditType = opt.IsParty ? LedgerPartyRefType.Party : LedgerPartyRefType.Account;
         _creditPartyId = opt.IsParty ? opt.RefId : null;
         _creditAccountId = opt.IsParty ? null : opt.RefId;
-        await FocusAmountAsync();
+        // Picking Credit lands you on Debit next, not Amount — Credit then Debit then Amount.
+        if (_debitSearchRef is not null) await _debitSearchRef.FocusAsync();
     }
 
     private async Task OnDebitSelected(int key)
@@ -230,7 +231,7 @@
         await FocusAmountAsync();
     }
 
-    // Picking who/what either side is lands you on Amount next, same as VoucherForm.
+    // Picking Debit lands you on Amount next, same as VoucherForm.
     private async Task FocusAmountAsync()
     {
         await _amountInputRef.FocusAsync();
