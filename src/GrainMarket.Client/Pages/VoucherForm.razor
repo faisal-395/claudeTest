@@ -192,27 +192,21 @@
     private decimal? SelectedToPartyBalance => _parties?.FirstOrDefault(p => p.Id == _toPartyId)?.CurrentBalance;
     private decimal? SelectedToAccountBalance => _accounts?.FirstOrDefault(a => a.Id == _toAccountId)?.CurrentBalance;
 
-    // Cash and Bank are no longer single fixed accounts — a site can have several (e.g. "Cash In
-    // Hand" and "Patty Cash", or any number of bank accounts) under a top-level "Cash"/"Bank"
-    // group account (set up from Setup > Chart of Accounts, Parent Account = "Cash"/"Bank"); Cash/
-    // Bank here just narrow the same account picker used for "Account" down to that family —
-    // "Account" itself still offers every chart-of-account row.
+    // Cash and Bank are Account Types (Setup > Account Types), not a parent/group account — a site
+    // can have several accounts of either type (e.g. "Cash in Hand" and "Dasti Cash", or any
+    // number of bank accounts); Cash/Bank here just narrow the same account picker used for
+    // "Account" down to that type. "Account" itself still offers every chart-of-account row.
     //
-    // Found by NAME rather than DomainConstants.CashAccountCode/BankAccountCode: Code is a plain
-    // editable text field in Setup > Chart of Accounts, so a renamed or recoded seed row would
-    // silently break a lookup keyed on one specific code value. Only the group's CHILDREN are
-    // offered here, never the group account itself — that's already represented by the main
-    // From/To dropdown's "Cash"/"Bank" option, so listing it again in this second picker would be
-    // redundant.
+    // Found by Account Type NAME rather than a fixed id: Setup > Account Types has no reserved id
+    // for "Cash"/"Bank" the way the original five (Asset/Liability/…) do, so a name match is the
+    // only stable way to find them regardless of what id they landed on.
     private List<ChartOfAccountDto> AccountsFor(LedgerPartyRefType type)
     {
         if (_accounts is null) return new();
         if (type == LedgerPartyRefType.Account) return _accounts;
 
-        var groupName = type == LedgerPartyRefType.Cash ? "Cash" : "Bank";
-        var group = _accounts.FirstOrDefault(a => string.Equals(a.Name, groupName, StringComparison.OrdinalIgnoreCase));
-        if (group is null) return new();
-        return _accounts.Where(a => a.ParentAccountId == group.Id).ToList();
+        var typeName = type == LedgerPartyRefType.Cash ? "Cash" : "Bank";
+        return _accounts.Where(a => string.Equals(a.AccountTypeName, typeName, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
     private static string PlaceholderFor(LedgerPartyRefType type) => type switch

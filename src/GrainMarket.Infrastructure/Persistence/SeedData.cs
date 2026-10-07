@@ -113,10 +113,13 @@ public static class SeedData
 
     private static async Task<Dictionary<string, ChartOfAccount>> SeedChartOfAccountsAsync(AppDbContext db, Dictionary<string, Role> roles, CancellationToken ct)
     {
+        // Cash in Hand (code 1000) and Bank Account (code 1010) are deliberately NOT in this array
+        // — the ConvertCashBankToAccountTypes migration creates both directly (typed under its own
+        // "Cash"/"Bank" Account Types, not the generic Asset bucket), and migrations always run
+        // before this, even on a brand-new database — see the comment below on existingAccounts for
+        // why that's safe to rely on.
         var accounts = new[]
         {
-            new ChartOfAccount { Code = DomainConstants.CashAccountCode, Name = "Cash in Hand", NameUrdu = "نقد", AccountTypeId = DomainConstants.AssetAccountTypeId },
-            new ChartOfAccount { Code = DomainConstants.BankAccountCode, Name = "Bank", NameUrdu = "بینک", AccountTypeId = DomainConstants.AssetAccountTypeId },
             new ChartOfAccount { Code = "3000", Name = "Owner's Equity", NameUrdu = "سرمایہ", AccountTypeId = DomainConstants.EquityAccountTypeId, IsProtected = true },
             new ChartOfAccount { Code = DomainConstants.SalesIncomeAccountCode, Name = "Sales Income", NameUrdu = "آمدنی فروخت", AccountTypeId = DomainConstants.IncomeAccountTypeId },
             new ChartOfAccount { Code = "4100", Name = "Commission Income", NameUrdu = "آمدنی کمیشن", AccountTypeId = DomainConstants.IncomeAccountTypeId },
