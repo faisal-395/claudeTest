@@ -147,7 +147,19 @@
 
     private string? DisplayedExpenseNo => _editingExpenseId is not null ? _editingExpenseNo : _nextExpenseNo;
 
-    private List<ChartOfAccountDto> ExpenseAccounts => (_accounts ?? new()).Where(a => a.AccountTypeId == DomainConstants.ExpenseAccountTypeId).ToList();
+    // The generic "Expense" type (Purchases, General Expenses) plus every specific expense-style
+    // Account Type from the legacy software's own list (Setup > Account Types) — those are their
+    // own distinct types now, not lumped under generic Expense, so matching by a single fixed
+    // AccountTypeId no longer finds them; match by name instead.
+    private static readonly HashSet<string> ExpenseTypeNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Discount Allowed", "Electricity Expenses", "Employee Related Expenses", "Maintenance Expenses",
+        "Miscellaneous Expenses", "Phone Expenses", "Rental Expenses", "Traveling Expenses"
+    };
+
+    private List<ChartOfAccountDto> ExpenseAccounts => (_accounts ?? new())
+        .Where(a => a.AccountTypeId == DomainConstants.ExpenseAccountTypeId || ExpenseTypeNames.Contains(a.AccountTypeName))
+        .ToList();
 
     private decimal? SelectedFromBalance => _accounts?.FirstOrDefault(a => a.Id == _paidFromAccountId)?.CurrentBalance;
     private decimal? SelectedToBalance => _accounts?.FirstOrDefault(a => a.Id == _expenseAccountId)?.CurrentBalance;

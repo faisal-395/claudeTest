@@ -10,19 +10,17 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // From the legacy software's own "Account Type" list (screenshot), split per the
-            // client's own call on where each belongs in this app's model:
-            //  - The broad/category-style ones become new AccountTypeDefinition rows, alongside the
-            //    original Asset/Liability/Income/Expense/Equity five — purely new picker options,
-            //    nothing is auto-filed under them. "Bank"/"Cash" and "Owner's Equity" from that same
-            //    list are deliberately NOT repeated here: this app already has "Bank"/"Cash" as
-            //    actual ChartOfAccount group accounts (see AddCashAccountGroup) and "Owner's Equity"
-            //    as both the existing "Equity" type and a seeded leaf account under it — adding
-            //    same-named types on top would just be a confusing duplicate with no purpose.
-            //  - "Party" and "Stock" don't correspond to anything postable in this schema (Party
-            //    balances live in the Parties module, Stock in Products/Inventory) — added anyway as
-            //    inert placeholder types, per explicit instruction, since neither can become a real
-            //    postable account here.
+            // Every entry from the legacy software's own "Account Type" list (screenshot) becomes
+            // its own AccountTypeDefinition row, exactly as named there (spelling corrected) —
+            // alongside the original Asset/Liability/Income/Expense/Equity five, not folded into
+            // them. "Bank"/"Cash" and "Owner's Equity" from that same list are deliberately NOT
+            // repeated here: this app already has "Bank"/"Cash" as actual ChartOfAccount group
+            // accounts (see AddCashAccountGroup) and "Owner's Equity" as both the existing "Equity"
+            // type and a seeded leaf account under it — adding same-named types on top would just be
+            // a confusing duplicate with no purpose. "Party" and "Stock" don't correspond to
+            // anything postable in this schema (Party balances live in the Parties module, Stock in
+            // Products/Inventory) — added anyway as inert placeholder types, per explicit
+            // instruction, since neither can become a real postable account here.
             migrationBuilder.Sql(@"
                 INSERT INTO ""AccountTypeDefinitions"" (""Name"", ""NameUrdu"", ""IsSystemType"", ""CreatedAtUtc"", ""IsDeleted"")
                 SELECT v.""Name"", v.""NameUrdu"", FALSE, NOW(), FALSE
@@ -30,26 +28,39 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                     ('Accounts Receivable', N'قابل وصول رقوم'),
                     ('Accounts Payable', N'قابل ادا رقوم'),
                     ('Accumulated Depreciation', N'جمع شدہ فرسودگی'),
+                    ('Discount Allowed', N'اجازت شدہ رعایت'),
+                    ('Electricity Expenses', N'بجلی کے اخراجات'),
+                    ('Employee Related Expenses', N'ملازمین کے متعلقہ اخراجات'),
                     ('Fixed Assets', N'فکسڈ اثاثے'),
+                    ('Maintenance Expenses', N'مرمت کے اخراجات'),
+                    ('Miscellaneous Expenses', N'متفرق اخراجات'),
                     ('Notes Payable', N'قابل ادا نوٹس'),
                     ('Notes Receivable', N'قابل وصول نوٹس'),
+                    ('Party', N'پارٹی'),
                     ('Payable to GOVT (Tax)', N'حکومت کو قابل ادا (ٹیکس)'),
+                    ('Phone Expenses', N'فون کے اخراجات'),
                     ('Profit', N'منافع'),
+                    ('Rental Expenses', N'کرایہ کے اخراجات'),
                     ('Revenue Earned', N'حاصل شدہ آمدنی'),
                     ('Sale Fee', N'فروخت فیس'),
-                    ('Party', N'پارٹی'),
-                    ('Stock', N'اسٹاک')
+                    ('Stock', N'اسٹاک'),
+                    ('Traveling Expenses', N'سفر کے اخراجات')
                 ) AS v(""Name"", ""NameUrdu"")
                 WHERE NOT EXISTS (SELECT 1 FROM ""AccountTypeDefinitions"" d WHERE d.""Name"" = v.""Name"");
             ");
 
-            // The leaf-account-style entries from that same list (clearly specific expense
-            // accounts, not categories) become real ChartOfAccount rows under the existing Expense
-            // type (id 4) — same shape as the "Purchases"/"General Expenses" rows already seeded,
-            // so they show up immediately in the Expense Voucher's "To" picker.
+            // Only the 8 expense-style entries actually get a matching ChartOfAccount leaf row —
+            // these are what the Expense Voucher's "To" picker needs to have anything to post
+            // against (see Expense.razor's ExpenseAccounts, matched by AccountType.Name since these
+            // are no longer lumped under the single generic "Expense" type). The other twelve
+            // (Accounts Receivable, Accounts Payable, Accumulated Depreciation, Fixed Assets, Notes
+            // Payable, Notes Receivable, Payable to GOVT (Tax), Profit, Revenue Earned, Sale Fee,
+            // Party, Stock) stay types only, with no account created — nothing in this app posts to
+            // them automatically, so a pre-made account for each would just be unused clutter; Setup
+            // > Chart of Accounts can always add one by hand later if a client actually needs it.
             migrationBuilder.Sql(@"
                 INSERT INTO ""ChartOfAccounts"" (""Code"", ""Name"", ""NameUrdu"", ""AccountTypeId"", ""ParentAccountId"", ""IsProtected"", ""IsActive"", ""CreatedAtUtc"", ""IsDeleted"")
-                SELECT v.""Code"", v.""Name"", v.""NameUrdu"", 4, NULL, FALSE, TRUE, NOW(), FALSE
+                SELECT v.""Code"", v.""Name"", v.""NameUrdu"", d.""Id"", NULL, FALSE, TRUE, NOW(), FALSE
                 FROM (VALUES
                     ('5200', 'Discount Allowed', N'اجازت شدہ رعایت'),
                     ('5300', 'Electricity Expenses', N'بجلی کے اخراجات'),
@@ -59,31 +70,6 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
                     ('5700', 'Phone Expenses', N'فون کے اخراجات'),
                     ('5800', 'Rental Expenses', N'کرایہ کے اخراجات'),
                     ('5900', 'Traveling Expenses', N'سفر کے اخراجات')
-                ) AS v(""Code"", ""Name"", ""NameUrdu"")
-                WHERE NOT EXISTS (SELECT 1 FROM ""ChartOfAccounts"" c WHERE c.""Code"" = v.""Code"");
-            ");
-
-            // Every one of the 12 new types above gets its own matching ChartOfAccount leaf row
-            // (same name), filed under ITS OWN new type rather than lumped under Expense — so each
-            // new type is immediately usable, not just an empty category with nothing under it.
-            // Account name doubles as the join key back to the type row just inserted, since both
-            // are identical for every one of these twelve.
-            migrationBuilder.Sql(@"
-                INSERT INTO ""ChartOfAccounts"" (""Code"", ""Name"", ""NameUrdu"", ""AccountTypeId"", ""ParentAccountId"", ""IsProtected"", ""IsActive"", ""CreatedAtUtc"", ""IsDeleted"")
-                SELECT v.""Code"", v.""Name"", v.""NameUrdu"", d.""Id"", NULL, FALSE, TRUE, NOW(), FALSE
-                FROM (VALUES
-                    ('1100', 'Accounts Receivable', N'قابل وصول رقوم'),
-                    ('2100', 'Accounts Payable', N'قابل ادا رقوم'),
-                    ('1200', 'Accumulated Depreciation', N'جمع شدہ فرسودگی'),
-                    ('1300', 'Fixed Assets', N'فکسڈ اثاثے'),
-                    ('2200', 'Notes Payable', N'قابل ادا نوٹس'),
-                    ('1400', 'Notes Receivable', N'قابل وصول نوٹس'),
-                    ('2300', 'Payable to GOVT (Tax)', N'حکومت کو قابل ادا (ٹیکس)'),
-                    ('3100', 'Profit', N'منافع'),
-                    ('4700', 'Revenue Earned', N'حاصل شدہ آمدنی'),
-                    ('4800', 'Sale Fee', N'فروخت فیس'),
-                    ('9100', 'Party', N'پارٹی'),
-                    ('9200', 'Stock', N'اسٹاک')
                 ) AS v(""Code"", ""Name"", ""NameUrdu"")
                 JOIN ""AccountTypeDefinitions"" d ON d.""Name"" = v.""Name""
                 WHERE NOT EXISTS (SELECT 1 FROM ""ChartOfAccounts"" c WHERE c.""Code"" = v.""Code"");
@@ -95,18 +81,17 @@ namespace GrainMarket.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.Sql(@"
                 DELETE FROM ""ChartOfAccounts""
-                WHERE ""Code"" IN (
-                    '5200','5300','5400','5500','5600','5700','5800','5900',
-                    '1100','2100','1200','1300','2200','1400','2300','3100','4700','4800','9100','9200')
+                WHERE ""Code"" IN ('5200','5300','5400','5500','5600','5700','5800','5900')
                   AND NOT EXISTS (SELECT 1 FROM ""LedgerEntries"" l WHERE l.""ChartOfAccountId"" = ""ChartOfAccounts"".""Id"");
             ");
 
             migrationBuilder.Sql(@"
                 DELETE FROM ""AccountTypeDefinitions""
                 WHERE ""Name"" IN (
-                    'Accounts Receivable','Accounts Payable','Accumulated Depreciation','Fixed Assets',
-                    'Notes Payable','Notes Receivable','Payable to GOVT (Tax)','Profit',
-                    'Revenue Earned','Sale Fee','Party','Stock')
+                    'Accounts Receivable','Accounts Payable','Accumulated Depreciation','Discount Allowed',
+                    'Electricity Expenses','Employee Related Expenses','Fixed Assets','Maintenance Expenses',
+                    'Miscellaneous Expenses','Notes Payable','Notes Receivable','Party','Payable to GOVT (Tax)',
+                    'Phone Expenses','Profit','Rental Expenses','Revenue Earned','Sale Fee','Stock','Traveling Expenses')
                   AND NOT EXISTS (SELECT 1 FROM ""ChartOfAccounts"" c WHERE c.""AccountTypeId"" = ""AccountTypeDefinitions"".""Id"");
             ");
         }
