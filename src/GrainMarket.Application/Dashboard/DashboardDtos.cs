@@ -1,3 +1,5 @@
+using GrainMarket.Application.Stock;
+
 namespace GrainMarket.Application.Dashboard;
 
 public record DashboardSummaryDto(
@@ -7,4 +9,5 @@ public record DashboardSummaryDto(
     int TodaySaleInvoiceCount, decimal TodaySaleNetBill,
     int TodayPurchaseCount, decimal TodayPurchaseNetBill,
     decimal CashBalance, decimal BankBalance,
-    decimal TotalOutstandingRecovery);
+    decimal TotalOutstandingRecovery,
+    List<ExpiringLotDto> ExpiringLots);

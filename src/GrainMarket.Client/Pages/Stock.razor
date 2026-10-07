@@ -1,0 +1,89 @@
+@page "/stock"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Stock <span class="rtl-urdu" style="font-size:1rem;">اسٹاک</span></h1>
+    <p style="color:#777;">Current on-hand quantity for farm inputs (pesticides, seeds, fertilizer), computed from all non-cancelled Purchase and Sale Invoice records.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:12px;">
+        <div>
+            <label style="display:block; font-size:0.85rem; color:#555;">Search</label>
+            <input @bind="_search" @bind:event="oninput" placeholder="Search product…" style="width:220px;" />
+        </div>
+        <div>
+            <label style="display:block; font-size:0.85rem; color:#555;">Product Type</label>
+            <select @bind="_productTypeFilter" style="width:180px;">
+                <option value="">All types</option>
+                @foreach (var t in DistinctProductTypes)
+                {
+                    <option value="@t">@t</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (_rows is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div class="batch-results-grid-wrapper">
+            <table class="data-grid" style="max-width:900px;">
+                <thead>
+                    <tr>
+                        <th>Product</th><th>Type</th><th>Unit</th><th>Purchased</th><th>Sold</th><th>On Hand</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in FilteredRows)
+                    {
+                        <tr class="@(row.OnHandQty <= 0 ? "invalid-total" : "")">
+                            <td>@row.ProductName @(row.NameUrdu is { Length: > 0 } u ? $"/ {u}" : "")</td>
+                            <td>@(row.ProductTypeName ?? "—")</td>
+                            <td>@row.BaseUnit</td>
+                            <td>@row.PurchasedQty.ToString("N2")</td>
+                            <td>@row.SoldQty.ToString("N2")</td>
+                            <td><strong>@row.OnHandQty.ToString("N2")</strong></td>
+                        </tr>
+                    }
+                    @if (FilteredRows.Count == 0)
+                    {
+                        <tr><td colspan="6" style="text-align:center;color:#999;">No products found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</RequireAuth>
+
+@code {
+    private List<StockDto>? _rows;
+    private string? _error;
+    private string _search = "";
+    private string _productTypeFilter = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _rows = await Api.GetStockAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private List<string> DistinctProductTypes => (_rows ?? new())
+        .Where(r => r.ProductTypeName is not null)
+        .Select(r => r.ProductTypeName!)
+        .Distinct()
+        .OrderBy(n => n)
+        .ToList();
+
+    private List<StockDto> FilteredRows => (_rows ?? new())
+        .Where(r => string.IsNullOrWhiteSpace(_search) || r.ProductName.Contains(_search, StringComparison.OrdinalIgnoreCase)
+            || (r.NameUrdu is not null && r.NameUrdu.Contains(_search, StringComparison.OrdinalIgnoreCase)))
+        .Where(r => string.IsNullOrEmpty(_productTypeFilter) || r.ProductTypeName == _productTypeFilter)
+        .ToList();
+}

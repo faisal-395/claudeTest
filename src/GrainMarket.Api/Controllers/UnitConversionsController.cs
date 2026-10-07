@@ -9,7 +9,6 @@ namespace GrainMarket.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/unit-conversions")]
-[ModulePermission(ModuleName.SetupUnitConversions)]
 public class UnitConversionsController : ControllerBase
 {
     private readonly IUnitConversionService _service;
@@ -19,6 +18,8 @@ public class UnitConversionsController : ControllerBase
         _service = service;
     }
 
+    // Deliberately not gated by ModulePermission: Kachi/Pakki entry needs these factors to compute
+    // weights regardless of the caller's Setup access.
     [HttpGet]
     public async Task<ActionResult<List<UnitConversionDto>>> GetAll(CancellationToken ct) => Ok(await _service.GetAllAsync(ct));
 

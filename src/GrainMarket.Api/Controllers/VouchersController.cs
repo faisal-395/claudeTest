@@ -19,14 +19,34 @@ public class VouchersController : ControllerBase
         _service = service;
     }
 
-    [ModulePermission(ModuleName.Payment)]
+    // Deliberately not gated by ModulePermission: Payment and Receipt's own "Today's Vouchers"
+    // grid calls this filtered by its own type, so a Receipt-only (no Payment) role still needs to
+    // see its own receipts — matches the Seasons/Parties/ChartOfAccounts "open read, gated write"
+    // convention used elsewhere for reference/record data.
     [HttpGet]
     public async Task<ActionResult<List<VoucherDto>>> GetAll([FromQuery] VoucherType? type, [FromQuery] int? seasonId, CancellationToken ct)
         => Ok(await _service.GetAllAsync(type, seasonId, ct));
 
-    [ModulePermission(ModuleName.Payment)]
     [HttpGet("{id:int}")]
     public async Task<ActionResult<VoucherDto>> GetById(int id, CancellationToken ct) => Ok(await _service.GetByIdAsync(id, ct));
+
+    // Read-only preview of the next PV number — never consumes it. The real number is only
+    // generated (and the sequence only advances) by CreatePayment below when the voucher is
+    // actually saved, so just opening the Payment screen never burns one.
+    [ModulePermission(ModuleName.Payment, PermissionAction.Create)]
+    [HttpGet("payment/next-voucher-no")]
+    public async Task<ActionResult<NextVoucherNoDto>> PeekNextPaymentNo(CancellationToken ct)
+        => Ok(await _service.PeekNextVoucherNoAsync(VoucherType.Payment, ct));
+
+    [ModulePermission(ModuleName.Receipt, PermissionAction.Create)]
+    [HttpGet("receipt/next-voucher-no")]
+    public async Task<ActionResult<NextVoucherNoDto>> PeekNextReceiptNo(CancellationToken ct)
+        => Ok(await _service.PeekNextVoucherNoAsync(VoucherType.Receipt, ct));
+
+    [ModulePermission(ModuleName.Journal, PermissionAction.Create)]
+    [HttpGet("journal/next-voucher-no")]
+    public async Task<ActionResult<NextVoucherNoDto>> PeekNextJournalNo(CancellationToken ct)
+        => Ok(await _service.PeekNextVoucherNoAsync(VoucherType.Journal, ct));
 
     [ModulePermission(ModuleName.Payment, PermissionAction.Create)]
     [HttpPost("payment")]
@@ -44,13 +64,25 @@ public class VouchersController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
+    // Gated the same way Cancel below already is: Payment's own Edit permission stands in for
+    // "can edit a voucher", regardless of whether this particular one is a Payment or a Receipt.
+    [ModulePermission(ModuleName.Payment, PermissionAction.Edit)]
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<VoucherDto>> Update(int id, UpdatePaymentOrReceiptRequest request, CancellationToken ct)
+        => Ok(await _service.UpdatePaymentOrReceiptAsync(id, request, ct));
+
     [ModulePermission(ModuleName.Journal, PermissionAction.Create)]
     [HttpPost("journal")]
-    public async Task<ActionResult<VoucherDto>> CreateJournal(CreateJournalRequest request, CancellationToken ct)
+    public async Task<ActionResult<VoucherDto>> CreateJournal(CreatePaymentOrReceiptRequest request, CancellationToken ct)
     {
-        var result = await _service.CreateJournalAsync(request, ct);
+        var result = await _service.CreatePaymentOrReceiptAsync(request with { VoucherType = VoucherType.Journal }, ct);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
+
+    [ModulePermission(ModuleName.Journal, PermissionAction.Edit)]
+    [HttpPut("journal/{id:int}")]
+    public async Task<ActionResult<VoucherDto>> UpdateJournal(int id, UpdatePaymentOrReceiptRequest request, CancellationToken ct)
+        => Ok(await _service.UpdatePaymentOrReceiptAsync(id, request, ct));
 
     [ModulePermission(ModuleName.Payment, PermissionAction.Delete)]
     [HttpPost("{id:int}/cancel")]

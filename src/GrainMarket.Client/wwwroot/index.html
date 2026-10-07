@@ -20,5 +20,111 @@
     </div>
 
     <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script>
+        // Applies the saved AppearanceSettings — one row per ThemeScope (see Role.cs) — as scoped
+        // CSS custom property overrides, by writing a <style> block instead of setting properties
+        // directly on <html>. Global's colors become plain `:root` rules (the sidebar, and any page
+        // with no more specific scope, use these); every other scope's colors are written under its
+        // own class selector (.theme-sale-invoice, .theme-purchase, .theme-kachi, .theme-pakki,
+        // .theme-payment, .theme-receipt, .theme-journal, .theme-expense) and CSS cascading automatically confines
+        // them to the matching page — see app.css's big :root comment for how that
+        // wrapper-class-per-page wiring works.
+        // Called once after login (see MainLayout.razor) and again right after a Setup > Appearance
+        // save, so a color change is visible instantly for the person making it. Takes the
+        // AppearanceSettingsDto list as-is (Blazor's JS interop serializes C# properties to
+        // camelCase) rather than positional arguments, so adding another themed property later is a
+        // one-line change to PROPERTY_TO_VAR here, not a signature change everywhere this is called.
+        var THEME_STYLE_ELEMENT_ID = 'brand-theme-overrides';
+        var SCOPE_TO_SELECTOR = { 0: ':root', 1: '.theme-sale-invoice', 2: '.theme-purchase', 3: '.theme-kachi', 4: '.theme-pakki', 6: '.theme-journal', 7: '.theme-expense', 8: '.theme-payment', 9: '.theme-receipt' };
+        var PROPERTY_TO_VAR = {
+            primaryColor: '--brand-primary',
+            accentColor: '--brand-accent',
+            surfaceColor: '--brand-surface',
+            panelColor: '--brand-panel',
+            productPanelColor: '--brand-product-panel-bg',
+            creditPanelColor: '--brand-credit-panel-bg',
+            debitPanelColor: '--brand-debit-panel-bg',
+            headingBackgroundColor: '--brand-heading-bg',
+            inputBackgroundColor: '--brand-input-bg',
+            gridHeaderColor: '--brand-grid-header',
+            gridBackgroundColor: '--brand-grid-bg'
+        };
+
+        // Several elements (sidebar, buttons, the date picker's selected day, a focused text box,
+        // the grid header row, the results grid/totals' "Form Panel"-colored labels, the readonly
+        // Invoice#/Balance figures) show text directly on top of a themed background
+        // (primaryColor/accentColor/inputBackgroundColor/gridHeaderColor/panelColor/surfaceColor)
+        // and used to hardcode that text as a fixed color — fine for the original defaults, but
+        // invisible the moment someone picks a background close to it from Setup > Appearance.
+        // contrastTextFor picks whichever of near-black/white actually reads against the given
+        // background, using the standard perceived-brightness formula, so this self-corrects for
+        // any color without the person needing to know why. The one exception is Primary as the
+        // page heading's own text (--brand-primary direct, not one of these computed *-text vars)
+        // — that pairing is both-sides-editable from Setup > Appearance, so it's validated
+        // server-side instead of auto-corrected (see UpdateAppearanceSettingsRequestValidator).
+        function contrastTextFor(hex) {
+            if (!hex || hex.length < 7) return '#ffffff';
+            var r = parseInt(hex.substr(1, 2), 16);
+            var g = parseInt(hex.substr(3, 2), 16);
+            var b = parseInt(hex.substr(5, 2), 16);
+            var brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            return brightness > 160 ? '#1a1a1a' : '#ffffff';
+        }
+
+        window.applyTheme = function (scopedSettingsList) {
+            if (!scopedSettingsList || !scopedSettingsList.length) return;
+
+            var css = scopedSettingsList.map(function (settings) {
+                var selector = SCOPE_TO_SELECTOR[settings.scope];
+                if (!selector) return '';
+
+                var declarations = Object.keys(PROPERTY_TO_VAR)
+                    .filter(function (key) { return !!settings[key]; })
+                    .map(function (key) { return PROPERTY_TO_VAR[key] + ': ' + settings[key] + ';'; });
+
+                if (settings.labelFontSizePx) {
+                    declarations.push('--brand-label-font-size: ' + settings.labelFontSizePx + 'px;');
+                }
+                if (settings.primaryColor) {
+                    declarations.push('--brand-primary-text: ' + contrastTextFor(settings.primaryColor) + ';');
+                }
+                if (settings.accentColor) {
+                    declarations.push('--brand-accent-text: ' + contrastTextFor(settings.accentColor) + ';');
+                }
+                if (settings.inputBackgroundColor) {
+                    declarations.push('--brand-input-text: ' + contrastTextFor(settings.inputBackgroundColor) + ';');
+                }
+                if (settings.gridHeaderColor) {
+                    declarations.push('--brand-grid-header-text: ' + contrastTextFor(settings.gridHeaderColor) + ';');
+                }
+                if (settings.surfaceColor) {
+                    declarations.push('--brand-surface-text: ' + contrastTextFor(settings.surfaceColor) + ';');
+                }
+                if (settings.panelColor) {
+                    declarations.push('--brand-panel-text: ' + contrastTextFor(settings.panelColor) + ';');
+                }
+                if (settings.productPanelColor) {
+                    declarations.push('--brand-product-panel-text: ' + contrastTextFor(settings.productPanelColor) + ';');
+                }
+                if (settings.creditPanelColor) {
+                    declarations.push('--brand-credit-panel-text: ' + contrastTextFor(settings.creditPanelColor) + ';');
+                }
+                if (settings.debitPanelColor) {
+                    declarations.push('--brand-debit-panel-text: ' + contrastTextFor(settings.debitPanelColor) + ';');
+                }
+                declarations.push('--brand-grid-border-width: ' + (settings.gridFullBorders ? '1px' : '0') + ';');
+
+                return selector + ' { ' + declarations.join(' ') + ' }';
+            }).join('\n');
+
+            var styleElement = document.getElementById(THEME_STYLE_ELEMENT_ID);
+            if (!styleElement) {
+                styleElement = document.createElement('style');
+                styleElement.id = THEME_STYLE_ELEMENT_ID;
+                document.head.appendChild(styleElement);
+            }
+            styleElement.textContent = css;
+        };
+    </script>
 </body>
 </html>

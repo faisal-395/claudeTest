@@ -1,26 +1,36 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using GrainMarket.Application.AccountTypes;
+using GrainMarket.Application.Appearance;
+using GrainMarket.Application.Approvals;
 using GrainMarket.Application.Auth;
 using GrainMarket.Application.ChartOfAccounts;
+using GrainMarket.Application.Common;
+using GrainMarket.Application.Company;
 using GrainMarket.Application.Dashboard;
 using GrainMarket.Application.DeductionRules;
 using GrainMarket.Application.Expenses;
 using GrainMarket.Application.Kachis;
 using GrainMarket.Application.Ledger;
 using GrainMarket.Application.MultiPurchase;
+using GrainMarket.Application.MultiSale;
 using GrainMarket.Application.Pakkis;
 using GrainMarket.Application.Parties;
 using GrainMarket.Application.Products;
+using GrainMarket.Application.ProductTypes;
+using GrainMarket.Application.ProductUnits;
 using GrainMarket.Application.Purchases;
 using GrainMarket.Application.Recovery;
 using GrainMarket.Application.Roles;
 using GrainMarket.Application.SaleInvoices;
 using GrainMarket.Application.Seasons;
+using GrainMarket.Application.Stock;
 using GrainMarket.Application.Trading;
 using GrainMarket.Application.UnitConversions;
 using GrainMarket.Application.Users;
 using GrainMarket.Application.Vouchers;
 using GrainMarket.Client.Models;
+using GrainMarket.Domain.Entities;
 using GrainMarket.Domain.Enums;
 
 namespace GrainMarket.Client.Services;
@@ -40,6 +50,7 @@ public class ApiClient
 
     // --- Auth ------------------------------------------------------------------------------
     public Task<LoginResponse> LoginAsync(LoginRequest request) => PostAsync<LoginRequest, LoginResponse>("api/auth/login", request);
+    public Task<List<RolePermissionDto>> GetMyPermissionsAsync() => GetAsync<List<RolePermissionDto>>("api/auth/me/permissions");
 
     // --- Dashboard ---------------------------------------------------------------------------
     public Task<DashboardSummaryDto> GetDashboardAsync(DateTime? date = null) =>
@@ -62,10 +73,17 @@ public class ApiClient
     public Task<PartyDto> UpdatePartyAsync(int id, UpsertPartyRequest request) => PutAsync<UpsertPartyRequest, PartyDto>($"api/parties/{id}", request);
     public Task DeletePartyAsync(int id) => DeleteAsync($"api/parties/{id}");
 
-    public Task<List<ProductDto>> GetProductsAsync(bool includeInactive = false) => GetAsync<List<ProductDto>>($"api/products?includeInactive={includeInactive}");
+    public Task<List<ProductDto>> GetProductsAsync(bool includeInactive = false, string? category = null) =>
+        GetAsync<List<ProductDto>>($"api/products?includeInactive={includeInactive}{(category is not null ? $"&category={Uri.EscapeDataString(category)}" : "")}");
     public Task<ProductDto> CreateProductAsync(UpsertProductRequest request) => PostAsync<UpsertProductRequest, ProductDto>("api/products", request);
     public Task<ProductDto> UpdateProductAsync(int id, UpsertProductRequest request) => PutAsync<UpsertProductRequest, ProductDto>($"api/products/{id}", request);
     public Task DeleteProductAsync(int id) => DeleteAsync($"api/products/{id}");
+
+    public Task<List<ProductTypeDto>> GetProductTypesAsync() => GetAsync<List<ProductTypeDto>>("api/product-types");
+    public Task<ProductTypeDto> CreateProductTypeAsync(CreateProductTypeRequest request) => PostAsync<CreateProductTypeRequest, ProductTypeDto>("api/product-types", request);
+
+    public Task<List<ProductUnitDto>> GetProductUnitsAsync() => GetAsync<List<ProductUnitDto>>("api/product-units");
+    public Task<ProductUnitDto> CreateProductUnitAsync(CreateProductUnitRequest request) => PostAsync<CreateProductUnitRequest, ProductUnitDto>("api/product-units", request);
 
     public Task<List<UnitConversionDto>> GetUnitConversionsAsync() => GetAsync<List<UnitConversionDto>>("api/unit-conversions");
     public Task<UnitConversionDto> CreateUnitConversionAsync(UpsertUnitConversionRequest request) => PostAsync<UpsertUnitConversionRequest, UnitConversionDto>("api/unit-conversions", request);
@@ -77,6 +95,9 @@ public class ApiClient
     public Task<ChartOfAccountDto> UpdateChartOfAccountAsync(int id, UpsertChartOfAccountRequest request) => PutAsync<UpsertChartOfAccountRequest, ChartOfAccountDto>($"api/chart-of-accounts/{id}", request);
     public Task DeleteChartOfAccountAsync(int id) => DeleteAsync($"api/chart-of-accounts/{id}");
 
+    public Task<List<AccountTypeDto>> GetAccountTypesAsync() => GetAsync<List<AccountTypeDto>>("api/account-types");
+    public Task<AccountTypeDto> CreateAccountTypeAsync(CreateAccountTypeRequest request) => PostAsync<CreateAccountTypeRequest, AccountTypeDto>("api/account-types", request);
+
     public Task<List<DeductionRuleDto>> GetDeductionRulesAsync(bool includeInactive = false) => GetAsync<List<DeductionRuleDto>>($"api/deduction-rules?includeInactive={includeInactive}");
     public Task<DeductionRuleDto> CreateDeductionRuleAsync(UpsertDeductionRuleRequest request) => PostAsync<UpsertDeductionRuleRequest, DeductionRuleDto>("api/deduction-rules", request);
     public Task<DeductionRuleDto> UpdateDeductionRuleAsync(int id, UpsertDeductionRuleRequest request) => PutAsync<UpsertDeductionRuleRequest, DeductionRuleDto>($"api/deduction-rules/{id}", request);
@@ -85,6 +106,13 @@ public class ApiClient
     public Task<List<SeasonDto>> GetSeasonsAsync() => GetAsync<List<SeasonDto>>("api/seasons");
     public Task<SeasonDto> CreateSeasonAsync(UpsertSeasonRequest request) => PostAsync<UpsertSeasonRequest, SeasonDto>("api/seasons", request);
     public Task<SeasonDto> UpdateSeasonAsync(int id, UpsertSeasonRequest request) => PutAsync<UpsertSeasonRequest, SeasonDto>($"api/seasons/{id}", request);
+
+    public Task<CompanyInfoDto> GetCompanyInfoAsync() => GetAsync<CompanyInfoDto>("api/company-info");
+    public Task<CompanyInfoDto> UpdateCompanyInfoAsync(UpdateCompanyInfoRequest request) => PutAsync<UpdateCompanyInfoRequest, CompanyInfoDto>("api/company-info", request);
+
+    public Task<List<AppearanceSettingsDto>> GetAppearanceSettingsAsync() => GetAsync<List<AppearanceSettingsDto>>("api/appearance-settings");
+    public Task<AppearanceSettingsDto> UpdateAppearanceSettingsAsync(ThemeScope scope, UpdateAppearanceSettingsRequest request) =>
+        PutAsync<UpdateAppearanceSettingsRequest, AppearanceSettingsDto>($"api/appearance-settings/{scope}", request);
 
     // --- Kachi / Pakki / Dual Invoice -----------------------------------------------------------
     public Task<List<KachiDto>> GetKachisAsync(int? seasonId = null) => GetAsync<List<KachiDto>>($"api/kachis{(seasonId.HasValue ? $"?seasonId={seasonId}" : "")}");
@@ -101,29 +129,49 @@ public class ApiClient
     public Task CancelPakkiAsync(int id) => PostAsync($"api/pakkis/{id}/cancel");
 
     public Task<MultiPurchaseResultDto> CreateMultiPurchaseAsync(CreateMultiPurchaseRequest request) => PostAsync<CreateMultiPurchaseRequest, MultiPurchaseResultDto>("api/multi-purchase", request);
+    public Task<MultiSaleResultDto> CreateMultiSaleAsync(CreateMultiSaleRequest request) => PostAsync<CreateMultiSaleRequest, MultiSaleResultDto>("api/multi-sale", request);
 
     // --- Sale Invoice / Purchase -----------------------------------------------------------------
     public Task<List<SaleInvoiceDto>> GetSaleInvoicesAsync() => GetAsync<List<SaleInvoiceDto>>("api/sale-invoices");
     public Task<SaleInvoiceDto> GetSaleInvoiceAsync(int id) => GetAsync<SaleInvoiceDto>($"api/sale-invoices/{id}");
     public Task<SaleInvoiceDto> CreateSaleInvoiceAsync(CreateSaleInvoiceRequest request) => PostAsync<CreateSaleInvoiceRequest, SaleInvoiceDto>("api/sale-invoices", request);
     public Task CancelSaleInvoiceAsync(int id) => PostAsync($"api/sale-invoices/{id}/cancel");
+    public Task<NextSaleInvoiceNoDto> ReserveNextSaleInvoiceNoAsync() => GetAsync<NextSaleInvoiceNoDto>("api/sale-invoices/next-invoice-no");
 
     public Task<List<PurchaseDto>> GetPurchasesAsync() => GetAsync<List<PurchaseDto>>("api/purchases");
     public Task<PurchaseDto> GetPurchaseAsync(int id) => GetAsync<PurchaseDto>($"api/purchases/{id}");
     public Task<PurchaseDto> CreatePurchaseAsync(CreatePurchaseRequest request) => PostAsync<CreatePurchaseRequest, PurchaseDto>("api/purchases", request);
+    public Task<NextPurchaseInvoiceNoDto> ReserveNextPurchaseInvoiceNoAsync() => GetAsync<NextPurchaseInvoiceNoDto>("api/purchases/next-invoice-no");
+
+    public Task<List<StockDto>> GetStockAsync() => GetAsync<List<StockDto>>("api/stock");
+    public Task<SuggestedSalePriceDto> GetSuggestedSalePriceAsync(int productId) =>
+        GetAsync<SuggestedSalePriceDto>($"api/stock/suggested-price?productId={productId}");
     public Task CancelPurchaseAsync(int id) => PostAsync($"api/purchases/{id}/cancel");
+
+    // --- Approvals -----------------------------------------------------------------------------
+    public Task<List<PendingApprovalDto>> GetPendingApprovalsAsync() => GetAsync<List<PendingApprovalDto>>("api/approvals/pending");
+    public Task ApproveAsync(string entityType, int id) => PostAsync($"api/approvals/{entityType}/{id}/approve");
+    public Task RejectAsync(string entityType, int id, string? reason) => PostAsync($"api/approvals/{entityType}/{id}/reject", new RejectRequest(reason));
 
     // --- Vouchers: Payment / Receipt / Journal -----------------------------------------------------
     public Task<List<VoucherDto>> GetVouchersAsync(VoucherType? type = null, int? seasonId = null) =>
         GetAsync<List<VoucherDto>>($"api/vouchers?{(type.HasValue ? $"type={type}&" : "")}{(seasonId.HasValue ? $"seasonId={seasonId}" : "")}");
+    public Task<VoucherDto> GetVoucherAsync(int id) => GetAsync<VoucherDto>($"api/vouchers/{id}");
+    public Task<NextVoucherNoDto> PeekNextPaymentNoAsync() => GetAsync<NextVoucherNoDto>("api/vouchers/payment/next-voucher-no");
+    public Task<NextVoucherNoDto> PeekNextReceiptNoAsync() => GetAsync<NextVoucherNoDto>("api/vouchers/receipt/next-voucher-no");
+    public Task<NextVoucherNoDto> PeekNextJournalNoAsync() => GetAsync<NextVoucherNoDto>("api/vouchers/journal/next-voucher-no");
+    public Task<VoucherDto> UpdateVoucherAsync(int id, UpdatePaymentOrReceiptRequest request) => PutAsync<UpdatePaymentOrReceiptRequest, VoucherDto>($"api/vouchers/{id}", request);
     public Task<VoucherDto> CreatePaymentAsync(CreatePaymentOrReceiptRequest request) => PostAsync<CreatePaymentOrReceiptRequest, VoucherDto>("api/vouchers/payment", request);
     public Task<VoucherDto> CreateReceiptAsync(CreatePaymentOrReceiptRequest request) => PostAsync<CreatePaymentOrReceiptRequest, VoucherDto>("api/vouchers/receipt", request);
-    public Task<VoucherDto> CreateJournalAsync(CreateJournalRequest request) => PostAsync<CreateJournalRequest, VoucherDto>("api/vouchers/journal", request);
+    public Task<VoucherDto> CreateJournalAsync(CreatePaymentOrReceiptRequest request) => PostAsync<CreatePaymentOrReceiptRequest, VoucherDto>("api/vouchers/journal", request);
+    public Task<VoucherDto> UpdateJournalAsync(int id, UpdatePaymentOrReceiptRequest request) => PutAsync<UpdatePaymentOrReceiptRequest, VoucherDto>($"api/vouchers/journal/{id}", request);
     public Task CancelVoucherAsync(int id) => PostAsync($"api/vouchers/{id}/cancel");
 
     // --- Expense -----------------------------------------------------------------------------------
     public Task<List<ExpenseDto>> GetExpensesAsync() => GetAsync<List<ExpenseDto>>("api/expenses");
     public Task<ExpenseDto> CreateExpenseAsync(CreateExpenseRequest request) => PostAsync<CreateExpenseRequest, ExpenseDto>("api/expenses", request);
+    public Task<ExpenseDto> UpdateExpenseAsync(int id, UpdateExpenseRequest request) => PutAsync<UpdateExpenseRequest, ExpenseDto>($"api/expenses/{id}", request);
+    public Task<NextExpenseNoDto> PeekNextExpenseNoAsync() => GetAsync<NextExpenseNoDto>("api/expenses/next-expense-no");
 
     // --- Ledger / Recovery / Trading -----------------------------------------------------------------
     public Task<PartyLedgerDto> GetPartyLedgerAsync(int partyId, DateTime? from = null, DateTime? to = null) =>
@@ -171,6 +219,12 @@ public class ApiClient
     private Task PostAsync(string url) => GuardAsync(async () =>
     {
         var response = await _http.PostAsync(url, content: null);
+        await EnsureSuccessAsync(response);
+    });
+
+    private Task PostAsync<TRequest>(string url, TRequest body) => GuardAsync(async () =>
+    {
+        var response = await _http.PostAsJsonAsync(url, body, JsonOptions);
         await EnsureSuccessAsync(response);
     });
 

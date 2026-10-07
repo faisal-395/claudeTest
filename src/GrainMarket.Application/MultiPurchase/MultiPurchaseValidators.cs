@@ -1,4 +1,5 @@
 using FluentValidation;
+using GrainMarket.Application.Common;
 
 namespace GrainMarket.Application.MultiPurchase;
 
@@ -11,6 +12,7 @@ public class MultiPurchaseRowRequestValidator : AbstractValidator<MultiPurchaseR
         RuleFor(x => x.RatePerUnit).NotNull().GreaterThan(0).WithMessage("Rate per Man is required.");
         RuleFor(x => x.BhartiKgPerBag).NotNull().GreaterThan(0).WithMessage("Bharti (weight per bag) is required.");
         RuleFor(x => x.TotalWeightKg).NotNull().GreaterThan(0).WithMessage("Total weight is required.");
+        RuleForEach(x => x.DeductionOverrides).SetValidator(new DeductionOverrideRequestValidator());
     }
 }
 

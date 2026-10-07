@@ -1,5 +1,6 @@
 using GrainMarket.Application.Common;
 using GrainMarket.Application.Common.Interfaces;
+using GrainMarket.Application.Stock;
 using Microsoft.EntityFrameworkCore;
 
 namespace GrainMarket.Application.Dashboard;
@@ -7,10 +8,12 @@ namespace GrainMarket.Application.Dashboard;
 public class DashboardService : IDashboardService
 {
     private readonly IApplicationDbContext _db;
+    private readonly IStockService _stock;
 
-    public DashboardService(IApplicationDbContext db)
+    public DashboardService(IApplicationDbContext db, IStockService stock)
     {
         _db = db;
+        _stock = stock;
     }
 
     public async Task<DashboardSummaryDto> GetSummaryAsync(DateTime date, CancellationToken ct = default)
@@ -25,6 +28,7 @@ public class DashboardService : IDashboardService
 
         var cashBalance = await GetAccountBalanceByCodeAsync(DomainConstants.CashAccountCode, ct);
         var bankBalance = await GetAccountBalanceByCodeAsync(DomainConstants.BankAccountCode, ct);
+        var expiringLots = await _stock.GetExpiringLotsAsync(DomainConstants.ExpiryAlertWindowDays, ct);
 
         var outstanding = await _db.LedgerEntries
             .Where(e => e.PartyId != null && !e.IsDeleted)
@@ -40,7 +44,8 @@ public class DashboardService : IDashboardService
             sales.Count, sales.Sum(s => s.NetBill),
             purchases.Count, purchases.Sum(p => p.NetBill),
             cashBalance, bankBalance,
-            outstanding.Sum());
+            outstanding.Sum(),
+            expiringLots);
     }
 
     private async Task<decimal> GetAccountBalanceByCodeAsync(string code, CancellationToken ct)

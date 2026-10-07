@@ -1,4 +1,5 @@
 using GrainMarket.Api.Common;
+using GrainMarket.Application.Common;
 using GrainMarket.Application.SaleInvoices;
 using GrainMarket.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -25,6 +26,12 @@ public class SaleInvoicesController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<SaleInvoiceDto>> GetById(int id, CancellationToken ct) => Ok(await _service.GetByIdAsync(id, ct));
 
+    // Reserves (consumes) the next invoice number immediately, so the New Sale Invoice screen can
+    // show it before Save — matches the legacy software. Left unsaved, that number is simply skipped.
+    [ModulePermission(ModuleName.SaleInvoice, PermissionAction.Create)]
+    [HttpGet("next-invoice-no")]
+    public async Task<ActionResult<NextSaleInvoiceNoDto>> ReserveNextInvoiceNo(CancellationToken ct) => Ok(await _service.ReserveNextInvoiceNoAsync(ct));
+
     [ModulePermission(ModuleName.SaleInvoice, PermissionAction.Create)]
     [HttpPost]
     public async Task<ActionResult<SaleInvoiceDto>> Create(CreateSaleInvoiceRequest request, CancellationToken ct)
@@ -40,4 +47,13 @@ public class SaleInvoicesController : ControllerBase
         await _service.CancelAsync(id, ct);
         return NoContent();
     }
+
+    [ModulePermission(ModuleName.Approvals, PermissionAction.Edit)]
+    [HttpPost("{id:int}/approve")]
+    public async Task<ActionResult<SaleInvoiceDto>> Approve(int id, CancellationToken ct) => Ok(await _service.ApproveAsync(id, ct));
+
+    [ModulePermission(ModuleName.Approvals, PermissionAction.Edit)]
+    [HttpPost("{id:int}/reject")]
+    public async Task<ActionResult<SaleInvoiceDto>> Reject(int id, [FromBody] RejectRequest request, CancellationToken ct)
+        => Ok(await _service.RejectAsync(id, request.Reason, ct));
 }

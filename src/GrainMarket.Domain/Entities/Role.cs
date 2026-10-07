@@ -8,6 +8,12 @@ public class Role : BaseEntity
     public string? NameUrdu { get; set; }
     public bool IsSystemRole { get; set; }
 
+    /// <summary>When set, every Kachi/Pakki/Purchase/Sale Invoice raised by a user with this role is
+    /// saved as ApprovalStatus.Pending instead of posting straight to the ledger — a Manager/Admin
+    /// must Approve it first (Setup &gt; Approvals permission). Configurable per role rather than
+    /// hardcoded to any one role.</summary>
+    public bool RequiresApproval { get; set; }
+
     public ICollection<User> Users { get; set; } = new List<User>();
     public ICollection<RolePermission> Permissions { get; set; } = new List<RolePermission>();
     public ICollection<ChartOfAccountRole> AllowedAccounts { get; set; } = new List<ChartOfAccountRole>();
@@ -37,7 +43,10 @@ public enum ModuleName
     SetupUnitConversions = 19,
     SetupUsersRoles = 20,
     Backup = 21,
-    SetupSeasons = 22
+    SetupSeasons = 22,
+    SetupCompanyInfo = 23,
+    SetupAppearance = 24,
+    Approvals = 25
 }
 
 public class RolePermission : BaseEntity

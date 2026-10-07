@@ -10,7 +10,6 @@ namespace GrainMarket.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/parties")]
-[ModulePermission(ModuleName.SetupParty)]
 public class PartiesController : ControllerBase
 {
     private readonly IPartyService _partyService;
@@ -20,6 +19,10 @@ public class PartiesController : ControllerBase
         _partyService = partyService;
     }
 
+    // Deliberately not gated by ModulePermission: Kachi/Pakki/Purchase/Sale Invoice/Voucher entry
+    // all need the farmer/buyer/supplier/customer list to populate their dropdowns regardless of
+    // the caller's Setup access — e.g. a Clerk with Create on Kachi but no Setup > Party permission
+    // still needs to read this list.
     [HttpGet]
     public async Task<ActionResult<List<PartyDto>>> GetAll([FromQuery] PartyType? type, [FromQuery] bool includeInactive, CancellationToken ct)
         => Ok(await _partyService.GetAllAsync(type, includeInactive, ct));

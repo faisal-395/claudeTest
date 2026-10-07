@@ -9,7 +9,6 @@ namespace GrainMarket.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/products")]
-[ModulePermission(ModuleName.SetupProducts)]
 public class ProductsController : ControllerBase
 {
     private readonly IProductService _productService;
@@ -19,9 +18,11 @@ public class ProductsController : ControllerBase
         _productService = productService;
     }
 
+    // Deliberately not gated by ModulePermission: Kachi/Pakki/Purchase/Sale Invoice entry all need
+    // the product catalog to populate their dropdowns regardless of the caller's Setup access.
     [HttpGet]
-    public async Task<ActionResult<List<ProductDto>>> GetAll([FromQuery] bool includeInactive, CancellationToken ct)
-        => Ok(await _productService.GetAllAsync(includeInactive, ct));
+    public async Task<ActionResult<List<ProductDto>>> GetAll([FromQuery] bool includeInactive, [FromQuery] string? category, CancellationToken ct)
+        => Ok(await _productService.GetAllAsync(includeInactive, category, ct));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ProductDto>> GetById(int id, CancellationToken ct)
