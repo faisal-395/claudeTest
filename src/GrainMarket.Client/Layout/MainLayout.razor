@@ -160,7 +160,8 @@ else
                 (AuthState.CanView(ModuleName.SaleInvoice), new NavItem("sale-invoice", "sale-invoice", "Sale Invoice")),
                 (AuthState.CanView(ModuleName.Purchase), new NavItem("purchase", "purchase", "Purchase")),
                 (AuthState.CanView(ModuleName.SetupProducts), new NavItem("stock", "stock", "Stock")),
-                (AuthState.CanView(ModuleName.Reports), new NavItem("records-report", "chart-of-accounts", "Records Report")));
+                (AuthState.CanView(ModuleName.Reports), new NavItem("records-report", "chart-of-accounts", "Records Report")),
+                (AuthState.CanView(ModuleName.Reports), new NavItem("reports/purchase-sale", "chart-of-accounts", "Purchase / Sale Report")));
 
             AddGroup("Vouchers",
                 (AuthState.CanView(ModuleName.Payment), new NavItem("payment", "payment", "Payment")),

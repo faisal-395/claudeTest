@@ -1,0 +1,153 @@
+@page "/reports/purchase-sale"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Purchase / Sale Report</h1>
+    <p style="color:#777;">Purchase and Sale Invoices for a chosen date range, with totals and the difference between them.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="max-width:500px;margin-bottom:20px;">
+        <div><label>From</label><input type="date" @bind="_from" /></div>
+        <div><label>To</label><input type="date" @bind="_to" /></div>
+    </div>
+
+    @if (_purchases is null || _sales is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div style="display:flex; gap:24px; margin-bottom:24px; flex-wrap:wrap;">
+            <div class="batch-readonly-figure" style="min-width:180px;">
+                <label style="display:block; font-size:0.85rem; color:#555;">Total Purchases</label>
+                Rs @TotalPurchases.ToString("N2")
+            </div>
+            <div class="batch-readonly-figure" style="min-width:180px;">
+                <label style="display:block; font-size:0.85rem; color:#555;">Total Sales</label>
+                Rs @TotalSales.ToString("N2")
+            </div>
+            <div class="batch-readonly-figure @(TotalSales - TotalPurchases < 0 ? "invalid-total" : "")" style="min-width:180px;">
+                <label style="display:block; font-size:0.85rem; color:#555;">Difference (Sales − Purchases)</label>
+                Rs @(TotalSales - TotalPurchases).ToString("N2")
+            </div>
+        </div>
+
+        <h2 style="font-size:1.1rem;">Purchases (@FilteredPurchases.Count)</h2>
+        @if (FilteredPurchases.Count == 0)
+        {
+            <p style="color:#999;">No purchases found in this date range.</p>
+        }
+        else
+        {
+            <table class="data-grid" style="max-width:1100px; margin-bottom:28px;">
+                <thead>
+                    <tr><th>Invoice #</th><th>Date</th><th>Supplier</th><th style="text-align:right;">Total Bill</th><th style="text-align:right;">Discount</th><th style="text-align:right;">Net Bill</th><th style="text-align:right;">Paid Cash</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in FilteredPurchases)
+                    {
+                        <tr>
+                            <td><a href="print/purchase/@p.Id">@p.InvoiceNo</a></td>
+                            <td>@p.Date.ToString("yyyy-MM-dd")</td>
+                            <td>@p.SupplierName</td>
+                            <td style="text-align:right;">@p.TotalBill.ToString("N2")</td>
+                            <td style="text-align:right;">@p.TotalDiscount.ToString("N2")</td>
+                            <td style="text-align:right;">@p.NetBill.ToString("N2")</td>
+                            <td style="text-align:right;">@p.PaidCash.ToString("N2")</td>
+                            <td>@StatusOf(p.IsCancelled, p.ApprovalStatus)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight:600; border-top:2px solid #ccc;">
+                        <td colspan="5">Total Purchases</td>
+                        <td style="text-align:right;">@TotalPurchases.ToString("N2")</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+
+        <h2 style="font-size:1.1rem;">Sales (@FilteredSales.Count)</h2>
+        @if (FilteredSales.Count == 0)
+        {
+            <p style="color:#999;">No sales found in this date range.</p>
+        }
+        else
+        {
+            <table class="data-grid" style="max-width:1100px;">
+                <thead>
+                    <tr><th>Invoice #</th><th>Date</th><th>Customer</th><th style="text-align:right;">Total Bill</th><th style="text-align:right;">Discount</th><th style="text-align:right;">Net Bill</th><th style="text-align:right;">Received Cash</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in FilteredSales)
+                    {
+                        <tr>
+                            <td><a href="print/sale/@s.Id">@s.InvoiceNo</a></td>
+                            <td>@s.Date.ToString("yyyy-MM-dd")</td>
+                            <td>@s.CustomerName</td>
+                            <td style="text-align:right;">@s.TotalBill.ToString("N2")</td>
+                            <td style="text-align:right;">@s.TotalDiscount.ToString("N2")</td>
+                            <td style="text-align:right;">@s.NetBill.ToString("N2")</td>
+                            <td style="text-align:right;">@s.ReceivedCash.ToString("N2")</td>
+                            <td>@StatusOf(s.IsCancelled, s.ApprovalStatus)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight:600; border-top:2px solid #ccc;">
+                        <td colspan="5">Total Sales</td>
+                        <td style="text-align:right;">@TotalSales.ToString("N2")</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+    }
+</RequireAuth>
+
+@code {
+    private List<PurchaseDto>? _purchases;
+    private List<SaleInvoiceDto>? _sales;
+    private DateTime? _from;
+    private DateTime? _to;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _purchases = await Api.GetPurchasesAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+
+        try { _sales = await Api.GetSaleInvoicesAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private static string StatusOf(bool isCancelled, ApprovalStatus status) => isCancelled ? "Cancelled" : status.ToString();
+
+    private List<PurchaseDto> FilteredPurchases => (_purchases ?? new())
+        .Where(p => _from is null || p.Date.Date >= _from.Value.Date)
+        .Where(p => _to is null || p.Date.Date <= _to.Value.Date)
+        .OrderByDescending(p => p.Date).ThenByDescending(p => p.Id)
+        .ToList();
+
+    private List<SaleInvoiceDto> FilteredSales => (_sales ?? new())
+        .Where(s => _from is null || s.Date.Date >= _from.Value.Date)
+        .Where(s => _to is null || s.Date.Date <= _to.Value.Date)
+        .OrderByDescending(s => s.Date).ThenByDescending(s => s.Id)
+        .ToList();
+
+    // Only Approved purchases/sales ever post ledger entries (see PurchaseService/SaleInvoiceService
+    // — Pending and Rejected never do, Cancelled reverses what Approved posted), so totals here only
+    // count Approved rows, same as every other report in this app only summing what's actually posted.
+    private decimal TotalPurchases => FilteredPurchases
+        .Where(p => !p.IsCancelled && p.ApprovalStatus == ApprovalStatus.Approved)
+        .Sum(p => p.NetBill);
+
+    private decimal TotalSales => FilteredSales
+        .Where(s => !s.IsCancelled && s.ApprovalStatus == ApprovalStatus.Approved)
+        .Sum(s => s.NetBill);
+}
