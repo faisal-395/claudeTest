@@ -1,0 +1,194 @@
+@page "/reports/account-balance"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Account Balance Report</h1>
+    <p style="color:#777;">Pick an Account Type to see the current balance of every account (or every party, for "Party") under it.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    @if (_accountTypes is null || _parties is null || _accounts is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+            <div>
+                <label style="display:block; font-size:0.85rem; color:#555;">Account Type</label>
+                <select @bind="_selectedAccountType" style="width:200px;">
+                    <option value="">— Select —</option>
+                    @foreach (var t in _accountTypes)
+                    {
+                        <option value="@t.Name">@t.Name</option>
+                    }
+                </select>
+            </div>
+
+            @if (_selectedAccountType == PartyAccountTypeName)
+            {
+                <div>
+                    <label style="display:block; font-size:0.85rem; color:#555;">Party Type</label>
+                    <select @bind="_selectedPartyType" style="width:160px;">
+                        <option value="">All</option>
+                        @foreach (var pt in Enum.GetValues<PartyType>())
+                        {
+                            <option value="@pt">@pt</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            <div>
+                <label style="display:block; font-size:0.85rem; color:#555;">Amount Type</label>
+                <select @bind="_amountType" style="width:140px;">
+                    <option value="Both">Both</option>
+                    <option value="Debit">Debit</option>
+                    <option value="Credit">Credit</option>
+                </select>
+            </div>
+        </div>
+
+        @if (string.IsNullOrEmpty(_selectedAccountType))
+        {
+            <p style="color:#999;">Select an Account Type above to see balances.</p>
+        }
+        else if (_selectedAccountType == PartyAccountTypeName)
+        {
+            <table class="data-grid" style="max-width:900px;">
+                <thead><tr><th>Party</th><th>Type</th><th style="text-align:right;">Balance</th><th>Position</th></tr></thead>
+                <tbody>
+                    @foreach (var p in FilteredParties)
+                    {
+                        <tr>
+                            <td>@p.Name @(string.IsNullOrEmpty(p.NameUrdu) ? "" : $"— {p.NameUrdu}")</td>
+                            <td>@p.PartyType</td>
+                            <td style="text-align:right;">@Math.Abs(p.CurrentBalance).ToString("N2")</td>
+                            <td>
+                                @if (p.CurrentBalance > 0)
+                                {
+                                    <span style="color:#1a7a3c;">Debit (Receivable)</span>
+                                }
+                                else if (p.CurrentBalance < 0)
+                                {
+                                    <span style="color:#b3261e;">Credit (Payable)</span>
+                                }
+                                else
+                                {
+                                    <span style="color:#999;">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (!FilteredParties.Any())
+                    {
+                        <tr><td colspan="4" style="text-align:center;color:#999;">No parties found.</td></tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight:600;">
+                        <td colspan="2">Total</td>
+                        <td style="text-align:right;">@FilteredParties.Sum(p => Math.Abs(p.CurrentBalance)).ToString("N2")</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+        else
+        {
+            <table class="data-grid" style="max-width:900px;">
+                <thead><tr><th>Code</th><th>Account</th><th style="text-align:right;">Balance</th><th>Position</th></tr></thead>
+                <tbody>
+                    @foreach (var a in FilteredAccounts)
+                    {
+                        <tr>
+                            <td>@a.Code</td>
+                            <td>@a.Name @(string.IsNullOrEmpty(a.NameUrdu) ? "" : $"— {a.NameUrdu}")</td>
+                            <td style="text-align:right;">@Math.Abs(a.CurrentBalance).ToString("N2")</td>
+                            <td>
+                                @if (a.CurrentBalance > 0)
+                                {
+                                    <span style="color:#1a7a3c;">Debit</span>
+                                }
+                                else if (a.CurrentBalance < 0)
+                                {
+                                    <span style="color:#b3261e;">Credit</span>
+                                }
+                                else
+                                {
+                                    <span style="color:#999;">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (!FilteredAccounts.Any())
+                    {
+                        <tr><td colspan="4" style="text-align:center;color:#999;">No accounts found.</td></tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight:600;">
+                        <td colspan="2">Total</td>
+                        <td style="text-align:right;">@FilteredAccounts.Sum(a => Math.Abs(a.CurrentBalance)).ToString("N2")</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+    }
+</RequireAuth>
+
+@code {
+    // "Party" sits in the same Account Type list as Asset/Cash/Bank/… (added from the legacy
+    // software's own Account Type list — see Setup > Account Types) even though it's not a real
+    // ChartOfAccount row; picking it here switches the report to party balances instead.
+    private const string PartyAccountTypeName = "Party";
+
+    private List<AccountTypeDto>? _accountTypes;
+    private List<PartyDto>? _parties;
+    private List<ChartOfAccountDto>? _accounts;
+    private string? _error;
+
+    private string _selectedAccountType = "";
+    private string _selectedPartyType = "";
+    private string _amountType = "Both";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _accountTypes = await Api.GetAccountTypesAsync();
+            _parties = await Api.GetPartiesAsync();
+            _accounts = await Api.GetChartOfAccountsAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private bool MatchesAmountType(decimal balance) => _amountType switch
+    {
+        "Debit" => balance > 0,
+        "Credit" => balance < 0,
+        _ => true
+    };
+
+    // PartyType is [Flags] — a party can carry more than one (e.g. Farmer|Vendor), so this checks
+    // the selected flag is SET rather than comparing the whole value/ToString() for an exact match,
+    // same as PartyService.GetAllAsync's own server-side filter.
+    private bool MatchesPartyType(PartyDto p) => string.IsNullOrEmpty(_selectedPartyType)
+        || (Enum.TryParse<PartyType>(_selectedPartyType, out var want) && (p.PartyType & want) == want);
+
+    private List<PartyDto> FilteredParties => (_parties ?? new())
+        .Where(MatchesPartyType)
+        .Where(p => MatchesAmountType(p.CurrentBalance))
+        .OrderByDescending(p => p.CurrentBalance)
+        .ToList();
+
+    private List<ChartOfAccountDto> FilteredAccounts => (_accounts ?? new())
+        .Where(a => a.IsActive && a.AccountTypeName == _selectedAccountType)
+        .Where(a => MatchesAmountType(a.CurrentBalance))
+        .OrderBy(a => a.Code)
+        .ToList();
+}
