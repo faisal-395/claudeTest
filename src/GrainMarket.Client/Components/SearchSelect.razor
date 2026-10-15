@@ -14,7 +14,7 @@
            @onkeydown="OnKeyDown" />
     @if (_open && _filtered.Count > 0)
     {
-        <div class="search-select-menu">
+        <div class="search-select-menu" @onmousedown:preventDefault="true">
             @for (var i = 0; i < _filtered.Count; i++)
             {
                 var item = _filtered[i];
