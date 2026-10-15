@@ -167,7 +167,8 @@ else
                 (AuthState.CanView(ModuleName.Receipt), new NavItem("receipt", "receipt", "Receipt")),
                 (AuthState.CanView(ModuleName.Journal), new NavItem("journal", "journal", "Journal")),
                 (AuthState.CanView(ModuleName.Expense), new NavItem("expense", "expense", "Expense")),
-                (AuthState.CanView(ModuleName.Payment), new NavItem("vouchers", "chart-of-accounts", "Voucher Records")));
+                (AuthState.CanView(ModuleName.Payment), new NavItem("vouchers", "chart-of-accounts", "Voucher Records")),
+                (AuthState.CanView(ModuleName.Payment), new NavItem("reports/voucher", "chart-of-accounts", "Voucher Report")));
 
             // Recovery (ModuleName.Recovery) is intentionally omitted — re-enable by adding
             // (AuthState.CanView(ModuleName.Recovery), new NavItem("recovery", "recovery", "Recovery"))
