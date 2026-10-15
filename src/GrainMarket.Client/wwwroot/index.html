@@ -71,6 +71,14 @@
             return brightness > 160 ? '#1a1a1a' : '#ffffff';
         }
 
+        // SearchSelect's dropdown menu takes over its own mouse-wheel scrolling (see the
+        // component) instead of relying on the browser's native wheel-to-scroll, since that menu
+        // sits position:absolute inside the page's own scrollable .main-content and WebView2 can
+        // intermittently route a wheel gesture to the wrong one of those two nested scrollers.
+        window.searchSelectScroll = function (el, deltaY) {
+            if (el) el.scrollTop += deltaY;
+        };
+
         window.applyTheme = function (scopedSettingsList) {
             if (!scopedSettingsList || !scopedSettingsList.length) return;
 
