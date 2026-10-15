@@ -1,0 +1,113 @@
+@page "/reports/trial-balance"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Trial Balance Report</h1>
+    <p style="color:#777;">Every account with a non-zero balance, grouped by Account Type, with a Debit/Credit subtotal per type and a grand total at the bottom.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    @if (_accountTypes is null || _parties is null || _accounts is null)
+    {
+        <p>Loading…</p>
+    }
+    else if (Groups.Count == 0)
+    {
+        <p style="color:#999;">No non-zero balances found.</p>
+    }
+    else
+    {
+        <table class="data-grid" style="max-width:900px;">
+            <thead><tr><th>Account ID</th><th>Title</th><th style="text-align:right;">Credit</th><th style="text-align:right;">Debit</th></tr></thead>
+            @foreach (var group in Groups)
+            {
+                <tbody>
+                    <tr style="background:var(--brand-grid-header); font-weight:600;"><td colspan="4">@group.CategoryName</td></tr>
+                    @foreach (var row in group.Rows)
+                    {
+                        <tr>
+                            <td>@row.AccountNo</td>
+                            <td>@row.Title</td>
+                            <td style="text-align:right;">@(row.Credit > 0 ? row.Credit.ToString("N2") : "")</td>
+                            <td style="text-align:right;">@(row.Debit > 0 ? row.Debit.ToString("N2") : "")</td>
+                        </tr>
+                    }
+                    <tr style="font-weight:600; border-top:2px solid #ccc;">
+                        <td colspan="2">Subtotal — @group.CategoryName</td>
+                        <td style="text-align:right;">@group.TotalCredit.ToString("N2")</td>
+                        <td style="text-align:right;">@group.TotalDebit.ToString("N2")</td>
+                    </tr>
+                </tbody>
+            }
+            <tfoot>
+                <tr style="font-weight:700; border-top:3px double #999;">
+                    <td colspan="2">Grand Total</td>
+                    <td style="text-align:right;">@GrandCredit.ToString("N2")</td>
+                    <td style="text-align:right;">@GrandDebit.ToString("N2")</td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    // "Party" sits in the same Account Type list as Asset/Cash/Bank/… (Setup > Account Types) even
+    // though it's not a real ChartOfAccount row — its rows come from Parties instead, same special
+    // case as the Account Balance Report.
+    private const string PartyAccountTypeName = "Party";
+
+    private List<AccountTypeDto>? _accountTypes;
+    private List<PartyDto>? _parties;
+    private List<ChartOfAccountDto>? _accounts;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _accountTypes = await Api.GetAccountTypesAsync();
+            _parties = await Api.GetPartiesAsync();
+            _accounts = await Api.GetChartOfAccountsAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private record ReportRow(string AccountNo, string Title, decimal Debit, decimal Credit);
+    private record CategoryGroup(string CategoryName, List<ReportRow> Rows, decimal TotalDebit, decimal TotalCredit);
+
+    // Positive CurrentBalance is a debit balance, negative is credit — same convention
+    // PositionReport.razor and the Account Balance Report already use. Zero-balance rows are
+    // dropped (nothing to show on a balance report), and so is any category left with nothing
+    // after that.
+    private List<CategoryGroup> Groups
+    {
+        get
+        {
+            var groups = new List<CategoryGroup>();
+            foreach (var type in _accountTypes ?? new())
+            {
+                var rows = type.Name == PartyAccountTypeName
+                    ? (_parties ?? new())
+                        .Where(p => p.CurrentBalance != 0)
+                        .OrderBy(p => p.Name)
+                        .Select(p => new ReportRow(p.Id.ToString(), p.Name, p.CurrentBalance > 0 ? p.CurrentBalance : 0, p.CurrentBalance < 0 ? -p.CurrentBalance : 0))
+                        .ToList()
+                    : (_accounts ?? new())
+                        .Where(a => a.IsActive && a.AccountTypeName == type.Name && a.CurrentBalance != 0)
+                        .OrderBy(a => a.Code)
+                        .Select(a => new ReportRow(a.Code, a.Name, a.CurrentBalance > 0 ? a.CurrentBalance : 0, a.CurrentBalance < 0 ? -a.CurrentBalance : 0))
+                        .ToList();
+
+                if (rows.Count == 0) continue;
+                groups.Add(new CategoryGroup(type.Name, rows, rows.Sum(r => r.Debit), rows.Sum(r => r.Credit)));
+            }
+            return groups;
+        }
+    }
+
+    private decimal GrandDebit => Groups.Sum(g => g.TotalDebit);
+    private decimal GrandCredit => Groups.Sum(g => g.TotalCredit);
+}
