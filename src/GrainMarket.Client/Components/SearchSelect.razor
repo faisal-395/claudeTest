@@ -19,7 +19,7 @@
             {
                 var item = _filtered[i];
                 var index = i;
-                <div class="search-select-option @(index == _highlighted ? "highlighted" : "")"
+                <div @key="IdSelector(item)" class="search-select-option @(index == _highlighted ? "highlighted" : "")"
                      @onmousedown:preventDefault="true"
                      @onmousedown="() => Select(item)">
                     @TextSelector(item)
@@ -49,6 +49,7 @@
     private bool _open;
     private int _highlighted;
     private int? _lastValue;
+    private List<int>? _lastItemIds;
     private ElementReference _inputRef;
 
     // Lets a parent move keyboard focus here programmatically (e.g. VoucherForm focusing the
@@ -66,7 +67,18 @@
         }
         _lastValue = Value;
 
-        Filter(items);
+        // Callers often pass Items as a computed property (a fresh List instance every render),
+        // so re-filtering on every single OnParametersSet — which fires on every parent render,
+        // not just when the list actually changed — was rebuilding and re-rendering the open menu
+        // on every unrelated keystroke/tick elsewhere on the page. That churn mid-gesture is what
+        // made the mouse wheel feel "stuck" while scrolling an open dropdown. Skip it when the
+        // underlying ids/order are unchanged.
+        var itemIds = items.Select(IdSelector).ToList();
+        if (_lastItemIds is null || !itemIds.SequenceEqual(_lastItemIds))
+        {
+            _lastItemIds = itemIds;
+            Filter(items);
+        }
     }
 
     private void Filter(List<TItem>? items = null)
