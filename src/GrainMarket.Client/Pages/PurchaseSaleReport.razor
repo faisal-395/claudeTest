@@ -27,7 +27,7 @@
     {
         <table class="data-grid" style="max-width:1300px;">
             <thead>
-                <tr><th>Invoice #</th><th>Date</th><th>Type</th><th>Description</th><th style="text-align:right;">Debit (Sale)</th><th style="text-align:right;">Credit (Purchase)</th><th>Status</th></tr>
+                <tr><th>Invoice #</th><th>Date</th><th>Type</th><th>Description</th><th style="text-align:right;">Debit (Sale)</th><th style="text-align:right;">Credit (Purchase)</th><th style="text-align:right;">Balance</th><th>Status</th></tr>
             </thead>
             <tbody>
                 @foreach (var r in FilteredRows)
@@ -39,6 +39,7 @@
                         <td>@r.Description</td>
                         <td style="text-align:right;">@(r.Debit == 0 ? "—" : r.Debit.ToString("N2"))</td>
                         <td style="text-align:right;">@(r.Credit == 0 ? "—" : r.Credit.ToString("N2"))</td>
+                        <td style="text-align:right;">@r.Balance.ToString("N2")</td>
                         <td>@r.Status</td>
                     </tr>
                 }
@@ -48,7 +49,8 @@
                     <td colspan="4">Grand Total</td>
                     <td style="text-align:right;">@TotalDebit.ToString("N2")</td>
                     <td style="text-align:right;">@TotalCredit.ToString("N2")</td>
-                    <td>Net @((TotalDebit - TotalCredit).ToString("N2"))</td>
+                    <td style="text-align:right;">@(TotalDebit - TotalCredit).ToString("N2")</td>
+                    <td></td>
                 </tr>
             </tfoot>
         </table>
@@ -89,8 +91,10 @@
     // mirror the same party ledger convention instead of inventing a new one. Description folds
     // the party name together with the line items (qty@price) so a flat, ungrouped list still
     // reads as a complete record of who the money moved with and what for.
-    private record Row(DateTime Date, string InvoiceNo, string Type, string Description, decimal Debit, decimal Credit, string Status, string DetailsUrl);
+    private record Row(DateTime Date, string InvoiceNo, string Type, string Description, decimal Debit, decimal Credit, string Status, string DetailsUrl, decimal Balance = 0);
 
+    // Oldest first so Balance accumulates forward the same way the Ledger page's RunningBalance
+    // does, rather than counting down from a total.
     private List<Row> FilteredRows
     {
         get
@@ -111,9 +115,17 @@
                     s.ApprovalStatus == ApprovalStatus.Approved && !s.IsCancelled ? s.NetBill : 0, 0,
                     StatusOf(s.IsCancelled, s.ApprovalStatus), $"print/sale/{s.Id}"));
 
-            return purchaseRows.Concat(saleRows)
-                .OrderByDescending(r => r.Date).ThenBy(r => r.Type)
+            var ordered = purchaseRows.Concat(saleRows)
+                .OrderBy(r => r.Date).ThenBy(r => r.Type)
                 .ToList();
+
+            var running = 0m;
+            for (var i = 0; i < ordered.Count; i++)
+            {
+                running += ordered[i].Debit - ordered[i].Credit;
+                ordered[i] = ordered[i] with { Balance = running };
+            }
+            return ordered;
         }
     }
 
