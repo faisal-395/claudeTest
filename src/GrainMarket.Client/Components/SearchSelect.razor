@@ -15,8 +15,7 @@
            @onkeydown="OnKeyDown" />
     @if (_open && _filtered.Count > 0)
     {
-        <div @ref="_menuRef" class="search-select-menu" @onmousedown:preventDefault="true"
-             @onwheel="OnWheel" @onwheel:preventDefault="true">
+        <div @ref="_menuRef" class="search-select-menu" @onmousedown:preventDefault="true">
             @for (var i = 0; i < _filtered.Count; i++)
             {
                 var item = _filtered[i];
@@ -62,10 +61,25 @@
     // This menu sits position:absolute inside .main-content, which is ALSO a scroll container —
     // that nesting is a known source of WebView2/Chromium wheel-routing glitches where a scroll
     // gesture intermittently gets delivered to the wrong one of the two scrollers, making the
-    // wheel feel like it randomly stalls partway through. Taking the wheel event over entirely
-    // (preventDefault + set scrollTop ourselves) sidesteps that native routing altogether, so the
-    // menu always scrolls, deterministically, regardless of what's scrollable underneath it.
-    private async Task OnWheel(WheelEventArgs e) => await JS.InvokeVoidAsync("searchSelectScroll", _menuRef, e.DeltaY);
+    // wheel feel like it randomly stalls partway through. Routing the wheel event through a
+    // Blazor @onwheel handler (round-tripping every single tick through .NET via JS interop)
+    // was still laggy under a fast scroll — the IPC hop per tick couldn't keep up. Attaching a
+    // plain JS listener directly on the menu element instead means every tick is handled
+    // entirely in JS, with zero round-trips back into .NET, so it can't fall behind.
+    private bool _wheelAttached;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_open && _filtered.Count > 0 && !_wheelAttached)
+        {
+            _wheelAttached = true;
+            await JS.InvokeVoidAsync("attachSearchSelectWheel", _menuRef);
+        }
+        else if (!_open || _filtered.Count == 0)
+        {
+            _wheelAttached = false;
+        }
+    }
 
     protected override void OnParametersSet()
     {

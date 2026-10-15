@@ -75,8 +75,18 @@
         // component) instead of relying on the browser's native wheel-to-scroll, since that menu
         // sits position:absolute inside the page's own scrollable .main-content and WebView2 can
         // intermittently route a wheel gesture to the wrong one of those two nested scrollers.
-        window.searchSelectScroll = function (el, deltaY) {
-            if (el) el.scrollTop += deltaY;
+        // The listener is attached here, in plain JS, rather than via a Blazor @onwheel handler,
+        // so every wheel tick is handled in one step with no round-trip back into .NET — routing
+        // each tick through .NET/JS interop couldn't keep up with a fast scroll and still lagged.
+        // dataset.wheelAttached guards against double-attaching if this is ever called twice for
+        // the same element (each dropdown open renders a brand-new element, so it starts unset).
+        window.attachSearchSelectWheel = function (el) {
+            if (!el || el.dataset.wheelAttached === '1') return;
+            el.dataset.wheelAttached = '1';
+            el.addEventListener('wheel', function (e) {
+                e.preventDefault();
+                el.scrollTop += e.deltaY;
+            }, { passive: false });
         };
 
         window.applyTheme = function (scopedSettingsList) {
