@@ -7,6 +7,7 @@
         <h1 class="page-title">Trial Balance Report</h1>
         <button class="btn no-print" @onclick="PrintAsync">Print</button>
     </div>
+    <CompanyHeader />
     <p style="color:#777;">Every account with a non-zero balance, grouped by Account Type, with a Debit/Credit subtotal per type and a grand total at the bottom.</p>
 
     @if (_error is not null)

@@ -1,0 +1,45 @@
+@* The business's own letterhead (name, market, contact, proprietor/NTN) — same block Ledger.razor
+   and Party Account Statement already print above their statements, pulled out here so every
+   report can show it without copy-pasting the markup and the Contact/Proprietor line-building. *@
+@inject ApiClient Api
+
+<div style="border:1px solid #000;padding:8px 10px;margin-bottom:12px;">
+    <div style="text-align:center;font-family:Georgia,'Times New Roman',serif;font-size:1.3rem;font-weight:700;">@_companyInfo?.NameEnglish</div>
+    @if (!string.IsNullOrWhiteSpace(_companyInfo?.MarketName))
+    {
+        <div style="text-align:center;font-size:0.9rem;">@_companyInfo.MarketName</div>
+    }
+    @if (ContactLine is { Length: > 0 })
+    {
+        <div style="text-align:center;font-size:0.75rem;">@ContactLine</div>
+    }
+    @if (ProprietorLine is { Length: > 0 })
+    {
+        <div style="text-align:center;font-size:0.8rem;">@ProprietorLine</div>
+    }
+</div>
+
+@code {
+    private CompanyInfoDto? _companyInfo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // The letterhead is a nice-to-have, not core to the report — swallow a failure here
+        // rather than blocking the report's own data from loading/showing.
+        try { _companyInfo = await Api.GetCompanyInfoAsync(); }
+        catch (Models.ApiException) { }
+    }
+
+    private string ContactLine => string.Join("  ", new[]
+    {
+        string.IsNullOrWhiteSpace(_companyInfo?.Phone) ? null : $"Phone: {_companyInfo.Phone}",
+        string.IsNullOrWhiteSpace(_companyInfo?.Mobile) ? null : $"Mobile: {_companyInfo.Mobile}",
+        string.IsNullOrWhiteSpace(_companyInfo?.Email) ? null : $"Email: {_companyInfo.Email}"
+    }.Where(s => s is not null));
+
+    private string ProprietorLine => string.Join("  |  ", new[]
+    {
+        string.IsNullOrWhiteSpace(_companyInfo?.ProprietorName) ? null : $"Proprietor: {_companyInfo.ProprietorName}",
+        string.IsNullOrWhiteSpace(_companyInfo?.NtnNumber) ? null : $"NTN No: {_companyInfo.NtnNumber}"
+    }.Where(s => s is not null));
+}

@@ -7,6 +7,7 @@
         <h1 class="page-title">Purchase / Sale Report</h1>
         <button class="btn no-print" @onclick="PrintAsync">Print</button>
     </div>
+    <CompanyHeader />
     <p style="color:#777;">Purchase and Sale Invoices together in one table — Sale is Debit, Purchase is Credit.</p>
 
     @if (_error is not null)
