@@ -78,8 +78,8 @@
 @code {
     private List<PurchaseDto>? _purchases;
     private List<SaleInvoiceDto>? _sales;
-    private DateTime? _from;
-    private DateTime? _to;
+    private DateTime? _from = DateTime.Today;
+    private DateTime? _to = DateTime.Today;
     private string? _error;
 
     protected override async Task OnInitializedAsync()
