@@ -4,7 +4,6 @@
    the window is resized, moved, or the display's DPI scaling kicks in — this renders entirely
    inside normal page flow instead, sidestepping that. *@
 @typeparam TItem
-@inject IJSRuntime JS
 
 <div class="search-select" tabindex="-1" @onfocusout="HandleFocusOut">
     <input @ref="_inputRef" class="search-select-input" type="text" autocomplete="off"
@@ -15,8 +14,7 @@
            @onkeydown="OnKeyDown" />
     @if (_open && _filtered.Count > 0)
     {
-        <div @ref="_menuRef" class="search-select-menu" @onmousedown:preventDefault="true"
-             @onwheel="OnWheel" @onwheel:preventDefault="true">
+        <div class="search-select-menu" @onmousedown:preventDefault="true">
             @for (var i = 0; i < _filtered.Count; i++)
             {
                 var item = _filtered[i];
@@ -53,19 +51,10 @@
     private int? _lastValue;
     private List<int>? _lastItemIds;
     private ElementReference _inputRef;
-    private ElementReference _menuRef;
 
     // Lets a parent move keyboard focus here programmatically (e.g. VoucherForm focusing the
     // party picker as soon as the form opens).
     public async Task FocusAsync() => await _inputRef.FocusAsync();
-
-    // This menu sits position:absolute inside .main-content, which is ALSO a scroll container —
-    // that nesting is a known source of WebView2/Chromium wheel-routing glitches where a scroll
-    // gesture intermittently gets delivered to the wrong one of the two scrollers, making the
-    // wheel feel like it randomly stalls partway through. Taking the wheel event over entirely
-    // (preventDefault + set scrollTop ourselves) sidesteps that native routing altogether, so the
-    // menu always scrolls, deterministically, regardless of what's scrollable underneath it.
-    private async Task OnWheel(WheelEventArgs e) => await JS.InvokeVoidAsync("searchSelectScroll", _menuRef, e.DeltaY);
 
     protected override void OnParametersSet()
     {
