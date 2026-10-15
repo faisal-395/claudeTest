@@ -1,0 +1,86 @@
+@page "/reports/day-book"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Day Book</h1>
+    <p style="color:#777;">Every ledger entry posted on a chosen date, across every party and account — pick a Type to narrow it down.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+        <div>
+            <label style="display:block; font-size:0.85rem; color:#555;">Date</label>
+            <input type="date" @bind="_date" @bind:after="LoadAsync" style="width:160px;" />
+        </div>
+        <div>
+            <label style="display:block; font-size:0.85rem; color:#555;">Type</label>
+            <select @bind="_typeFilter" style="width:160px;">
+                <option value="">All</option>
+                @foreach (var t in Enum.GetValues<LedgerSourceType>())
+                {
+                    <option value="@t">@t</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (_rows is null)
+    {
+        <p>Loading…</p>
+    }
+    else if (FilteredRows.Count == 0)
+    {
+        <p style="color:#999;">No entries on @_date.ToString("yyyy-MM-dd")@(string.IsNullOrEmpty(_typeFilter) ? "" : $" for {_typeFilter}").</p>
+    }
+    else
+    {
+        <table class="data-grid" style="max-width:1000px;">
+            <thead>
+                <tr><th>Entity</th><th>Type</th><th>Ref #</th><th>Description</th><th style="text-align:right;">Debit</th><th style="text-align:right;">Credit</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in FilteredRows)
+                {
+                    <tr>
+                        <td>@r.EntityName</td>
+                        <td>@r.SourceType</td>
+                        <td>@(r.ReferenceNo ?? "—")</td>
+                        <td>@(r.Description ?? "—")</td>
+                        <td style="text-align:right;">@(r.Debit > 0 ? r.Debit.ToString("N2") : "")</td>
+                        <td style="text-align:right;">@(r.Credit > 0 ? r.Credit.ToString("N2") : "")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr style="font-weight:700;">
+                    <td colspan="4">Total</td>
+                    <td style="text-align:right;">@FilteredRows.Sum(r => r.Debit).ToString("N2")</td>
+                    <td style="text-align:right;">@FilteredRows.Sum(r => r.Credit).ToString("N2")</td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<DayBookRowDto>? _rows;
+    private DateTime _date = DateTime.Today;
+    private string _typeFilter = "";
+    private string? _error;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        try { _rows = await Api.GetDayBookAsync(_date); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private List<DayBookRowDto> FilteredRows => (_rows ?? new())
+        .Where(r => string.IsNullOrEmpty(_typeFilter) || r.SourceType.ToString() == _typeFilter)
+        .ToList();
+}

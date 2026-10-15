@@ -68,6 +68,20 @@ public class LedgerQueryService : ILedgerQueryService
         return new AccountLedgerDto(accountId, account.Code, account.Name, opening, closing, await ToRowDtosAsync(rows, ct));
     }
 
+    public async Task<List<DayBookRowDto>> GetDayBookAsync(DateTime date, CancellationToken ct = default)
+    {
+        var rows = await _db.LedgerEntries
+            .Include(e => e.Party).Include(e => e.ChartOfAccount)
+            .Where(e => !e.IsDeleted && e.Date.Date == date.Date)
+            .OrderBy(e => e.CreatedAtUtc).ThenBy(e => e.Id)
+            .ToListAsync(ct);
+
+        var rowDtos = await ToRowDtosAsync(rows, ct);
+        return rows.Zip(rowDtos, (e, dto) => new DayBookRowDto(
+            dto.Id, dto.Date, e.Party?.Name ?? e.ChartOfAccount?.Name ?? "—", e.PartyId is not null,
+            dto.Debit, dto.Credit, dto.SourceType, dto.SourceId, dto.Description, dto.ReferenceNo)).ToList();
+    }
+
     // Description is free text (or an auto-generated label); ReferenceNo is the actual
     // invoice/voucher number, kept separate so the statement/ledger can show and trace each entry
     // to its source document without depending on what ended up in the description.

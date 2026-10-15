@@ -176,6 +176,7 @@ else
             AddGroup("Accounts",
                 (AuthState.CanView(ModuleName.Ledger), new NavItem("ledger", "ledger", "Ledger")),
                 (AuthState.CanView(ModuleName.Ledger), new NavItem("reports/party-account", "user", "Party Account Statement")),
+                (AuthState.CanView(ModuleName.Ledger), new NavItem("reports/day-book", "ledger", "Day Book")),
                 (AuthState.CanView(ModuleName.Reports), new NavItem("reports/position", "chart-of-accounts", "Position in Hand")),
                 (AuthState.CanView(ModuleName.Reports), new NavItem("reports/account-balance", "chart-of-accounts", "Account Balance Report")),
                 (AuthState.CanView(ModuleName.Reports), new NavItem("reports/trial-balance", "chart-of-accounts", "Trial Balance Report")),
