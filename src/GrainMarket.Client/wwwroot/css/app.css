@@ -924,6 +924,11 @@ table.batch-results-grid th, table.batch-results-grid td {
     z-index: 50;
     max-height: 220px;
     overflow-y: auto;
+    /* Without this, WebView2/Chromium can hand a wheel gesture over to an outer scrollable
+       ancestor (a batch-entry table, the page body) mid-scroll once it decides the gesture
+       might reach this menu's edge, which is what made the wheel feel like it randomly stuck
+       partway through. Containing the scroll keeps every wheel tick here while the menu is open. */
+    overscroll-behavior: contain;
     background: white;
     border: 1px solid #ccc;
     border-top: none;
