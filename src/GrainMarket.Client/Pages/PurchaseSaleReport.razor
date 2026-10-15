@@ -3,7 +3,7 @@
 
 <RequireAuth>
     <h1 class="page-title">Purchase / Sale Report</h1>
-    <p style="color:#777;">Purchase and Sale Invoices together in one table, grouped by party — useful when the same party both buys from and sells to you. Sale is Debit, Purchase is Credit.</p>
+    <p style="color:#777;">Purchase and Sale Invoices together in one table — Sale is Debit, Purchase is Credit.</p>
 
     @if (_error is not null)
     {
@@ -19,66 +19,39 @@
     {
         <p>Loading…</p>
     }
+    else if (FilteredRows.Count == 0)
+    {
+        <p style="color:#999;">No purchases or sales found in this date range.</p>
+    }
     else
     {
-        <div style="display:flex; gap:24px; margin-bottom:24px; flex-wrap:wrap;">
-            <div class="batch-readonly-figure" style="min-width:180px;">
-                <label style="display:block; font-size:0.85rem; color:#555;">Total Debit (Sale)</label>
-                Rs @TotalDebit.ToString("N2")
-            </div>
-            <div class="batch-readonly-figure" style="min-width:180px;">
-                <label style="display:block; font-size:0.85rem; color:#555;">Total Credit (Purchase)</label>
-                Rs @TotalCredit.ToString("N2")
-            </div>
-            <div class="batch-readonly-figure @(TotalDebit - TotalCredit < 0 ? "invalid-total" : "")" style="min-width:180px;">
-                <label style="display:block; font-size:0.85rem; color:#555;">Net (Debit − Credit)</label>
-                Rs @(TotalDebit - TotalCredit).ToString("N2")
-            </div>
-        </div>
-
-        @if (PartyGroups.Count == 0)
-        {
-            <p style="color:#999;">No purchases or sales found in this date range.</p>
-        }
-        else
-        {
-            <table class="data-grid" style="max-width:1100px;">
-                <thead>
-                    <tr><th>Invoice #</th><th>Date</th><th>Type</th><th style="text-align:right;">Debit (Sale)</th><th style="text-align:right;">Credit (Purchase)</th><th>Status</th></tr>
-                </thead>
-                @foreach (var group in PartyGroups)
+        <table class="data-grid" style="max-width:1300px;">
+            <thead>
+                <tr><th>Invoice #</th><th>Date</th><th>Type</th><th>Description</th><th style="text-align:right;">Debit (Sale)</th><th style="text-align:right;">Credit (Purchase)</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in FilteredRows)
                 {
-                    <tbody>
-                        <tr style="background:var(--brand-grid-header); font-weight:600;"><td colspan="6">@group.PartyName (@group.Rows.Count)</td></tr>
-                        @foreach (var r in group.Rows)
-                        {
-                            <tr>
-                                <td><a href="@r.DetailsUrl">@r.InvoiceNo</a></td>
-                                <td>@r.Date.ToString("yyyy-MM-dd")</td>
-                                <td>@r.Type</td>
-                                <td style="text-align:right;">@(r.Debit == 0 ? "—" : r.Debit.ToString("N2"))</td>
-                                <td style="text-align:right;">@(r.Credit == 0 ? "—" : r.Credit.ToString("N2"))</td>
-                                <td>@r.Status</td>
-                            </tr>
-                        }
-                        <tr style="font-weight:600; border-top:2px solid #ccc;">
-                            <td colspan="3">Subtotal — @group.PartyName</td>
-                            <td style="text-align:right;">@group.TotalDebit.ToString("N2")</td>
-                            <td style="text-align:right;">@group.TotalCredit.ToString("N2")</td>
-                            <td>Net @((group.TotalDebit - group.TotalCredit).ToString("N2"))</td>
-                        </tr>
-                    </tbody>
-                }
-                <tfoot>
-                    <tr style="font-weight:700; border-top:3px double #999;">
-                        <td colspan="3">Grand Total</td>
-                        <td style="text-align:right;">@TotalDebit.ToString("N2")</td>
-                        <td style="text-align:right;">@TotalCredit.ToString("N2")</td>
-                        <td>Net @((TotalDebit - TotalCredit).ToString("N2"))</td>
+                    <tr>
+                        <td><a href="@r.DetailsUrl">@r.InvoiceNo</a></td>
+                        <td>@r.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@r.Type</td>
+                        <td>@r.Description</td>
+                        <td style="text-align:right;">@(r.Debit == 0 ? "—" : r.Debit.ToString("N2"))</td>
+                        <td style="text-align:right;">@(r.Credit == 0 ? "—" : r.Credit.ToString("N2"))</td>
+                        <td>@r.Status</td>
                     </tr>
-                </tfoot>
-            </table>
-        }
+                }
+            </tbody>
+            <tfoot>
+                <tr style="font-weight:700; border-top:3px double #999;">
+                    <td colspan="4">Grand Total</td>
+                    <td style="text-align:right;">@TotalDebit.ToString("N2")</td>
+                    <td style="text-align:right;">@TotalCredit.ToString("N2")</td>
+                    <td>Net @((TotalDebit - TotalCredit).ToString("N2"))</td>
+                </tr>
+            </tfoot>
+        </table>
     }
 </RequireAuth>
 
@@ -100,11 +73,23 @@
 
     private static string StatusOf(bool isCancelled, ApprovalStatus status) => isCancelled ? "Cancelled" : status.ToString();
 
+    private static string LineSummary(IEnumerable<(string Name, decimal Qty, decimal Price)> lines)
+    {
+        var items = lines.Select(l => $"{l.Name} ({l.Qty:N2}@{l.Price:N2})").ToList();
+        return items.Count switch
+        {
+            0 => "—",
+            <= 3 => string.Join(", ", items),
+            _ => string.Join(", ", items.Take(2)) + $" +{items.Count - 2} more"
+        };
+    }
+
     // Sale debits the customer and Purchase credits the supplier — see
-    // SaleInvoiceService/PurchaseService's own PostPartyEntryAsync calls — so this row shape mirrors
-    // the same party ledger convention instead of inventing a new one.
-    private record Row(DateTime Date, string InvoiceNo, string Type, int PartyId, string PartyName, decimal Debit, decimal Credit, string Status, string DetailsUrl);
-    private record PartyGroup(string PartyName, List<Row> Rows, decimal TotalDebit, decimal TotalCredit);
+    // SaleInvoiceService/PurchaseService's own PostPartyEntryAsync calls — so Debit/Credit here
+    // mirror the same party ledger convention instead of inventing a new one. Description folds
+    // the party name together with the line items (qty@price) so a flat, ungrouped list still
+    // reads as a complete record of who the money moved with and what for.
+    private record Row(DateTime Date, string InvoiceNo, string Type, string Description, decimal Debit, decimal Credit, string Status, string DetailsUrl);
 
     private List<Row> FilteredRows
     {
@@ -113,30 +98,24 @@
             var purchaseRows = (_purchases ?? new())
                 .Where(p => _from is null || p.Date.Date >= _from.Value.Date)
                 .Where(p => _to is null || p.Date.Date <= _to.Value.Date)
-                .Select(p => new Row(p.Date, p.InvoiceNo, "Purchase", p.SupplierId, p.SupplierName,
+                .Select(p => new Row(p.Date, p.InvoiceNo, "Purchase",
+                    $"{p.SupplierName} — {LineSummary(p.Lines.Select(l => (l.ProductName, l.Quantity, l.Price)))}",
                     0, p.ApprovalStatus == ApprovalStatus.Approved && !p.IsCancelled ? p.NetBill : 0,
                     StatusOf(p.IsCancelled, p.ApprovalStatus), $"print/purchase/{p.Id}"));
 
             var saleRows = (_sales ?? new())
                 .Where(s => _from is null || s.Date.Date >= _from.Value.Date)
                 .Where(s => _to is null || s.Date.Date <= _to.Value.Date)
-                .Select(s => new Row(s.Date, s.InvoiceNo, "Sale", s.CustomerId, s.CustomerName,
+                .Select(s => new Row(s.Date, s.InvoiceNo, "Sale",
+                    $"{s.CustomerName} — {LineSummary(s.Lines.Select(l => (l.ProductName, l.Quantity, l.Price)))}",
                     s.ApprovalStatus == ApprovalStatus.Approved && !s.IsCancelled ? s.NetBill : 0, 0,
                     StatusOf(s.IsCancelled, s.ApprovalStatus), $"print/sale/{s.Id}"));
 
-            return purchaseRows.Concat(saleRows).ToList();
+            return purchaseRows.Concat(saleRows)
+                .OrderByDescending(r => r.Date).ThenBy(r => r.Type)
+                .ToList();
         }
     }
-
-    private List<PartyGroup> PartyGroups => FilteredRows
-        .GroupBy(r => r.PartyName)
-        .OrderBy(g => g.Key)
-        .Select(g =>
-        {
-            var rows = g.OrderByDescending(r => r.Date).ThenBy(r => r.Type).ToList();
-            return new PartyGroup(g.Key, rows, rows.Sum(r => r.Debit), rows.Sum(r => r.Credit));
-        })
-        .ToList();
 
     // Pending/Rejected purchases and sales never post ledger entries (only Approved does — see
     // SaleInvoiceService/PurchaseService), and Cancelled reverses whatever Approved posted, so
