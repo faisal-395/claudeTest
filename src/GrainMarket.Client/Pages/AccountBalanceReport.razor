@@ -1,8 +1,12 @@
 @page "/reports/account-balance"
 @inject ApiClient Api
+@inject IJSRuntime JS
 
 <RequireAuth>
-    <h1 class="page-title">Account Balance Report</h1>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title">Account Balance Report</h1>
+        <button class="btn no-print" @onclick="PrintAsync">Print</button>
+    </div>
     <p style="color:#777;">Pick an Account Type to see the balance of every account (or every party, for "Party") under it, as of a date — or leave From/To blank for the balance right now.</p>
 
     @if (_error is not null)
@@ -16,7 +20,7 @@
     }
     else
     {
-        <div style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+        <div class="no-print" style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
             <div>
                 <label style="display:block; font-size:0.85rem; color:#555;">From</label>
                 <input type="date" @bind="_from" @bind:after="LoadBalancesAsync" style="width:160px;" />
@@ -212,4 +216,6 @@
         .Where(a => MatchesAmountType(a.ClosingBalance))
         .OrderBy(a => a.Code)
         .ToList();
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
 }

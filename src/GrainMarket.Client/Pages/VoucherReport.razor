@@ -1,8 +1,12 @@
 @page "/reports/voucher"
 @inject ApiClient Api
+@inject IJSRuntime JS
 
 <RequireAuth>
-    <h1 class="page-title">Voucher Report</h1>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title">Voucher Report</h1>
+        <button class="btn no-print" @onclick="PrintAsync">Print</button>
+    </div>
     <p style="color:#777;">Payment, Receipt and Journal vouchers grouped by type, for a chosen date range.</p>
 
     @if (_error is not null)
@@ -10,7 +14,7 @@
         <div class="error-banner">@_error</div>
     }
 
-    <div class="form-grid" style="max-width:500px;margin-bottom:20px;">
+    <div class="form-grid no-print" style="max-width:500px;margin-bottom:20px;">
         <div><label>From</label><input type="date" @bind="_from" /></div>
         <div><label>To</label><input type="date" @bind="_to" /></div>
     </div>
@@ -99,4 +103,6 @@
                 .ToList();
         }
     }
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
 }

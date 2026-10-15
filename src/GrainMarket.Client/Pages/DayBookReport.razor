@@ -1,8 +1,12 @@
 @page "/reports/day-book"
 @inject ApiClient Api
+@inject IJSRuntime JS
 
 <RequireAuth>
-    <h1 class="page-title">Day Book</h1>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title">Day Book</h1>
+        <button class="btn no-print" @onclick="PrintAsync">Print</button>
+    </div>
     <p style="color:#777;">Every ledger entry posted on a chosen date, across every party and account — pick a Type to narrow it down.</p>
 
     @if (_error is not null)
@@ -10,7 +14,7 @@
         <div class="error-banner">@_error</div>
     }
 
-    <div style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+    <div class="no-print" style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
         <div>
             <label style="display:block; font-size:0.85rem; color:#555;">Date</label>
             <input type="date" @bind="_date" @bind:after="LoadAsync" style="width:160px;" />
@@ -83,4 +87,6 @@
     private List<DayBookRowDto> FilteredRows => (_rows ?? new())
         .Where(r => string.IsNullOrEmpty(_typeFilter) || r.SourceType.ToString() == _typeFilter)
         .ToList();
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
 }

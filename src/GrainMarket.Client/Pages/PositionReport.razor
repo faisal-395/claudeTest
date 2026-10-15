@@ -1,9 +1,13 @@
 @page "/reports/position"
 @using GrainMarket.Application.Common
 @inject ApiClient Api
+@inject IJSRuntime JS
 
 <RequireAuth>
-    <h1 class="page-title">Position in Hand <span class="rtl-urdu" style="font-size:1rem;">پوزیشن</span></h1>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title">Position in Hand <span class="rtl-urdu" style="font-size:1rem;">پوزیشن</span></h1>
+        <button class="btn no-print" @onclick="PrintAsync">Print</button>
+    </div>
     <p style="color:#777;">Everything the business currently holds and owes/is owed, as of right now — cash and bank
         balances, what every party owes us (Receivable) or we owe them (Payable), and every account's balance.</p>
 
@@ -113,4 +117,6 @@
     private decimal TotalReceivable => _parties?.Where(p => p.CurrentBalance > 0).Sum(p => p.CurrentBalance) ?? 0m;
     private decimal TotalPayable => _parties?.Where(p => p.CurrentBalance < 0).Sum(p => -p.CurrentBalance) ?? 0m;
     private decimal NetPosition => CashBalance + BankBalance + TotalReceivable - TotalPayable;
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
 }

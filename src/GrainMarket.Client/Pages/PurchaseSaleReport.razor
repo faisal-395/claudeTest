@@ -1,8 +1,12 @@
 @page "/reports/purchase-sale"
 @inject ApiClient Api
+@inject IJSRuntime JS
 
 <RequireAuth>
-    <h1 class="page-title">Purchase / Sale Report</h1>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title">Purchase / Sale Report</h1>
+        <button class="btn no-print" @onclick="PrintAsync">Print</button>
+    </div>
     <p style="color:#777;">Purchase and Sale Invoices together in one table — Sale is Debit, Purchase is Credit.</p>
 
     @if (_error is not null)
@@ -10,7 +14,7 @@
         <div class="error-banner">@_error</div>
     }
 
-    <div class="form-grid" style="max-width:500px;margin-bottom:20px;">
+    <div class="form-grid no-print" style="max-width:500px;margin-bottom:20px;">
         <div><label>From</label><input type="date" @bind="_from" /></div>
         <div><label>To</label><input type="date" @bind="_to" /></div>
     </div>
@@ -153,4 +157,6 @@
     // just sum what's left, same as every other report in this app only summing what's posted.
     private decimal TotalDebit => FilteredRows.Sum(r => r.Debit);
     private decimal TotalCredit => FilteredRows.Sum(r => r.Credit);
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
 }

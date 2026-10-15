@@ -1,8 +1,12 @@
 @page "/records-report"
 @inject ApiClient Api
+@inject IJSRuntime JS
 
 <RequireAuth>
-    <h1 class="page-title">Records Report <span class="rtl-urdu" style="font-size:1rem;">ریکارڈ رپورٹ</span></h1>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title">Records Report <span class="rtl-urdu" style="font-size:1rem;">ریکارڈ رپورٹ</span></h1>
+        <button class="btn no-print" @onclick="PrintAsync">Print</button>
+    </div>
     <p style="color:#777;">Kachi, Pakki, Purchase and Sale Invoice records together, newest first — filter by type below.</p>
 
     @if (_error is not null)
@@ -10,7 +14,7 @@
         <div class="error-banner">@_error</div>
     }
 
-    <div style="margin-bottom:16px;">
+    <div class="no-print" style="margin-bottom:16px;">
         <button class="btn secondary" @onclick="() => _filtersExpanded = !_filtersExpanded">
             @(_filtersExpanded ? "▾" : "▸") Filters
             @if (!_filtersExpanded && (_typeFilter != "All" || _partyId != 0 || _from is not null || _to is not null))
@@ -201,4 +205,6 @@
             _ => string.Join(", ", items.Take(2)) + $" +{items.Count - 2} more"
         };
     }
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
 }

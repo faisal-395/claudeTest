@@ -1,8 +1,12 @@
 @page "/reports/trial-balance"
 @inject ApiClient Api
+@inject IJSRuntime JS
 
 <RequireAuth>
-    <h1 class="page-title">Trial Balance Report</h1>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title">Trial Balance Report</h1>
+        <button class="btn no-print" @onclick="PrintAsync">Print</button>
+    </div>
     <p style="color:#777;">Every account with a non-zero balance, grouped by Account Type, with a Debit/Credit subtotal per type and a grand total at the bottom.</p>
 
     @if (_error is not null)
@@ -110,4 +114,6 @@
 
     private decimal GrandDebit => Groups.Sum(g => g.TotalDebit);
     private decimal GrandCredit => Groups.Sum(g => g.TotalCredit);
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
 }
