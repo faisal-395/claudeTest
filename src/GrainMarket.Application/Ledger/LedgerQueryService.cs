@@ -82,6 +82,61 @@ public class LedgerQueryService : ILedgerQueryService
             dto.Debit, dto.Credit, dto.SourceType, dto.SourceId, dto.Description, dto.ReferenceNo)).ToList();
     }
 
+    public async Task<PeriodBalancesDto> GetPeriodBalancesAsync(DateTime? from, DateTime? to, CancellationToken ct = default)
+    {
+        var accounts = await _db.ChartOfAccounts.Include(a => a.AccountType)
+            .Where(a => !a.IsDeleted && a.IsActive).ToListAsync(ct);
+        var parties = await _db.Parties.Where(p => !p.IsDeleted && p.IsActive).ToListAsync(ct);
+
+        var accountOpening = await LatestAccountBalancesAsync(from, inclusive: false, ct);
+        var accountClosing = await LatestAccountBalancesAsync(to, inclusive: true, ct);
+        var partyOpening = await LatestPartyBalancesAsync(from, inclusive: false, ct);
+        var partyClosing = await LatestPartyBalancesAsync(to, inclusive: true, ct);
+
+        var accountDtos = accounts.Select(a =>
+        {
+            var opening = accountOpening.GetValueOrDefault(a.Id);
+            var closing = accountClosing.TryGetValue(a.Id, out var c) ? c : opening;
+            return new AccountBalanceDto(a.Id, a.Code, a.Name, a.NameUrdu, a.AccountType.Name, opening, closing);
+        }).ToList();
+
+        var partyDtos = parties.Select(p =>
+        {
+            var opening = partyOpening.GetValueOrDefault(p.Id);
+            var closing = partyClosing.TryGetValue(p.Id, out var c) ? c : opening;
+            return new PartyBalanceDto(p.Id, p.Name, p.NameUrdu, p.PartyType, opening, closing);
+        }).ToList();
+
+        return new PeriodBalancesDto(accountDtos, partyDtos);
+    }
+
+    // "Latest RunningBalance on or before (inclusive) / strictly before (exclusive) a cutoff date"
+    // per account/party, for every one of them in a single query — the bulk equivalent of the
+    // single-entity "opening balance" lookup GetAccountLedgerAsync/GetPartyLedgerAsync already do.
+    // A null cutoff means "no bound" (every entry counts, i.e. "as of right now" for Closing, or
+    // "from inception" — no opening offset — for Opening since nothing is ever before it).
+    private async Task<Dictionary<int, decimal>> LatestAccountBalancesAsync(DateTime? cutoff, bool inclusive, CancellationToken ct)
+    {
+        var query = _db.LedgerEntries.Where(e => !e.IsDeleted && e.ChartOfAccountId != null);
+        if (cutoff is not null) query = inclusive ? query.Where(e => e.Date <= cutoff) : query.Where(e => e.Date < cutoff);
+
+        var latest = await query.GroupBy(e => e.ChartOfAccountId)
+            .Select(g => g.OrderByDescending(e => e.Date).ThenByDescending(e => e.Id).First())
+            .ToListAsync(ct);
+        return latest.ToDictionary(e => e.ChartOfAccountId!.Value, e => e.RunningBalance);
+    }
+
+    private async Task<Dictionary<int, decimal>> LatestPartyBalancesAsync(DateTime? cutoff, bool inclusive, CancellationToken ct)
+    {
+        var query = _db.LedgerEntries.Where(e => !e.IsDeleted && e.PartyId != null);
+        if (cutoff is not null) query = inclusive ? query.Where(e => e.Date <= cutoff) : query.Where(e => e.Date < cutoff);
+
+        var latest = await query.GroupBy(e => e.PartyId)
+            .Select(g => g.OrderByDescending(e => e.Date).ThenByDescending(e => e.Id).First())
+            .ToListAsync(ct);
+        return latest.ToDictionary(e => e.PartyId!.Value, e => e.RunningBalance);
+    }
+
     // Description is free text (or an auto-generated label); ReferenceNo is the actual
     // invoice/voucher number, kept separate so the statement/ledger can show and trace each entry
     // to its source document without depending on what ended up in the description.

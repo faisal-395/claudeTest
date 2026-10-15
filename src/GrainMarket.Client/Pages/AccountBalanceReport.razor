@@ -3,20 +3,28 @@
 
 <RequireAuth>
     <h1 class="page-title">Account Balance Report</h1>
-    <p style="color:#777;">Pick an Account Type to see the current balance of every account (or every party, for "Party") under it.</p>
+    <p style="color:#777;">Pick an Account Type to see the balance of every account (or every party, for "Party") under it, as of a date — or leave From/To blank for the balance right now.</p>
 
     @if (_error is not null)
     {
         <div class="error-banner">@_error</div>
     }
 
-    @if (_accountTypes is null || _parties is null || _accounts is null)
+    @if (_accountTypes is null || _balances is null)
     {
         <p>Loading…</p>
     }
     else
     {
         <div style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+            <div>
+                <label style="display:block; font-size:0.85rem; color:#555;">From</label>
+                <input type="date" @bind="_from" @bind:after="LoadBalancesAsync" style="width:160px;" />
+            </div>
+            <div>
+                <label style="display:block; font-size:0.85rem; color:#555;">To</label>
+                <input type="date" @bind="_to" @bind:after="LoadBalancesAsync" style="width:160px;" />
+            </div>
             <div>
                 <label style="display:block; font-size:0.85rem; color:#555;">Account Type</label>
                 <select @bind="_selectedAccountType" style="width:200px;">
@@ -58,21 +66,22 @@
         }
         else if (_selectedAccountType == PartyAccountTypeName)
         {
-            <table class="data-grid" style="max-width:900px;">
-                <thead><tr><th>Party</th><th>Type</th><th style="text-align:right;">Balance</th><th>Position</th></tr></thead>
+            <table class="data-grid" style="max-width:1000px;">
+                <thead><tr><th>Party</th><th>Type</th><th style="text-align:right;">Opening</th><th style="text-align:right;">Closing</th><th>Position</th></tr></thead>
                 <tbody>
                     @foreach (var p in FilteredParties)
                     {
                         <tr>
                             <td>@p.Name @(string.IsNullOrEmpty(p.NameUrdu) ? "" : $"— {p.NameUrdu}")</td>
                             <td>@p.PartyType</td>
-                            <td style="text-align:right;">@Math.Abs(p.CurrentBalance).ToString("N2")</td>
+                            <td style="text-align:right;">@Math.Abs(p.OpeningBalance).ToString("N2")</td>
+                            <td style="text-align:right;">@Math.Abs(p.ClosingBalance).ToString("N2")</td>
                             <td>
-                                @if (p.CurrentBalance > 0)
+                                @if (p.ClosingBalance > 0)
                                 {
                                     <span style="color:#1a7a3c;">Debit (Receivable)</span>
                                 }
-                                else if (p.CurrentBalance < 0)
+                                else if (p.ClosingBalance < 0)
                                 {
                                     <span style="color:#b3261e;">Credit (Payable)</span>
                                 }
@@ -85,13 +94,15 @@
                     }
                     @if (!FilteredParties.Any())
                     {
-                        <tr><td colspan="4" style="text-align:center;color:#999;">No parties found.</td></tr>
+                        <tr><td colspan="5" style="text-align:center;color:#999;">No parties found.</td></tr>
                     }
                 </tbody>
                 <tfoot>
                     <tr style="font-weight:600;">
-                        <td colspan="2">Total</td>
-                        <td style="text-align:right;">@FilteredParties.Sum(p => Math.Abs(p.CurrentBalance)).ToString("N2")</td>
+                        <td>Total</td>
+                        <td></td>
+                        <td style="text-align:right;">@FilteredParties.Sum(p => Math.Abs(p.OpeningBalance)).ToString("N2")</td>
+                        <td style="text-align:right;">@FilteredParties.Sum(p => Math.Abs(p.ClosingBalance)).ToString("N2")</td>
                         <td></td>
                     </tr>
                 </tfoot>
@@ -99,21 +110,22 @@
         }
         else
         {
-            <table class="data-grid" style="max-width:900px;">
-                <thead><tr><th>Code</th><th>Account</th><th style="text-align:right;">Balance</th><th>Position</th></tr></thead>
+            <table class="data-grid" style="max-width:1000px;">
+                <thead><tr><th>Code</th><th>Account</th><th style="text-align:right;">Opening</th><th style="text-align:right;">Closing</th><th>Position</th></tr></thead>
                 <tbody>
                     @foreach (var a in FilteredAccounts)
                     {
                         <tr>
                             <td>@a.Code</td>
                             <td>@a.Name @(string.IsNullOrEmpty(a.NameUrdu) ? "" : $"— {a.NameUrdu}")</td>
-                            <td style="text-align:right;">@Math.Abs(a.CurrentBalance).ToString("N2")</td>
+                            <td style="text-align:right;">@Math.Abs(a.OpeningBalance).ToString("N2")</td>
+                            <td style="text-align:right;">@Math.Abs(a.ClosingBalance).ToString("N2")</td>
                             <td>
-                                @if (a.CurrentBalance > 0)
+                                @if (a.ClosingBalance > 0)
                                 {
                                     <span style="color:#1a7a3c;">Debit</span>
                                 }
-                                else if (a.CurrentBalance < 0)
+                                else if (a.ClosingBalance < 0)
                                 {
                                     <span style="color:#b3261e;">Credit</span>
                                 }
@@ -126,13 +138,15 @@
                     }
                     @if (!FilteredAccounts.Any())
                     {
-                        <tr><td colspan="4" style="text-align:center;color:#999;">No accounts found.</td></tr>
+                        <tr><td colspan="5" style="text-align:center;color:#999;">No accounts found.</td></tr>
                     }
                 </tbody>
                 <tfoot>
                     <tr style="font-weight:600;">
-                        <td colspan="2">Total</td>
-                        <td style="text-align:right;">@FilteredAccounts.Sum(a => Math.Abs(a.CurrentBalance)).ToString("N2")</td>
+                        <td>Total</td>
+                        <td></td>
+                        <td style="text-align:right;">@FilteredAccounts.Sum(a => Math.Abs(a.OpeningBalance)).ToString("N2")</td>
+                        <td style="text-align:right;">@FilteredAccounts.Sum(a => Math.Abs(a.ClosingBalance)).ToString("N2")</td>
                         <td></td>
                     </tr>
                 </tfoot>
@@ -148,22 +162,29 @@
     private const string PartyAccountTypeName = "Party";
 
     private List<AccountTypeDto>? _accountTypes;
-    private List<PartyDto>? _parties;
-    private List<ChartOfAccountDto>? _accounts;
+    private PeriodBalancesDto? _balances;
     private string? _error;
 
+    private DateTime? _from;
+    private DateTime? _to;
     private string _selectedAccountType = "";
     private string _selectedPartyType = "";
     private string _amountType = "Both";
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            _accountTypes = await Api.GetAccountTypesAsync();
-            _parties = await Api.GetPartiesAsync();
-            _accounts = await Api.GetChartOfAccountsAsync();
-        }
+        try { _accountTypes = await Api.GetAccountTypesAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+        await LoadBalancesAsync();
+    }
+
+    // Opening = balance strictly before From (0 if From is blank — nothing is "before" an
+    // unbounded start). Closing = balance on or before To (the live/current balance if To is
+    // blank). Leaving both blank reproduces the report's old always-current behavior.
+    private async Task LoadBalancesAsync()
+    {
+        _error = null;
+        try { _balances = await Api.GetPeriodBalancesAsync(_from, _to); }
         catch (Models.ApiException ex) { _error = ex.Message; }
     }
 
@@ -177,18 +198,18 @@
     // PartyType is [Flags] — a party can carry more than one (e.g. Farmer|Vendor), so this checks
     // the selected flag is SET rather than comparing the whole value/ToString() for an exact match,
     // same as PartyService.GetAllAsync's own server-side filter.
-    private bool MatchesPartyType(PartyDto p) => string.IsNullOrEmpty(_selectedPartyType)
+    private bool MatchesPartyType(PartyBalanceDto p) => string.IsNullOrEmpty(_selectedPartyType)
         || (Enum.TryParse<PartyType>(_selectedPartyType, out var want) && (p.PartyType & want) == want);
 
-    private List<PartyDto> FilteredParties => (_parties ?? new())
+    private List<PartyBalanceDto> FilteredParties => (_balances?.Parties ?? new())
         .Where(MatchesPartyType)
-        .Where(p => MatchesAmountType(p.CurrentBalance))
-        .OrderByDescending(p => p.CurrentBalance)
+        .Where(p => MatchesAmountType(p.ClosingBalance))
+        .OrderByDescending(p => p.ClosingBalance)
         .ToList();
 
-    private List<ChartOfAccountDto> FilteredAccounts => (_accounts ?? new())
-        .Where(a => a.IsActive && a.AccountTypeName == _selectedAccountType)
-        .Where(a => MatchesAmountType(a.CurrentBalance))
+    private List<AccountBalanceDto> FilteredAccounts => (_balances?.Accounts ?? new())
+        .Where(a => a.AccountTypeName == _selectedAccountType)
+        .Where(a => MatchesAmountType(a.ClosingBalance))
         .OrderBy(a => a.Code)
         .ToList();
 }

@@ -180,6 +180,8 @@ public class ApiClient
         GetAsync<AccountLedgerDto>($"api/ledger/account/{accountId}{BuildDateQuery(from, to)}");
     public Task<List<DayBookRowDto>> GetDayBookAsync(DateTime date) =>
         GetAsync<List<DayBookRowDto>>($"api/ledger/day-book?date={date:yyyy-MM-dd}");
+    public Task<PeriodBalancesDto> GetPeriodBalancesAsync(DateTime? from = null, DateTime? to = null) =>
+        GetAsync<PeriodBalancesDto>($"api/ledger/period-balances{BuildDateQuery(from, to)}");
 
     public Task<List<OutstandingPartyDto>> GetOutstandingAsync() => GetAsync<List<OutstandingPartyDto>>("api/recovery/outstanding");
     public Task<List<RecoveryNoteDto>> GetRecoveryNotesAsync(int partyId) => GetAsync<List<RecoveryNoteDto>>($"api/recovery/notes/{partyId}");

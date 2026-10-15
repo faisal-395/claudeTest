@@ -10,4 +10,8 @@ public interface ILedgerQueryService
     /// <summary>Every ledger entry posted on the given date, across every party and account —
     /// the Day Book.</summary>
     Task<List<DayBookRowDto>> GetDayBookAsync(DateTime date, CancellationToken ct = default);
+
+    /// <summary>Opening/Closing balance for every account and party at once, for the Account
+    /// Balance Report's date range — see PeriodBalancesDto.</summary>
+    Task<PeriodBalancesDto> GetPeriodBalancesAsync(DateTime? from, DateTime? to, CancellationToken ct = default);
 }
