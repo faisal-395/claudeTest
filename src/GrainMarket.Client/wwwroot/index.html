@@ -34,6 +34,22 @@
         // AppearanceSettingsDto list as-is (Blazor's JS interop serializes C# properties to
         // camelCase) rather than positional arguments, so adding another themed property later is a
         // one-line change to PROPERTY_TO_VAR here, not a signature change everywhere this is called.
+        // SearchSelect's dropdown menu takes over its own mouse-wheel scrolling (see the
+        // component) instead of relying on the browser's native wheel-to-scroll, which reliably
+        // stalls partway through a gesture for this menu's layout (position:absolute, nested
+        // inside the page's own scrollable .main-content) even with CSS hints and WebView2's
+        // smooth scrolling disabled. dataset.wheelAttached makes this a no-op on a node that
+        // already has the listener, since the component calls this on every render while open
+        // rather than tracking "already attached" on the C# side (see the component for why).
+        window.attachSearchSelectWheel = function (el) {
+            if (!el || el.dataset.wheelAttached === '1') return;
+            el.dataset.wheelAttached = '1';
+            el.addEventListener('wheel', function (e) {
+                e.preventDefault();
+                el.scrollTop += e.deltaY;
+            }, { passive: false });
+        };
+
         var THEME_STYLE_ELEMENT_ID = 'brand-theme-overrides';
         var SCOPE_TO_SELECTOR = { 0: ':root', 1: '.theme-sale-invoice', 2: '.theme-purchase', 3: '.theme-kachi', 4: '.theme-pakki', 6: '.theme-journal', 7: '.theme-expense', 8: '.theme-payment', 9: '.theme-receipt' };
         var PROPERTY_TO_VAR = {
