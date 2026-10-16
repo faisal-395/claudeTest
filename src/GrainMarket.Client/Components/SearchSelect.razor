@@ -60,9 +60,9 @@
 
     // Native wheel-to-scroll on this menu (position:absolute, nested inside the page's own
     // scrollable .main-content) reliably stalls partway through a scroll in WebView2, even with
-    // overscroll-behavior/overflow-anchor/GPU-layer CSS hints and with WebView2's own smooth
-    // scrolling disabled — the scrollbar drags fine, only the wheel gesture itself breaks down.
-    // So the wheel is handled entirely in JS instead (attachSearchSelectWheel in index.html),
+    // overscroll-behavior/overflow-anchor/GPU-layer CSS hints — the scrollbar drags fine, only the
+    // wheel gesture itself breaks down. So the wheel is handled entirely in JS instead
+    // (attachSearchSelectWheel in index.html),
     // bypassing native wheel-to-scroll altogether. This is called on every render where the menu
     // is open rather than guarded by a C# "already attached" flag: if Blazor ever replaces the
     // underlying <div> for any reason, a stale C# flag would skip re-attaching to the new node
