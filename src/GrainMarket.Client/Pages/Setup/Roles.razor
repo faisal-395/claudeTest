@@ -1,0 +1,192 @@
+@page "/setup/roles"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Roles</h1>
+    <p style="color:#777;">Tick <b>View/Create/Edit/Delete</b> per screen to control exactly what each role can do —
+        e.g. give Clerk Create on Kachi, Pakki, Sale Invoice, Purchase and Payment/Receipt/Journal (vouchers) to let
+        a Munshi raise those transactions. Turn on <b>Requires Approval</b> to hold everything that role raises
+        (Kachi/Pakki/Purchase/Sale Invoice) as Pending until a Manager/Admin reviews it under Pending Approvals —
+        off (the default) posts straight through as before.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+    @if (_successMessage is not null)
+    {
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+    }
+
+    <div style="max-width:520px;background:white;padding:16px 20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+        <h2 style="font-size:1.05rem;color:var(--brand-primary);margin-top:0;">Add New Role</h2>
+        <div class="form-grid" style="max-width:none;padding:0;box-shadow:none;">
+            <div><label>Name</label><input @bind="_newName" placeholder="e.g. Munshi (Test)" /></div>
+            <div><label>Name (Urdu)</label><input @bind="_newNameUrdu" class="rtl-urdu" /></div>
+        </div>
+        <button class="btn" disabled="@(string.IsNullOrWhiteSpace(_newName) || _creating)" @onclick="CreateRoleAsync" style="margin-top:10px;">
+            @(_creating ? "Creating…" : "Create Role")
+        </button>
+    </div>
+
+    @if (_roles is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div style="max-width:300px;margin-bottom:16px;">
+            <label>Role</label>
+            <select @bind="_selectedRoleId" style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:3px;">
+                @foreach (var role in SelectableRoles)
+                {
+                    <option value="@role.Id">@role.Name</option>
+                }
+            </select>
+            <p style="color:#777;font-size:0.85rem;margin:4px 0 0;">Owner/Admin always has every permission and isn't listed here — it can't be changed.</p>
+        </div>
+
+        @if (SelectedRole is { } r)
+        {
+            <div style="max-width:900px;background:white;padding:16px 20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+                <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+                    <div><label>Name</label><input @bind="r.Name" style="width:200px;" /></div>
+                    <div><label>Name (Urdu)</label><input @bind="r.NameUrdu" class="rtl-urdu" style="width:160px;" /></div>
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:400;">
+                        <input type="checkbox" @bind="r.RequiresApproval" style="width:auto;" />
+                        Requires Approval
+                    </label>
+                </div>
+
+                <table class="data-grid" style="font-size:0.85rem;">
+                    <thead><tr><th style="text-align:left;">Screen</th><th>View</th><th>Create</th><th>Edit</th><th>Delete</th></tr></thead>
+                    <tbody>
+                        @foreach (var module in AllModules)
+                        {
+                            var p = r.Permissions[module];
+                            <tr>
+                                <td style="text-align:left;">@Label(module)</td>
+                                <td><input type="checkbox" checked="@p.CanView" @onchange="@(e => r.Permissions[module] = p with { CanView = (bool)e.Value! })" /></td>
+                                <td><input type="checkbox" checked="@p.CanCreate" @onchange="@(e => r.Permissions[module] = p with { CanCreate = (bool)e.Value! })" /></td>
+                                <td><input type="checkbox" checked="@p.CanEdit" @onchange="@(e => r.Permissions[module] = p with { CanEdit = (bool)e.Value! })" /></td>
+                                <td><input type="checkbox" checked="@p.CanDelete" @onchange="@(e => r.Permissions[module] = p with { CanDelete = (bool)e.Value! })" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <button class="btn" disabled="@(_savingId == r.Id)" @onclick="() => SaveAsync(r)" style="margin-top:10px;">
+                    @(_savingId == r.Id ? "Saving…" : "Save")
+                </button>
+            </div>
+        }
+    }
+</RequireAuth>
+
+@code {
+    private List<RoleEditModel>? _roles;
+    private int _selectedRoleId;
+    private int? _savingId;
+    private string? _error;
+    private string? _successMessage;
+    private string _newName = "";
+    private string? _newNameUrdu;
+    private bool _creating;
+
+    private static readonly ModuleName[] AllModules = Enum.GetValues<ModuleName>();
+
+    // Owner/Admin always has every permission (see SeedData) and is never meant to be edited —
+    // excluded here so it can't be picked, let alone accidentally narrowed down.
+    private IEnumerable<RoleEditModel> SelectableRoles => _roles?.Where(r => r.Name != "Owner/Admin") ?? Enumerable.Empty<RoleEditModel>();
+    private RoleEditModel? SelectedRole => _roles?.FirstOrDefault(r => r.Id == _selectedRoleId);
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            var roles = await Api.GetRolesAsync();
+            _roles = roles.Select(RoleEditModel.From).ToList();
+            if (SelectableRoles.All(r => r.Id != _selectedRoleId))
+            {
+                _selectedRoleId = SelectableRoles.FirstOrDefault()?.Id ?? 0;
+            }
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task CreateRoleAsync()
+    {
+        _error = null;
+        _successMessage = null;
+        _creating = true;
+        try
+        {
+            var permissions = AllModules.Select(m => new RolePermissionDto(m, false, false, false, false)).ToList();
+            await Api.CreateRoleAsync(new UpsertRoleRequest(_newName, string.IsNullOrWhiteSpace(_newNameUrdu) ? null : _newNameUrdu, permissions));
+            _newName = "";
+            _newNameUrdu = null;
+            _successMessage = "Role created — tick its permissions below and Save.";
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+        finally { _creating = false; }
+    }
+
+    private async Task SaveAsync(RoleEditModel r)
+    {
+        _error = null;
+        _successMessage = null;
+        _savingId = r.Id;
+        try
+        {
+            await Api.UpdateRoleAsync(r.Id, r.ToRequest());
+            _successMessage = $"{r.Name} updated.";
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+        finally { _savingId = null; }
+    }
+
+    private static string Label(ModuleName module) => module switch
+    {
+        ModuleName.DualInvoice => "Dual Invoice",
+        ModuleName.SaleInvoice => "Sale Invoice",
+        ModuleName.Journal => "Journal (Voucher)",
+        ModuleName.Payment => "Payment (Voucher)",
+        ModuleName.Receipt => "Receipt (Voucher)",
+        ModuleName.SetupProducts => "Setup: Products",
+        ModuleName.SetupParty => "Setup: Party",
+        ModuleName.SetupChartOfAccounts => "Setup: Chart of Accounts",
+        ModuleName.SetupDeductionRules => "Setup: Format (Deductions)",
+        ModuleName.SetupUnitConversions => "Setup: Unit Conversions",
+        ModuleName.SetupUsersRoles => "Setup: Users & Roles",
+        ModuleName.SetupSeasons => "Setup: Seasons",
+        ModuleName.SetupCompanyInfo => "Setup: Company Info",
+        ModuleName.SetupAppearance => "Setup: Appearance",
+        ModuleName.Approvals => "Pending Approvals",
+        _ => module.ToString()
+    };
+
+    private class RoleEditModel
+    {
+        public int Id;
+        public string Name = "";
+        public string? NameUrdu;
+        public bool RequiresApproval;
+        public Dictionary<ModuleName, RolePermissionDto> Permissions = new();
+
+        public static RoleEditModel From(RoleDto dto)
+        {
+            var model = new RoleEditModel { Id = dto.Id, Name = dto.Name, NameUrdu = dto.NameUrdu, RequiresApproval = dto.RequiresApproval };
+            foreach (var module in AllModules)
+            {
+                model.Permissions[module] = dto.Permissions.FirstOrDefault(p => p.Module == module) ?? new RolePermissionDto(module, false, false, false, false);
+            }
+            return model;
+        }
+
+        public UpsertRoleRequest ToRequest() => new(Name, string.IsNullOrWhiteSpace(NameUrdu) ? null : NameUrdu, Permissions.Values.ToList(), RequiresApproval);
+    }
+}

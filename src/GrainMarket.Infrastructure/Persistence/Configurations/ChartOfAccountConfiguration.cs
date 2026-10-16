@@ -14,6 +14,7 @@ public class ChartOfAccountConfiguration : IEntityTypeConfiguration<ChartOfAccou
         builder.HasIndex(a => a.Code).IsUnique();
 
         builder.HasOne(a => a.ParentAccount).WithMany().HasForeignKey(a => a.ParentAccountId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(a => a.AccountType).WithMany().HasForeignKey(a => a.AccountTypeId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

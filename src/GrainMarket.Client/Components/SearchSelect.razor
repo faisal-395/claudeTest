@@ -4,9 +4,10 @@
    the window is resized, moved, or the display's DPI scaling kicks in — this renders entirely
    inside normal page flow instead, sidestepping that. *@
 @typeparam TItem
+@inject IJSRuntime JS
 
 <div class="search-select" tabindex="-1" @onfocusout="HandleFocusOut">
-    <input class="search-select-input" type="text" autocomplete="off"
+    <input @ref="_inputRef" class="search-select-input" type="text" autocomplete="off"
            value="@_displayText"
            placeholder="@Placeholder"
            @oninput="OnInput"
@@ -14,12 +15,12 @@
            @onkeydown="OnKeyDown" />
     @if (_open && _filtered.Count > 0)
     {
-        <div class="search-select-menu">
+        <div @ref="_menuRef" class="search-select-menu" @onmousedown:preventDefault="true">
             @for (var i = 0; i < _filtered.Count; i++)
             {
                 var item = _filtered[i];
                 var index = i;
-                <div class="search-select-option @(index == _highlighted ? "highlighted" : "")"
+                <div @key="IdSelector(item)" class="search-select-option @(index == _highlighted ? "highlighted" : "")"
                      @onmousedown:preventDefault="true"
                      @onmousedown="() => Select(item)">
                     @TextSelector(item)
@@ -49,6 +50,31 @@
     private bool _open;
     private int _highlighted;
     private int? _lastValue;
+    private List<int>? _lastItemIds;
+    private ElementReference _inputRef;
+    private ElementReference _menuRef;
+
+    // Lets a parent move keyboard focus here programmatically (e.g. VoucherForm focusing the
+    // party picker as soon as the form opens).
+    public async Task FocusAsync() => await _inputRef.FocusAsync();
+
+    // Native wheel-to-scroll on this menu (position:absolute, nested inside the page's own
+    // scrollable .main-content) reliably stalls partway through a scroll in WebView2, even with
+    // overscroll-behavior/overflow-anchor/GPU-layer CSS hints — the scrollbar drags fine, only the
+    // wheel gesture itself breaks down. So the wheel is handled entirely in JS instead
+    // (attachSearchSelectWheel in index.html),
+    // bypassing native wheel-to-scroll altogether. This is called on every render where the menu
+    // is open rather than guarded by a C# "already attached" flag: if Blazor ever replaces the
+    // underlying <div> for any reason, a stale C# flag would skip re-attaching to the new node
+    // and leave it with no listener at all (silently worse than doing nothing). The JS side's own
+    // dataset check is what makes repeated calls on the same node a no-op.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_open && _filtered.Count > 0)
+        {
+            await JS.InvokeVoidAsync("attachSearchSelectWheel", _menuRef);
+        }
+    }
 
     protected override void OnParametersSet()
     {
@@ -61,7 +87,18 @@
         }
         _lastValue = Value;
 
-        Filter(items);
+        // Callers often pass Items as a computed property (a fresh List instance every render),
+        // so re-filtering on every single OnParametersSet — which fires on every parent render,
+        // not just when the list actually changed — was rebuilding and re-rendering the open menu
+        // on every unrelated keystroke/tick elsewhere on the page. That churn mid-gesture is what
+        // made the mouse wheel feel "stuck" while scrolling an open dropdown. Skip it when the
+        // underlying ids/order are unchanged.
+        var itemIds = items.Select(IdSelector).ToList();
+        if (_lastItemIds is null || !itemIds.SequenceEqual(_lastItemIds))
+        {
+            _lastItemIds = itemIds;
+            Filter(items);
+        }
     }
 
     private void Filter(List<TItem>? items = null)

@@ -16,10 +16,26 @@
         <div><label>Name (Urdu)</label><input class="rtl-urdu" @bind="_nameUrdu" /></div>
         <div>
             <label>Account Type</label>
-            <select @bind="_accountType">
-                @foreach (var t in Enum.GetValues<AccountType>())
+            <select @bind="_accountTypeId">
+                @if (_accountTypes is not null)
                 {
-                    <option value="@t">@t</option>
+                    @foreach (var t in _accountTypes)
+                    {
+                        <option value="@t.Id">@t.Name</option>
+                    }
+                }
+            </select>
+        </div>
+        <div>
+            <label>Parent Account</label>
+            <select @bind="_parentAccountId">
+                <option value="">— None (top-level) —</option>
+                @if (_accounts is not null)
+                {
+                    @foreach (var a in _accounts.Where(a => a.Id != _editingId))
+                    {
+                        <option value="@a.Id">@a.Code - @a.Name</option>
+                    }
                 }
             </select>
         </div>
@@ -39,7 +55,7 @@
             </div>
         }
         <div style="grid-column: span 2;">
-            <button class="btn" @onclick="SaveAsync">@(_editingId is null ? "Add Account" : "Update Account")</button>
+            <button class="btn" disabled="@(_accountTypeId <= 0)" @onclick="SaveAsync">@(_editingId is null ? "Add Account" : "Update Account")</button>
             @if (_editingId is not null)
             {
                 <button class="btn secondary" @onclick="ResetForm">Cancel</button>
@@ -54,14 +70,15 @@
     else
     {
         <table class="data-grid">
-            <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Protected</th><th>Balance</th><th></th></tr></thead>
+            <thead><tr><th>Code</th><th>Name</th><th>Parent</th><th>Type</th><th>Protected</th><th>Balance</th><th></th></tr></thead>
             <tbody>
                 @foreach (var a in _accounts)
                 {
                     <tr>
                         <td>@a.Code</td>
                         <td>@a.Name</td>
-                        <td>@a.AccountType</td>
+                        <td>@(a.ParentAccountId is null ? "—" : _accounts.FirstOrDefault(p => p.Id == a.ParentAccountId)?.Name ?? "—")</td>
+                        <td>@a.AccountTypeName</td>
                         <td>@(a.IsProtected ? "Yes" : "")</td>
                         <td>@a.CurrentBalance.ToString("N2")</td>
                         <td>
@@ -78,19 +95,26 @@
 @code {
     private List<ChartOfAccountDto>? _accounts;
     private List<RoleDto>? _roles;
+    private List<AccountTypeDto>? _accountTypes;
     private int? _editingId;
     private string? _error;
 
     private string _code = "";
     private string _name = "";
     private string? _nameUrdu;
-    private AccountType _accountType = AccountType.Asset;
+    private int _accountTypeId;
+    private int? _parentAccountId;
     private bool _isProtected;
     private List<int> _allowedRoleIds = new();
 
     protected override async Task OnInitializedAsync()
     {
-        try { _roles = await Api.GetRolesAsync(); }
+        try
+        {
+            _roles = await Api.GetRolesAsync();
+            _accountTypes = await Api.GetAccountTypesAsync();
+            if (_accountTypes.Count > 0) _accountTypeId = _accountTypes[0].Id;
+        }
         catch (Models.ApiException ex) { _error = ex.Message; return; }
         await LoadAsync();
     }
@@ -110,20 +134,22 @@
     private void Edit(ChartOfAccountDto a)
     {
         _editingId = a.Id;
-        _code = a.Code; _name = a.Name; _nameUrdu = a.NameUrdu; _accountType = a.AccountType;
+        _code = a.Code; _name = a.Name; _nameUrdu = a.NameUrdu; _accountTypeId = a.AccountTypeId;
+        _parentAccountId = a.ParentAccountId;
         _isProtected = a.IsProtected; _allowedRoleIds = new List<int>(a.AllowedRoleIds);
     }
 
     private void ResetForm()
     {
         _editingId = null; _code = ""; _name = ""; _nameUrdu = null;
-        _accountType = AccountType.Asset; _isProtected = false; _allowedRoleIds = new();
+        _accountTypeId = _accountTypes?.FirstOrDefault()?.Id ?? 0; _parentAccountId = null;
+        _isProtected = false; _allowedRoleIds = new();
     }
 
     private async Task SaveAsync()
     {
         _error = null;
-        var request = new UpsertChartOfAccountRequest(_code, _name, _nameUrdu, _accountType, null, _isProtected, true, _allowedRoleIds);
+        var request = new UpsertChartOfAccountRequest(_code, _name, _nameUrdu, _accountTypeId, _parentAccountId, _isProtected, true, _allowedRoleIds);
         try
         {
             if (_editingId is null) await Api.CreateChartOfAccountAsync(request);
@@ -131,12 +157,22 @@
             ResetForm();
             await LoadAsync();
         }
-        catch (Models.ApiException ex) { _error = ex.Message; }
+        catch (Models.ApiException ex) { _error = FormatError(ex); }
     }
 
     private async Task DeleteAsync(int id)
     {
         try { await Api.DeleteChartOfAccountAsync(id); await LoadAsync(); }
-        catch (Models.ApiException ex) { _error = ex.Message; }
+        catch (Models.ApiException ex) { _error = FormatError(ex); }
+    }
+
+    // The server reports *why* a save was rejected (e.g. "AccountTypeId must be greater than 0")
+    // as per-field validation errors, not in the exception's own Message (just the generic
+    // "Validation failed." title) — append them so the banner explains the real problem.
+    private static string FormatError(Models.ApiException ex)
+    {
+        if (ex.Errors is null || ex.Errors.Count == 0) return ex.Message;
+        var details = string.Join(" ", ex.Errors.SelectMany(kv => kv.Value));
+        return $"{ex.Message} {details}";
     }
 }

@@ -9,7 +9,6 @@ namespace GrainMarket.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/deduction-rules")]
-[ModulePermission(ModuleName.SetupDeductionRules)]
 public class DeductionRulesController : ControllerBase
 {
     private readonly IDeductionRuleService _service;
@@ -19,6 +18,8 @@ public class DeductionRulesController : ControllerBase
         _service = service;
     }
 
+    // Deliberately not gated by ModulePermission: Kachi/Pakki entry needs the active rules to
+    // compute and preview deductions live, regardless of the caller's Setup access.
     [HttpGet]
     public async Task<ActionResult<List<DeductionRuleDto>>> GetAll([FromQuery] bool includeInactive, CancellationToken ct)
         => Ok(await _service.GetAllAsync(includeInactive, ct));

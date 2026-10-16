@@ -8,6 +8,14 @@ public interface IKachiService
     Task<KachiDto> UpdateAsync(int id, UpdateKachiRequest request, CancellationToken ct = default);
     Task CancelAsync(int id, CancellationToken ct = default);
 
+    /// <summary>Approves a Pending Kachi — posts the ledger entries that were deferred at creation
+    /// time (see Role.RequiresApproval) and marks it reviewed.</summary>
+    Task<KachiDto> ApproveAsync(int id, CancellationToken ct = default);
+
+    /// <summary>Rejects a Pending Kachi — never posts anything. The original submitter or anyone
+    /// with Approvals edit permission can then correct it via UpdateAsync, which resubmits it.</summary>
+    Task<KachiDto> RejectAsync(int id, string? reason, CancellationToken ct = default);
+
     /// <summary>Reverses this Kachi's own ledger postings without cancelling it — called right
     /// before converting it to a Pakki, since the Pakki then posts its own authoritative
     /// farmer/buyer entries for the same underlying transaction.</summary>

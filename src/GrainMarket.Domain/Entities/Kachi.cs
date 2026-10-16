@@ -83,6 +83,14 @@ public class Kachi : BaseEntity
 
     public string? Notes { get; set; }
 
+    /// <summary>Approvals workflow (see Role.RequiresApproval) — ledger posting is deferred while
+    /// this is Pending, and skipped entirely if Rejected.</summary>
+    public ApprovalStatus ApprovalStatus { get; set; } = ApprovalStatus.Approved;
+    public int? SubmittedByUserId { get; set; }
+    public int? ReviewedByUserId { get; set; }
+    public DateTime? ReviewedAtUtc { get; set; }
+    public string? RejectionReason { get; set; }
+
     public ICollection<KachiDeductionLine> DeductionLines { get; set; } = new List<KachiDeductionLine>();
 }
 
@@ -101,5 +109,5 @@ public class KachiDeductionLine : BaseEntity
 
     /// <summary>Copied from DeductionRule.ChargedTo at posting time, so historical lines keep
     /// reading correctly even if the rule's ChargedTo is changed later.</summary>
-    public DeductionChargedTo ChargedTo { get; set; } = DeductionChargedTo.Farmer;
+    public DeductionChargedTo ChargedTo { get; set; } = DeductionChargedTo.Seller;
 }

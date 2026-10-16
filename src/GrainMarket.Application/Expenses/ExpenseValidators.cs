@@ -9,6 +9,19 @@ public class CreateExpenseRequestValidator : AbstractValidator<CreateExpenseRequ
     {
         RuleFor(x => x.ExpenseAccountId).GreaterThan(0);
         RuleFor(x => x.Amount).GreaterThan(0);
+        RuleFor(x => x.RefNo).MaximumLength(50);
+        RuleFor(x => x.PaidFrom).Must(t => t is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank or LedgerPartyRefType.Account);
+        RuleFor(x => x.PaidFromAccountId).NotNull().When(x => x.PaidFrom == LedgerPartyRefType.Account).WithMessage("Paid-from account is required.");
+    }
+}
+
+public class UpdateExpenseRequestValidator : AbstractValidator<UpdateExpenseRequest>
+{
+    public UpdateExpenseRequestValidator()
+    {
+        RuleFor(x => x.ExpenseAccountId).GreaterThan(0);
+        RuleFor(x => x.Amount).GreaterThan(0);
+        RuleFor(x => x.RefNo).MaximumLength(50);
         RuleFor(x => x.PaidFrom).Must(t => t is LedgerPartyRefType.Cash or LedgerPartyRefType.Bank or LedgerPartyRefType.Account);
         RuleFor(x => x.PaidFromAccountId).NotNull().When(x => x.PaidFrom == LedgerPartyRefType.Account).WithMessage("Paid-from account is required.");
     }

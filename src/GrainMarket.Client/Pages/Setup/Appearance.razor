@@ -1,0 +1,308 @@
+@page "/setup/appearance"
+@inject ApiClient Api
+@inject IJSRuntime JS
+
+<RequireAuth>
+    <h1 class="page-title">Appearance</h1>
+    <p style="color:#777;">Brand colors used across the app. <b>Global</b> covers the sidebar and any screen not listed below; Sale Invoice, Purchase, Kachi, Pakki, Voucher (Payment and Receipt) and Journal Voucher each have their own colors that override Global only on their own screen. Changes apply immediately and are remembered for everyone.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+    @if (_successMessage is not null)
+    {
+        <div style="background:#eaf7ee;border:1px solid #b6e3c2;padding:8px 12px;margin-bottom:12px;">@_successMessage</div>
+    }
+
+    @if (_scopes is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        @foreach (var s in _scopes)
+        {
+            <div style="max-width:760px;background:white;padding:16px 20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+                <h2 style="font-size:1.05rem;color:var(--brand-primary);margin-top:0;">@s.Label</h2>
+
+                <div style="font-size:0.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.03em;margin:4px 0 8px;">Heading</div>
+                <div class="form-grid" style="max-width:none;padding:0;box-shadow:none;margin-bottom:18px;">
+                    <div>
+                        <label>Heading Text</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.PrimaryColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.PrimaryColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Heading Background</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.HeadingBackgroundColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.HeadingBackgroundColor" style="width:100px;" />
+                        </div>
+                    </div>
+                </div>
+
+                <div style="font-size:0.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.03em;margin:4px 0 8px;">Form (Invoice Info / Add Product panels)</div>
+                <div class="form-grid" style="max-width:none;padding:0;box-shadow:none;margin-bottom:18px;">
+                    <div>
+                        <label>Button</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.AccentColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.AccentColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Invoice Info Panel Background</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.PanelColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.PanelColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Add Product Panel Background</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.ProductPanelColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.ProductPanelColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Selected Text Box Background</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.InputBackgroundColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.InputBackgroundColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Field Label Font Size (px)</label>
+                        <input type="number" min="8" max="32" @bind="s.LabelFontSizePx" style="width:80px;" />
+                    </div>
+                </div>
+
+                <div style="font-size:0.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.03em;margin:4px 0 8px;">Results Grid</div>
+                <div class="form-grid" style="max-width:none;padding:0;box-shadow:none;margin-bottom:18px;">
+                    <div>
+                        <label>Grid Header Background</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.GridHeaderColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.GridHeaderColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Grid Body Background</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="color" @bind="s.GridBackgroundColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                            <input @bind="s.GridBackgroundColor" style="width:100px;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label>Grid Borders</label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:400;">
+                            <input type="checkbox" @bind="s.GridFullBorders" style="width:auto;" />
+                            Show a full border on every cell (not just a line between rows)
+                        </label>
+                    </div>
+                </div>
+
+                @if (s.Scope == ThemeScope.Journal)
+                {
+                    <div style="font-size:0.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.03em;margin:4px 0 8px;">Credit / Debit Panels</div>
+                    <div class="form-grid" style="max-width:none;padding:0;box-shadow:none;margin-bottom:18px;">
+                        <div>
+                            <label>Credit Panel Background</label>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <input type="color" @bind="s.CreditPanelColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                                <input @bind="s.CreditPanelColor" style="width:100px;" />
+                            </div>
+                        </div>
+                        <div>
+                            <label>Debit Panel Background</label>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <input type="color" @bind="s.DebitPanelColor" style="width:48px;height:36px;padding:0;border:1px solid #ccc;" />
+                                <input @bind="s.DebitPanelColor" style="width:100px;" />
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (s.Scope == ThemeScope.Global)
+                {
+                    <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e5e5;">
+                        <label>Navigation Layout</label>
+                        <p style="color:#777;margin:2px 0 8px;font-size:0.85rem;">Where the app's menu lives — applies everywhere, not just this screen.</p>
+                        <select @bind="s.NavigationLayout" style="width:220px;padding:6px 8px;border:1px solid #ccc;border-radius:3px;">
+                            <option value="@NavigationLayout.Sidebar">Side Menu</option>
+                            <option value="@NavigationLayout.TopMenu">Top Menu</option>
+                        </select>
+                    </div>
+                }
+
+                <div style="margin-top:12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <div style="background:@s.HeadingBackgroundColor;color:@s.PrimaryColor;padding:6px 12px;border-radius:4px;font-size:@(s.LabelFontSizePx)px;font-weight:600;">Heading</div>
+                        <div style="background:@s.AccentColor;color:white;padding:6px 12px;border-radius:4px;">Button</div>
+                        <div style="background:@s.PanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Invoice Info Panel</div>
+                        <div style="background:@s.ProductPanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Add Product Panel</div>
+                        @if (s.Scope == ThemeScope.Journal)
+                        {
+                            <div style="background:@s.CreditPanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Credit Panel</div>
+                            <div style="background:@s.DebitPanelColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Debit Panel</div>
+                        }
+                        <div style="background:@s.InputBackgroundColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Text Box (selected)</div>
+                        <div style="background:@s.GridHeaderColor;color:#333;padding:6px 12px;border-radius:4px;font-weight:600;">Grid Header</div>
+                        <div style="background:@s.GridBackgroundColor;color:#333;padding:6px 12px;border-radius:4px;border:1px solid #e2e2e2;">Grid Body</div>
+                    </div>
+                    <div style="margin-left:auto;">
+                        <button class="btn" disabled="@s.Saving" @onclick="() => SaveAsync(s)">@(s.Saving ? "Saving…" : "Save")</button>
+                        <button class="btn secondary" disabled="@s.Saving" @onclick="() => ResetToDefaultAsync(s)">Reset to Default</button>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</RequireAuth>
+
+@code {
+    private List<ScopeEditModel>? _scopes;
+    private string? _error;
+    private string? _successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var settings = await Api.GetAppearanceSettingsAsync();
+            _scopes = settings.Select(ScopeEditModel.From).OrderBy(s => s.Scope).ToList();
+        }
+        catch (Models.ApiException ex) { _error = FormatError(ex); }
+    }
+
+    // The server reports *why* a save was rejected (e.g. "Primary color is too light to read as
+    // text") as per-field validation errors, not in the exception's own Message (which is just the
+    // generic "Validation failed." title) — append them so the banner actually explains the
+    // problem instead of leaving it looking like nothing happened.
+    private static string FormatError(Models.ApiException ex)
+    {
+        if (ex.Errors is null || ex.Errors.Count == 0) return ex.Message;
+        var details = string.Join(" ", ex.Errors.SelectMany(kv => kv.Value));
+        return $"{ex.Message} {details}";
+    }
+
+    private async Task SaveAsync(ScopeEditModel s)
+    {
+        _error = null;
+        _successMessage = null;
+        s.Saving = true;
+        try
+        {
+            var request = new UpdateAppearanceSettingsRequest(
+                s.PrimaryColor, s.AccentColor, s.SurfaceColor,
+                s.PanelColor, s.ProductPanelColor, s.CreditPanelColor, s.DebitPanelColor,
+                s.HeadingBackgroundColor, s.InputBackgroundColor,
+                s.GridHeaderColor, s.GridBackgroundColor,
+                s.LabelFontSizePx, s.GridFullBorders, s.NavigationLayout);
+            var updated = await Api.UpdateAppearanceSettingsAsync(s.Scope, request);
+            s.ApplyFrom(updated);
+            await JS.InvokeVoidAsync("applyTheme", _scopes!.Select(x => x.ToDto()).ToList());
+            _successMessage = $"{s.Label} saved. The new colors are live across the app.";
+        }
+        catch (Models.ApiException ex) { _error = FormatError(ex); }
+        finally { s.Saving = false; }
+    }
+
+    private Task ResetToDefaultAsync(ScopeEditModel s)
+    {
+        var defaults = ScopeEditModel.Default(s.Scope);
+        s.PrimaryColor = defaults.PrimaryColor;
+        s.AccentColor = defaults.AccentColor;
+        s.SurfaceColor = defaults.SurfaceColor;
+        s.PanelColor = defaults.PanelColor;
+        s.ProductPanelColor = defaults.ProductPanelColor;
+        s.CreditPanelColor = defaults.CreditPanelColor;
+        s.DebitPanelColor = defaults.DebitPanelColor;
+        s.HeadingBackgroundColor = defaults.HeadingBackgroundColor;
+        s.InputBackgroundColor = defaults.InputBackgroundColor;
+        s.GridHeaderColor = defaults.GridHeaderColor;
+        s.GridBackgroundColor = defaults.GridBackgroundColor;
+        s.LabelFontSizePx = defaults.LabelFontSizePx;
+        s.GridFullBorders = defaults.GridFullBorders;
+        s.NavigationLayout = defaults.NavigationLayout;
+        return SaveAsync(s);
+    }
+
+    private class ScopeEditModel
+    {
+        public ThemeScope Scope { get; private init; }
+        public string Label { get; private init; } = "";
+        public bool Saving { get; set; }
+
+        public string PrimaryColor { get; set; } = "#1B4332";
+        public string AccentColor { get; set; } = "#2D6A4F";
+
+        // Not shown in the UI anymore — kept frozen at whatever it's already set to (still drives
+        // .main-content/staging-panel backgrounds).
+        public string SurfaceColor { get; set; } = "#F7F9F7";
+
+        public string PanelColor { get; set; } = "#FFFFFF";
+        public string ProductPanelColor { get; set; } = "#FFFFFF";
+        public string CreditPanelColor { get; set; } = "#E8F5E9";
+        public string DebitPanelColor { get; set; } = "#FCE4EC";
+        public string HeadingBackgroundColor { get; set; } = "#FFFFFF";
+        public string InputBackgroundColor { get; set; } = "#FFFFFF";
+        public string GridHeaderColor { get; set; } = "#EEF4EE";
+        public string GridBackgroundColor { get; set; } = "#FFFFFF";
+        public int LabelFontSizePx { get; set; } = 13;
+        public bool GridFullBorders { get; set; }
+
+        // Only shown/editable on the Global panel — round-trips unchanged for every other scope.
+        public NavigationLayout NavigationLayout { get; set; } = NavigationLayout.TopMenu;
+
+        private static string LabelFor(ThemeScope scope) => scope switch
+        {
+            ThemeScope.SaleInvoice => "Sale Invoice",
+            ThemeScope.Purchase => "Purchase",
+            ThemeScope.Kachi => "Kachi",
+            ThemeScope.Pakki => "Pakki",
+            ThemeScope.Payment => "Payment Voucher",
+            ThemeScope.Receipt => "Receipt Voucher",
+            ThemeScope.Journal => "Journal Voucher",
+            ThemeScope.Expense => "Expense Voucher",
+            _ => "Global (sidebar & everything else)"
+        };
+
+        public static ScopeEditModel Default(ThemeScope scope) => new() { Scope = scope, Label = LabelFor(scope) };
+
+        public static ScopeEditModel From(AppearanceSettingsDto dto)
+        {
+            var model = new ScopeEditModel { Scope = dto.Scope, Label = LabelFor(dto.Scope) };
+            model.ApplyFrom(dto);
+            return model;
+        }
+
+        public void ApplyFrom(AppearanceSettingsDto dto)
+        {
+            PrimaryColor = dto.PrimaryColor;
+            AccentColor = dto.AccentColor;
+            SurfaceColor = dto.SurfaceColor;
+            PanelColor = dto.PanelColor;
+            ProductPanelColor = dto.ProductPanelColor;
+            CreditPanelColor = dto.CreditPanelColor;
+            DebitPanelColor = dto.DebitPanelColor;
+            HeadingBackgroundColor = dto.HeadingBackgroundColor;
+            InputBackgroundColor = dto.InputBackgroundColor;
+            GridHeaderColor = dto.GridHeaderColor;
+            GridBackgroundColor = dto.GridBackgroundColor;
+            LabelFontSizePx = dto.LabelFontSizePx;
+            GridFullBorders = dto.GridFullBorders;
+            NavigationLayout = dto.NavigationLayout;
+        }
+
+        public AppearanceSettingsDto ToDto() => new(
+            0, Scope, PrimaryColor, AccentColor, SurfaceColor,
+            PanelColor, ProductPanelColor, CreditPanelColor, DebitPanelColor,
+            HeadingBackgroundColor, InputBackgroundColor,
+            GridHeaderColor, GridBackgroundColor,
+            LabelFontSizePx, GridFullBorders, NavigationLayout);
+    }
+}

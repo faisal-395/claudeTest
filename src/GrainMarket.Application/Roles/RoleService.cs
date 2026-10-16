@@ -31,7 +31,7 @@ public class RoleService : IRoleService
 
     public async Task<RoleDto> CreateAsync(UpsertRoleRequest request, CancellationToken ct = default)
     {
-        var role = new Role { Name = request.Name, NameUrdu = request.NameUrdu, IsSystemRole = false };
+        var role = new Role { Name = request.Name, NameUrdu = request.NameUrdu, IsSystemRole = false, RequiresApproval = request.RequiresApproval };
         foreach (var p in request.Permissions)
         {
             role.Permissions.Add(new RolePermission { Module = p.Module, CanView = p.CanView, CanCreate = p.CanCreate, CanEdit = p.CanEdit, CanDelete = p.CanDelete });
@@ -48,6 +48,7 @@ public class RoleService : IRoleService
 
         role.Name = request.Name;
         role.NameUrdu = request.NameUrdu;
+        role.RequiresApproval = request.RequiresApproval;
         role.UpdatedAtUtc = _clock.UtcNow;
 
         foreach (var existing in role.Permissions.ToList())
@@ -65,6 +66,6 @@ public class RoleService : IRoleService
     }
 
     private static RoleDto ToDto(Role r) => new(
-        r.Id, r.Name, r.NameUrdu, r.IsSystemRole,
+        r.Id, r.Name, r.NameUrdu, r.IsSystemRole, r.RequiresApproval,
         r.Permissions.Select(p => new RolePermissionDto(p.Module, p.CanView, p.CanCreate, p.CanEdit, p.CanDelete)).ToList());
 }

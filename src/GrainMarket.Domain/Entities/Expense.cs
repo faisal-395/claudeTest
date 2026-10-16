@@ -13,6 +13,7 @@ public class Expense : BaseEntity
 
     public decimal Amount { get; set; }
     public string? Description { get; set; }
+    public string? RefNo { get; set; }
 
     public LedgerPartyRefType PaidFrom { get; set; }
     public int? PaidFromAccountId { get; set; }

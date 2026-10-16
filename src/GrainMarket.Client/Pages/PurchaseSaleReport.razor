@@ -1,0 +1,162 @@
+@page "/reports/purchase-sale"
+@inject ApiClient Api
+@inject IJSRuntime JS
+
+<RequireAuth>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title">Purchase / Sale Report</h1>
+        <button class="btn no-print" @onclick="PrintAsync">Print</button>
+    </div>
+    <CompanyHeader />
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid no-print" style="max-width:500px;margin-bottom:20px;">
+        <div><label>From</label><input type="date" @bind="_from" /></div>
+        <div><label>To</label><input type="date" @bind="_to" /></div>
+    </div>
+
+    @if (_purchases is null || _sales is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <div style="display:flex; gap:24px; margin-bottom:24px; flex-wrap:wrap;">
+            <div class="batch-readonly-figure" style="min-width:180px;">
+                <label style="display:block; font-size:0.85rem; color:#555;">Total Sale (Debit)</label>
+                Rs @TotalDebit.ToString("N2")
+            </div>
+            <div class="batch-readonly-figure" style="min-width:180px;">
+                <label style="display:block; font-size:0.85rem; color:#555;">Total Purchase (Credit)</label>
+                Rs @TotalCredit.ToString("N2")
+            </div>
+            <div class="batch-readonly-figure @((TotalDebit - TotalCredit) < 0 ? "invalid-total" : "")" style="min-width:180px;">
+                <label style="display:block; font-size:0.85rem; color:#555;">Total (Net)</label>
+                Rs @((TotalDebit - TotalCredit).ToString("N2"))
+            </div>
+        </div>
+
+        @if (FilteredRows.Count == 0)
+        {
+            <p style="color:#999;">No purchases or sales found in this date range.</p>
+        }
+        else
+        {
+            <table class="data-grid" style="max-width:1300px;">
+                <thead>
+                    <tr><th>Invoice #</th><th>Date</th><th>Type</th><th>Description</th><th style="text-align:right;">Debit (Sale)</th><th style="text-align:right;">Credit (Purchase)</th><th style="text-align:right;">Balance</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in FilteredRows)
+                    {
+                        <tr>
+                            <td><a href="@r.DetailsUrl">@r.InvoiceNo</a></td>
+                            <td>@r.Date.ToString("yyyy-MM-dd")</td>
+                            <td>@r.Type</td>
+                            <td>@r.Description</td>
+                            <td style="text-align:right;">@(r.Debit == 0 ? "—" : r.Debit.ToString("N2"))</td>
+                            <td style="text-align:right;">@(r.Credit == 0 ? "—" : r.Credit.ToString("N2"))</td>
+                            <td style="text-align:right;">@r.Balance.ToString("N2")</td>
+                            <td>@r.Status</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight:700; border-top:3px double #999;">
+                        <td colspan="4">Grand Total</td>
+                        <td style="text-align:right;">@TotalDebit.ToString("N2")</td>
+                        <td style="text-align:right;">@TotalCredit.ToString("N2")</td>
+                        <td style="text-align:right;">@((TotalDebit - TotalCredit).ToString("N2"))</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+    }
+</RequireAuth>
+
+@code {
+    private List<PurchaseDto>? _purchases;
+    private List<SaleInvoiceDto>? _sales;
+    private DateTime? _from = DateTime.Today;
+    private DateTime? _to = DateTime.Today;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _purchases = await Api.GetPurchasesAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+
+        try { _sales = await Api.GetSaleInvoicesAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private static string StatusOf(bool isCancelled, ApprovalStatus status) => isCancelled ? "Cancelled" : status.ToString();
+
+    private static string LineSummary(IEnumerable<(string Name, decimal Qty, decimal Price)> lines)
+    {
+        var items = lines.Select(l => $"{l.Name} ({l.Qty:N2}@{l.Price:N2})").ToList();
+        return items.Count switch
+        {
+            0 => "—",
+            <= 3 => string.Join(", ", items),
+            _ => string.Join(", ", items.Take(2)) + $" +{items.Count - 2} more"
+        };
+    }
+
+    // Sale debits the customer and Purchase credits the supplier — see
+    // SaleInvoiceService/PurchaseService's own PostPartyEntryAsync calls — so Debit/Credit here
+    // mirror the same party ledger convention instead of inventing a new one. Description folds
+    // the party name together with the line items (qty@price) so a flat, ungrouped list still
+    // reads as a complete record of who the money moved with and what for.
+    private record Row(DateTime Date, string InvoiceNo, string Type, string Description, decimal Debit, decimal Credit, string Status, string DetailsUrl, decimal Balance = 0);
+
+    // Oldest first so Balance accumulates forward the same way the Ledger page's RunningBalance
+    // does, rather than counting down from a total.
+    private List<Row> FilteredRows
+    {
+        get
+        {
+            var purchaseRows = (_purchases ?? new())
+                .Where(p => _from is null || p.Date.Date >= _from.Value.Date)
+                .Where(p => _to is null || p.Date.Date <= _to.Value.Date)
+                .Select(p => new Row(p.Date, p.InvoiceNo, "Purchase",
+                    $"{p.SupplierName} — {LineSummary(p.Lines.Select(l => (l.ProductName, l.Quantity, l.Price)))}",
+                    0, p.ApprovalStatus == ApprovalStatus.Approved && !p.IsCancelled ? p.NetBill : 0,
+                    StatusOf(p.IsCancelled, p.ApprovalStatus), $"print/purchase/{p.Id}"));
+
+            var saleRows = (_sales ?? new())
+                .Where(s => _from is null || s.Date.Date >= _from.Value.Date)
+                .Where(s => _to is null || s.Date.Date <= _to.Value.Date)
+                .Select(s => new Row(s.Date, s.InvoiceNo, "Sale",
+                    $"{s.CustomerName} — {LineSummary(s.Lines.Select(l => (l.ProductName, l.Quantity, l.Price)))}",
+                    s.ApprovalStatus == ApprovalStatus.Approved && !s.IsCancelled ? s.NetBill : 0, 0,
+                    StatusOf(s.IsCancelled, s.ApprovalStatus), $"print/sale/{s.Id}"));
+
+            var ordered = purchaseRows.Concat(saleRows)
+                .OrderBy(r => r.Date).ThenBy(r => r.Type)
+                .ToList();
+
+            var running = 0m;
+            for (var i = 0; i < ordered.Count; i++)
+            {
+                running += ordered[i].Debit - ordered[i].Credit;
+                ordered[i] = ordered[i] with { Balance = running };
+            }
+            return ordered;
+        }
+    }
+
+    // Pending/Rejected purchases and sales never post ledger entries (only Approved does — see
+    // SaleInvoiceService/PurchaseService), and Cancelled reverses whatever Approved posted, so
+    // Debit/Credit above are already zeroed out for anything not Approved-and-live; these totals
+    // just sum what's left, same as every other report in this app only summing what's posted.
+    private decimal TotalDebit => FilteredRows.Sum(r => r.Debit);
+    private decimal TotalCredit => FilteredRows.Sum(r => r.Credit);
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
+}

@@ -27,4 +27,12 @@ public class LedgerController : ControllerBase
     [HttpGet("account/{accountId:int}")]
     public async Task<ActionResult<AccountLedgerDto>> GetAccountLedger(int accountId, [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
         => Ok(await _service.GetAccountLedgerAsync(accountId, from, to, ct));
+
+    [HttpGet("day-book")]
+    public async Task<ActionResult<List<DayBookRowDto>>> GetDayBook([FromQuery] DateTime date, CancellationToken ct)
+        => Ok(await _service.GetDayBookAsync(date, ct));
+
+    [HttpGet("period-balances")]
+    public async Task<ActionResult<PeriodBalancesDto>> GetPeriodBalances([FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
+        => Ok(await _service.GetPeriodBalancesAsync(from, to, ct));
 }

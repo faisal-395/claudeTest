@@ -1,0 +1,108 @@
+@page "/reports/voucher"
+@inject ApiClient Api
+@inject IJSRuntime JS
+
+<RequireAuth>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h1 class="page-title">Voucher Report</h1>
+        <button class="btn no-print" @onclick="PrintAsync">Print</button>
+    </div>
+    <CompanyHeader />
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid no-print" style="max-width:500px;margin-bottom:20px;">
+        <div><label>From</label><input type="date" @bind="_from" /></div>
+        <div><label>To</label><input type="date" @bind="_to" /></div>
+    </div>
+
+    @if (_vouchers is null)
+    {
+        <p>Loading…</p>
+    }
+    else if (Groups.Count == 0)
+    {
+        <p style="color:#999;">No vouchers found in this date range.</p>
+    }
+    else
+    {
+        <table class="data-grid" style="max-width:1100px;">
+            <thead>
+                <tr><th>Voucher #</th><th>Date</th><th>From / Debit</th><th>To / Credit</th><th style="text-align:right;">Amount</th><th>Description</th><th>Status</th></tr>
+            </thead>
+            @foreach (var group in Groups)
+            {
+                <tbody>
+                    <tr style="background:var(--brand-grid-header); font-weight:600;"><td colspan="7">@group.VoucherType (@group.Rows.Count)</td></tr>
+                    @foreach (var v in group.Rows)
+                    {
+                        <tr>
+                            <td><a href="print/voucher/@v.Id">@v.VoucherNo</a></td>
+                            <td>@v.Date.ToString("yyyy-MM-dd")</td>
+                            <td>@(v.DebitAccountId is not null ? v.DebitAccountName : (v.FromPartyName ?? v.FromAccountName ?? v.FromType?.ToString()))</td>
+                            <td>@(v.CreditAccountId is not null ? v.CreditAccountName : (v.ToPartyName ?? v.ToAccountName ?? v.ToType?.ToString()))</td>
+                            <td style="text-align:right;">@v.Amount.ToString("N2")</td>
+                            <td>@(v.Description ?? "—")</td>
+                            <td>@(v.IsCancelled ? "Cancelled" : "Open")</td>
+                        </tr>
+                    }
+                    <tr style="font-weight:600; border-top:2px solid #ccc;">
+                        <td colspan="4">Subtotal — @group.VoucherType</td>
+                        <td style="text-align:right;">@group.TotalAmount.ToString("N2")</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tbody>
+            }
+            <tfoot>
+                <tr style="font-weight:700; border-top:3px double #999;">
+                    <td colspan="4">Grand Total</td>
+                    <td style="text-align:right;">@Groups.Sum(g => g.TotalAmount).ToString("N2")</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<VoucherDto>? _vouchers;
+    private DateTime? _from;
+    private DateTime? _to;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _vouchers = await Api.GetVouchersAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private record TypeGroup(string VoucherType, List<VoucherDto> Rows, decimal TotalAmount);
+
+    // Cancelled vouchers stay listed (so the date range is a complete record of what was raised),
+    // but excluded from the type's subtotal/grand total — a cancelled voucher no longer represents
+    // real money moved, same as every other report in this app only summing live balances.
+    private List<TypeGroup> Groups
+    {
+        get
+        {
+            var inRange = (_vouchers ?? new())
+                .Where(v => _from is null || v.Date.Date >= _from.Value.Date)
+                .Where(v => _to is null || v.Date.Date <= _to.Value.Date);
+
+            return inRange
+                .GroupBy(v => v.VoucherType)
+                .OrderBy(g => g.Key)
+                .Select(g =>
+                {
+                    var rows = g.OrderByDescending(v => v.Date).ThenByDescending(v => v.Id).ToList();
+                    return new TypeGroup(g.Key.ToString(), rows, rows.Where(v => !v.IsCancelled).Sum(v => v.Amount));
+                })
+                .ToList();
+        }
+    }
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("print").AsTask();
+}

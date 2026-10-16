@@ -1,0 +1,77 @@
+@page "/setup/product-types"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Product Types</h1>
+    <p style="color:#777;">The categories available under "Product Type" when adding an Input product (pesticide, fertilizer, seed, …) in Setup &gt; Products.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="form-grid" style="margin-bottom:20px;">
+        <div><label>Name</label><input @bind="_name" /></div>
+        <div><label>Name (Urdu)</label><input class="rtl-urdu" @bind="_nameUrdu" /></div>
+        <div style="grid-column: span 2;">
+            <button class="btn" disabled="@string.IsNullOrWhiteSpace(_name)" @onclick="SaveAsync">Add Product Type</button>
+        </div>
+    </div>
+
+    @if (_types is null)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>Name</th><th>Name (Urdu)</th></tr></thead>
+            <tbody>
+                @foreach (var t in _types)
+                {
+                    <tr>
+                        <td>@t.Name</td>
+                        <td class="rtl-urdu">@t.NameUrdu</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<ProductTypeDto>? _types;
+    private string? _error;
+
+    private string _name = "";
+    private string? _nameUrdu;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try { _types = await Api.GetProductTypesAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var request = new CreateProductTypeRequest(_name, _nameUrdu);
+        try
+        {
+            await Api.CreateProductTypeAsync(request);
+            _name = "";
+            _nameUrdu = null;
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = FormatError(ex); }
+    }
+
+    private static string FormatError(Models.ApiException ex)
+    {
+        if (ex.Errors is null || ex.Errors.Count == 0) return ex.Message;
+        var details = string.Join(" ", ex.Errors.SelectMany(kv => kv.Value));
+        return $"{ex.Message} {details}";
+    }
+}

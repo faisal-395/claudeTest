@@ -1,0 +1,144 @@
+@page "/approvals"
+@inject ApiClient Api
+
+<RequireAuth>
+    <h1 class="page-title">Pending Approvals</h1>
+    <p style="color:#777;">Every Kachi, Pakki, Purchase and Sale Invoice raised by a role with Requires Approval
+        turned on (Setup &gt; Roles) waits here before it posts to the ledger. Approve posts it; Reject sends it
+        back with a note — the person who raised it (or anyone who can Approve here) can then fix it.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    @if (_rejectingKey is not null)
+    {
+        <div class="form-grid" style="margin-bottom:20px;">
+            <div style="grid-column: span 2;"><label>Reason for rejecting</label><input @bind="_rejectReason" placeholder="What needs to change?" /></div>
+            <div style="grid-column: span 2;">
+                <button class="btn" @onclick="ConfirmRejectAsync">Confirm Reject</button>
+                <button class="btn secondary" @onclick="() => _rejectingKey = null">Cancel</button>
+            </div>
+        </div>
+    }
+
+    @if (_rows is null)
+    {
+        <p>Loading…</p>
+    }
+    else if (_rows.Count == 0)
+    {
+        <p>Nothing waiting on review.</p>
+    }
+    else
+    {
+        <table class="data-grid">
+            <thead><tr><th>Type</th><th>Invoice</th><th>Date</th><th>Party</th><th>Amount</th><th>Submitted By</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var row in _rows)
+                {
+                    <tr>
+                        <td>@TypeLabel(row.EntityType)</td>
+                        <td>@row.InvoiceNo</td>
+                        <td>@row.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@row.PartyName</td>
+                        <td>@row.Amount.ToString("N2")</td>
+                        <td>@(row.SubmittedByUsername ?? "—")</td>
+                        <td>
+                            @row.Status
+                            @if (row.Status == ApprovalStatus.Rejected && row.RejectionReason is not null)
+                            {
+                                <div style="color:#b3261e;font-size:0.85rem;">@row.RejectionReason</div>
+                            }
+                        </td>
+                        <td>
+                            @if (row.Status == ApprovalStatus.Pending)
+                            {
+                                <button class="btn" disabled="@(_busyKey == Key(row))" @onclick="() => ApproveAsync(row)">Approve</button>
+                                <text> </text>
+                                <button class="btn secondary" disabled="@(_busyKey == Key(row))" @onclick="() => StartReject(row)">Reject</button>
+                            }
+                            else
+                            {
+                                <a href="@RecordsLink(row)">Go fix it</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</RequireAuth>
+
+@code {
+    private List<PendingApprovalDto>? _rows;
+    private string? _error;
+    private string? _busyKey;
+    private string? _rejectingKey;
+    private string? _rejectReason;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try { _rows = await Api.GetPendingApprovalsAsync(); }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+    }
+
+    private static string Key(PendingApprovalDto row) => $"{row.EntityType}:{row.Id}";
+
+    private static string TypeLabel(string entityType) => entityType switch
+    {
+        "SaleInvoice" => "Sale Invoice",
+        _ => entityType
+    };
+
+    private string RecordsLink(PendingApprovalDto row) => row.EntityType switch
+    {
+        "Kachi" => "kachi-records",
+        "Pakki" => "pakki-records",
+        // Purchase and Sale Invoice have no edit screen today — the only remedy for a rejected one
+        // is to Cancel it from its print/detail page and re-enter it with corrected figures.
+        "Purchase" => $"print/purchase/{row.Id}",
+        "SaleInvoice" => $"print/sale/{row.Id}",
+        _ => "approvals"
+    };
+
+    private async Task ApproveAsync(PendingApprovalDto row)
+    {
+        _error = null;
+        _busyKey = Key(row);
+        try
+        {
+            await Api.ApproveAsync(row.EntityType, row.Id);
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+        finally { _busyKey = null; }
+    }
+
+    private void StartReject(PendingApprovalDto row)
+    {
+        _rejectingKey = Key(row);
+        _rejectReason = null;
+    }
+
+    private async Task ConfirmRejectAsync()
+    {
+        if (_rejectingKey is null) return;
+        var row = _rows?.FirstOrDefault(r => Key(r) == _rejectingKey);
+        if (row is null) return;
+
+        _error = null;
+        _busyKey = _rejectingKey;
+        try
+        {
+            await Api.RejectAsync(row.EntityType, row.Id, _rejectReason);
+            _rejectingKey = null;
+            await LoadAsync();
+        }
+        catch (Models.ApiException ex) { _error = ex.Message; }
+        finally { _busyKey = null; }
+    }
+}

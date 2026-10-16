@@ -9,6 +9,7 @@ public class Purchase : BaseEntity
     public string InvoiceNo { get; set; } = string.Empty;
     public string? BillNo { get; set; }
     public DateTime Date { get; set; }
+    public string? Description { get; set; }
 
     public int SupplierId { get; set; }
     public Party Supplier { get; set; } = null!;
@@ -22,6 +23,14 @@ public class Purchase : BaseEntity
     public PrintLanguage PrintLanguage { get; set; } = PrintLanguage.English;
 
     public bool IsCancelled { get; set; }
+
+    /// <summary>Approvals workflow (see Role.RequiresApproval) — ledger posting is deferred while
+    /// this is Pending, and skipped entirely if Rejected.</summary>
+    public ApprovalStatus ApprovalStatus { get; set; } = ApprovalStatus.Approved;
+    public int? SubmittedByUserId { get; set; }
+    public int? ReviewedByUserId { get; set; }
+    public DateTime? ReviewedAtUtc { get; set; }
+    public string? RejectionReason { get; set; }
 
     public ICollection<PurchaseLine> Lines { get; set; } = new List<PurchaseLine>();
 }
@@ -38,4 +47,11 @@ public class PurchaseLine : BaseEntity
     public decimal Price { get; set; }
     public decimal DiscountPercent { get; set; }
     public decimal NetPrice { get; set; }
+
+    /// <summary>Quantity from this lot not yet consumed by a FIFO Sale Invoice allocation — the unit
+    /// of stock-on-hand, drawn down oldest lot first.</summary>
+    public decimal RemainingQuantity { get; set; }
+
+    /// <summary>Optional — only products with a shelf life (fertilizer, pesticide, seed) need this.</summary>
+    public DateTime? ExpiryDate { get; set; }
 }

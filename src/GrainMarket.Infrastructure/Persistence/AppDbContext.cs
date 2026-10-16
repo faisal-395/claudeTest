@@ -14,9 +14,12 @@ public class AppDbContext : DbContext, IApplicationDbContext
 
     public DbSet<Party> Parties => Set<Party>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductType> ProductTypes => Set<ProductType>();
+    public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
     public DbSet<UnitConversion> UnitConversions => Set<UnitConversion>();
     public DbSet<ChartOfAccount> ChartOfAccounts => Set<ChartOfAccount>();
     public DbSet<ChartOfAccountRole> ChartOfAccountRoles => Set<ChartOfAccountRole>();
+    public DbSet<AccountTypeDefinition> AccountTypeDefinitions => Set<AccountTypeDefinition>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<User> Users => Set<User>();
@@ -31,11 +34,14 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<SaleInvoiceLine> SaleInvoiceLines => Set<SaleInvoiceLine>();
     public DbSet<Purchase> Purchases => Set<Purchase>();
     public DbSet<PurchaseLine> PurchaseLines => Set<PurchaseLine>();
+    public DbSet<SaleInvoiceLineAllocation> SaleInvoiceLineAllocations => Set<SaleInvoiceLineAllocation>();
     public DbSet<Voucher> Vouchers => Set<Voucher>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<RecoveryNote> RecoveryNotes => Set<RecoveryNote>();
     public DbSet<NumberSequence> NumberSequences => Set<NumberSequence>();
+    public DbSet<CompanyInfo> CompanyInfos => Set<CompanyInfo>();
+    public DbSet<AppearanceSettings> AppearanceSettings => Set<AppearanceSettings>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

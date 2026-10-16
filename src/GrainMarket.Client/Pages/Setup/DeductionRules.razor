@@ -33,7 +33,7 @@
         <div>
             <label>Charged To</label>
             <select @bind="_chargedTo">
-                <option value="@DeductionChargedTo.Farmer">Farmer (reduces what the farmer receives)</option>
+                <option value="@DeductionChargedTo.Seller">Seller (reduces what the seller receives — Farmer in Kachi, Vendor in Pakki)</option>
                 <option value="@DeductionChargedTo.Buyer">Buyer (what the buyer owes on top)</option>
             </select>
         </div>
@@ -91,7 +91,7 @@
     private DeductionCalculationType _calcType = DeductionCalculationType.FixedAmount;
     private decimal _value;
     private DeductionAppliesTo _appliesTo = DeductionAppliesTo.Both;
-    private DeductionChargedTo _chargedTo = DeductionChargedTo.Farmer;
+    private DeductionChargedTo _chargedTo = DeductionChargedTo.Seller;
     private int? _incomeAccountId;
     private int _sortOrder;
     private bool _requiresVehicle;
@@ -120,7 +120,7 @@
     private void ResetForm()
     {
         _editingId = null; _name = ""; _nameUrdu = ""; _calcType = DeductionCalculationType.FixedAmount;
-        _value = 0; _appliesTo = DeductionAppliesTo.Both; _chargedTo = DeductionChargedTo.Farmer; _incomeAccountId = null;
+        _value = 0; _appliesTo = DeductionAppliesTo.Both; _chargedTo = DeductionChargedTo.Seller; _incomeAccountId = null;
         _sortOrder = 0; _requiresVehicle = false;
     }
 

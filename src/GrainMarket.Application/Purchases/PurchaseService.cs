@@ -13,13 +13,15 @@ public class PurchaseService : IPurchaseService
     private readonly ILedgerPostingService _ledger;
     private readonly IInvoiceNumberGenerator _numberGenerator;
     private readonly IDateTimeProvider _clock;
+    private readonly ICurrentUser _currentUser;
 
-    public PurchaseService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock)
+    public PurchaseService(IApplicationDbContext db, ILedgerPostingService ledger, IInvoiceNumberGenerator numberGenerator, IDateTimeProvider clock, ICurrentUser currentUser)
     {
         _db = db;
         _ledger = ledger;
         _numberGenerator = numberGenerator;
         _clock = clock;
+        _currentUser = currentUser;
     }
 
     public async Task<List<PurchaseDto>> GetAllAsync(CancellationToken ct = default)
@@ -35,9 +37,11 @@ public class PurchaseService : IPurchaseService
         return ToDto(row);
     }
 
+    public async Task<NextPurchaseInvoiceNoDto> ReserveNextInvoiceNoAsync(CancellationToken ct = default) => new(await _numberGenerator.NextAsync("PU", ct));
+
     public async Task<PurchaseDto> CreateAsync(CreatePurchaseRequest request, CancellationToken ct = default)
     {
-        if (!await _db.Parties.AnyAsync(p => p.Id == request.SupplierId && !p.IsDeleted, ct))
+        if (!await _db.Parties.AnyAsync(p => p.Id == request.SupplierId && !p.IsDeleted && (p.PartyType & PartyType.Supplier) == PartyType.Supplier, ct))
             throw new NotFoundException(nameof(Party), request.SupplierId);
 
         var productIds = request.Lines.Select(l => l.ProductId).Distinct().ToList();
@@ -45,11 +49,18 @@ public class PurchaseService : IPurchaseService
         if (productCount != productIds.Count)
             throw new InvalidCalculationException("One or more products on the purchase do not exist.");
 
+        // Purchase is for farm inputs (pesticides, seeds, fertilizer) bought from a supplier — not
+        // the grain catalog Kachi/Pakki trade in.
+        var nonInputCount = await _db.Products.CountAsync(p => productIds.Contains(p.Id) && p.Category != DomainConstants.ProductCategoryInput, ct);
+        if (nonInputCount > 0)
+            throw new InvalidCalculationException("Purchase can only include input products (pesticides, seeds, fertilizer), not grain products.");
+
         var purchase = new Purchase
         {
-            InvoiceNo = await _numberGenerator.NextAsync("PU", ct),
+            InvoiceNo = request.InvoiceNo ?? await _numberGenerator.NextAsync("PU", ct),
             BillNo = request.BillNo,
             Date = request.Date,
+            Description = request.Description,
             SupplierId = request.SupplierId,
             PrintFormat = request.PrintFormat,
             PrintLanguage = request.PrintLanguage
@@ -70,7 +81,9 @@ public class PurchaseService : IPurchaseService
                 Quantity = line.Quantity,
                 Price = line.Price,
                 DiscountPercent = line.DiscountPercent,
-                NetPrice = net
+                NetPrice = net,
+                RemainingQuantity = line.Quantity,
+                ExpiryDate = line.ExpiryDate
             });
         }
 
@@ -81,25 +94,37 @@ public class PurchaseService : IPurchaseService
         purchase.TotalDiscount = totalDiscount;
         purchase.NetBill = netBill;
         purchase.PaidCash = request.PaidCash;
+        purchase.ApprovalStatus = await DetermineApprovalStatusAsync(ct);
+        purchase.SubmittedByUserId = _currentUser.UserId;
 
         _db.Purchases.Add(purchase);
         await _db.SaveChangesAsync(ct);
 
+        if (purchase.ApprovalStatus == ApprovalStatus.Approved)
+        {
+            await PostLedgerAsync(purchase, ct);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        return await GetByIdAsync(purchase.Id, ct);
+    }
+
+    /// <summary>Posts a Purchase's expense/supplier/cash entries straight from its own stored
+    /// fields — used both right after Create (when it doesn't need approval) and by ApproveAsync.</summary>
+    private async Task PostLedgerAsync(Purchase purchase, CancellationToken ct)
+    {
         var purchaseExpenseAccountId = await GetAccountIdAsync(DomainConstants.PurchaseExpenseAccountCode, ct);
         var cashAccountId = await GetAccountIdAsync(DomainConstants.CashAccountCode, ct);
 
-        await _ledger.PostAccountEntryAsync(purchaseExpenseAccountId, purchase.Date, netBill, 0, LedgerSourceType.Purchase, purchase.Id, $"Purchase {purchase.InvoiceNo}", ct);
-        await _ledger.PostPartyEntryAsync(purchase.SupplierId, purchase.Date, 0, netBill, LedgerSourceType.Purchase, purchase.Id, $"Purchase {purchase.InvoiceNo}", ct);
+        await _ledger.PostAccountEntryAsync(purchaseExpenseAccountId, purchase.Date, purchase.NetBill, 0, LedgerSourceType.Purchase, purchase.Id, $"Purchase {purchase.InvoiceNo}", ct);
+        await _ledger.PostPartyEntryAsync(purchase.SupplierId, purchase.Date, 0, purchase.NetBill, LedgerSourceType.Purchase, purchase.Id, $"Purchase {purchase.InvoiceNo}", ct);
 
-        var cashApplied = Math.Min(request.PaidCash, netBill);
+        var cashApplied = Math.Min(purchase.PaidCash, purchase.NetBill);
         if (cashApplied > 0)
         {
             await _ledger.PostPartyEntryAsync(purchase.SupplierId, purchase.Date, cashApplied, 0, LedgerSourceType.Purchase, purchase.Id, $"Cash paid: {purchase.InvoiceNo}", ct);
             await _ledger.PostAccountEntryAsync(cashAccountId, purchase.Date, 0, cashApplied, LedgerSourceType.Purchase, purchase.Id, $"Cash paid: {purchase.InvoiceNo}", ct);
         }
-
-        await _db.SaveChangesAsync(ct);
-        return await GetByIdAsync(purchase.Id, ct);
     }
 
     public async Task CancelAsync(int id, CancellationToken ct = default)
@@ -107,24 +132,88 @@ public class PurchaseService : IPurchaseService
         var purchase = await LoadAsync(id, ct);
         if (purchase.IsCancelled) return;
 
+        // A cancelled purchase's lots drop out of stock entirely — if a Sale Invoice has already
+        // drawn FIFO stock from one of them, cancelling now would silently invalidate that sale's
+        // cost basis and on-hand math.
+        if (purchase.Lines.Any(l => l.RemainingQuantity < l.Quantity))
+            throw new InvalidCalculationException("This purchase can't be cancelled: some of its stock has already been sold.");
+
         purchase.IsCancelled = true;
         purchase.UpdatedAtUtc = _clock.UtcNow;
 
-        var purchaseExpenseAccountId = await GetAccountIdAsync(DomainConstants.PurchaseExpenseAccountCode, ct);
-        var cashAccountId = await GetAccountIdAsync(DomainConstants.CashAccountCode, ct);
-        var reason = $"Reversal: {purchase.InvoiceNo} cancelled";
-
-        await _ledger.PostAccountEntryAsync(purchaseExpenseAccountId, _clock.UtcNow, 0, purchase.NetBill, LedgerSourceType.Purchase, purchase.Id, reason, ct);
-        await _ledger.PostPartyEntryAsync(purchase.SupplierId, _clock.UtcNow, purchase.NetBill, 0, LedgerSourceType.Purchase, purchase.Id, reason, ct);
-
-        var cashApplied = Math.Min(purchase.PaidCash, purchase.NetBill);
-        if (cashApplied > 0)
+        // Nothing was ever posted for a Purchase still awaiting (or denied) review, so there is
+        // nothing to reverse — only an Approved Purchase has live ledger entries.
+        if (purchase.ApprovalStatus == ApprovalStatus.Approved)
         {
-            await _ledger.PostPartyEntryAsync(purchase.SupplierId, _clock.UtcNow, 0, cashApplied, LedgerSourceType.Purchase, purchase.Id, reason, ct);
-            await _ledger.PostAccountEntryAsync(cashAccountId, _clock.UtcNow, cashApplied, 0, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+            var purchaseExpenseAccountId = await GetAccountIdAsync(DomainConstants.PurchaseExpenseAccountCode, ct);
+            var cashAccountId = await GetAccountIdAsync(DomainConstants.CashAccountCode, ct);
+            var reason = $"Reversal: {purchase.InvoiceNo} cancelled";
+
+            // Dated with the purchase's own Date, not _clock.UtcNow: LedgerQueryService and
+            // LedgerPostingService's "find the latest balance" lookup both sort primarily by Date, so
+            // a reversal dated with the real wall-clock time (which carries a time-of-day, unlike the
+            // midnight-only business Date on every normal entry) would sort as "later" than same-day
+            // entries actually posted after it — scrambling both the displayed order and the running
+            // balance chain on any same-day cancel.
+            await _ledger.PostAccountEntryAsync(purchaseExpenseAccountId, purchase.Date, 0, purchase.NetBill, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+            await _ledger.PostPartyEntryAsync(purchase.SupplierId, purchase.Date, purchase.NetBill, 0, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+
+            var cashApplied = Math.Min(purchase.PaidCash, purchase.NetBill);
+            if (cashApplied > 0)
+            {
+                await _ledger.PostPartyEntryAsync(purchase.SupplierId, purchase.Date, 0, cashApplied, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+                await _ledger.PostAccountEntryAsync(cashAccountId, purchase.Date, cashApplied, 0, LedgerSourceType.Purchase, purchase.Id, reason, ct);
+            }
         }
 
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Approves a Pending Purchase, posting the ledger entries that were deferred at creation.</summary>
+    public async Task<PurchaseDto> ApproveAsync(int id, CancellationToken ct = default)
+    {
+        var purchase = await LoadAsync(id, ct);
+        if (purchase.ApprovalStatus != ApprovalStatus.Pending)
+        {
+            throw new InvalidCalculationException("Only a Purchase awaiting review can be approved.");
+        }
+
+        purchase.ApprovalStatus = ApprovalStatus.Approved;
+        purchase.ReviewedByUserId = _currentUser.UserId;
+        purchase.ReviewedAtUtc = _clock.UtcNow;
+        purchase.UpdatedAtUtc = _clock.UtcNow;
+
+        await PostLedgerAsync(purchase, ct);
+        await _db.SaveChangesAsync(ct);
+
+        return await GetByIdAsync(id, ct);
+    }
+
+    /// <summary>Rejects a Pending Purchase — nothing was ever posted, so there is nothing to
+    /// reverse. There is no edit for a Purchase today, so the submitter must Cancel and re-enter it.</summary>
+    public async Task<PurchaseDto> RejectAsync(int id, string? reason, CancellationToken ct = default)
+    {
+        var purchase = await LoadAsync(id, ct);
+        if (purchase.ApprovalStatus != ApprovalStatus.Pending)
+        {
+            throw new InvalidCalculationException("Only a Purchase awaiting review can be rejected.");
+        }
+
+        purchase.ApprovalStatus = ApprovalStatus.Rejected;
+        purchase.ReviewedByUserId = _currentUser.UserId;
+        purchase.ReviewedAtUtc = _clock.UtcNow;
+        purchase.RejectionReason = reason;
+        purchase.UpdatedAtUtc = _clock.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return await GetByIdAsync(id, ct);
+    }
+
+    private async Task<ApprovalStatus> DetermineApprovalStatusAsync(CancellationToken ct)
+    {
+        if (_currentUser.RoleId is null) return ApprovalStatus.Approved;
+        var requiresApproval = await _db.Roles.Where(r => r.Id == _currentUser.RoleId).Select(r => r.RequiresApproval).FirstOrDefaultAsync(ct);
+        return requiresApproval ? ApprovalStatus.Pending : ApprovalStatus.Approved;
     }
 
     private async Task<int> GetAccountIdAsync(string code, CancellationToken ct)
@@ -142,7 +231,8 @@ public class PurchaseService : IPurchaseService
     }
 
     private static PurchaseDto ToDto(Purchase p) => new(
-        p.Id, p.InvoiceNo, p.BillNo, p.Date, p.SupplierId, p.Supplier.Name,
+        p.Id, p.InvoiceNo, p.BillNo, p.Date, p.Description, p.SupplierId, p.Supplier.Name,
         p.TotalBill, p.TotalDiscount, p.NetBill, p.PaidCash, p.PrintFormat, p.PrintLanguage, p.IsCancelled,
-        p.Lines.Select(l => new PurchaseLineDto(l.ProductId, l.Product.Name, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice)).ToList());
+        p.ApprovalStatus, p.SubmittedByUserId, p.RejectionReason,
+        p.Lines.Select(l => new PurchaseLineDto(l.ProductId, l.Product.Name, l.Quantity, l.Price, l.DiscountPercent, l.NetPrice, l.ExpiryDate)).ToList());
 }

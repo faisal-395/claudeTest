@@ -9,7 +9,6 @@ namespace GrainMarket.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/chart-of-accounts")]
-[ModulePermission(ModuleName.SetupChartOfAccounts)]
 public class ChartOfAccountsController : ControllerBase
 {
     private readonly IChartOfAccountService _service;
@@ -19,7 +18,9 @@ public class ChartOfAccountsController : ControllerBase
         _service = service;
     }
 
-    /// <summary>Protected accounts are already filtered out server-side for roles not on the allow-list.</summary>
+    /// <summary>Protected accounts are already filtered out server-side for roles not on the
+    /// allow-list, so this is deliberately not gated by ModulePermission on top of that — Voucher
+    /// (Payment/Receipt/Journal) entry needs this list regardless of the caller's Setup access.</summary>
     [HttpGet]
     public async Task<ActionResult<List<ChartOfAccountDto>>> GetAll([FromQuery] bool includeInactive, CancellationToken ct)
         => Ok(await _service.GetVisibleAsync(includeInactive, ct));

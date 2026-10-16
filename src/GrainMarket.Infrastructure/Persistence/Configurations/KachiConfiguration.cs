@@ -9,9 +9,12 @@ public class KachiConfiguration : IEntityTypeConfiguration<Kachi>
     public void Configure(EntityTypeBuilder<Kachi> builder)
     {
         builder.Property(k => k.InvoiceNo).IsRequired().HasMaxLength(30);
-        builder.HasIndex(k => k.InvoiceNo).IsUnique();
+        // Not unique: a multi-farmer batch (MultiPurchaseService) shares one InvoiceNo across all
+        // its rows — one buyer's invoice, several farmers' Kachi rows underneath.
+        builder.HasIndex(k => k.InvoiceNo);
         builder.Property(k => k.ReceiptNumber).HasMaxLength(30);
         builder.Property(k => k.BillNumber).HasMaxLength(30);
+        builder.Property(k => k.RejectionReason).HasMaxLength(500);
 
         foreach (var name in new[] { nameof(Kachi.BhartiKgPerBag), nameof(Kachi.TotalWeightKg), nameof(Kachi.BoriQty) })
         {

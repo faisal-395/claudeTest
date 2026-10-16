@@ -1,5 +1,4 @@
 using GrainMarket.Domain.Common;
-using GrainMarket.Domain.Enums;
 
 namespace GrainMarket.Domain.Entities;
 
@@ -8,7 +7,8 @@ public class ChartOfAccount : BaseEntity
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? NameUrdu { get; set; }
-    public AccountType AccountType { get; set; }
+    public int AccountTypeId { get; set; }
+    public AccountTypeDefinition AccountType { get; set; } = null!;
     public int? ParentAccountId { get; set; }
     public ChartOfAccount? ParentAccount { get; set; }
 
